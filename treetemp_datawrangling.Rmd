@@ -1,0 +1,28 @@
+---
+title: "treetemp_datawrangling"
+author: "Erika Lee"
+date: "2024-06-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(openxlsx)
+library(plotly)
+library(rstatix)
+library(htmlwidgets)
+library(RColorBrewer)
+
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
