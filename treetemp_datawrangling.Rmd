@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Data Wrangling
+
 ```{r}
 library(tidyverse)
 library(lterdatasampler)
@@ -173,3 +175,112 @@ filtered_transb_wx_15min <- transb_wx_15min %>%
 filtered_transun_wx_15min <- transub_wx_15min %>%
   filter(datetime >= start_time & datetime <= end_time)
 ```
+
+## Tree Temp Comparison
+
+```{r}
+#adding in a burn status column to the aspect dataframes
+filtered_pers_b_aspects <- filtered_pers_b_aspects %>%
+  mutate(burn_status = case_when(
+    startsWith(tree_name, "gb") ~ "green burn",
+    startsWith(tree_name, "db") ~ "dead burn",
+    TRUE ~ NA_character_  # Optional: handle other cases if needed
+  )) %>%
+  #adding a zone column
+  mutate(zone = "persistent")
+
+filtered_pers_ub_aspects <- filtered_pers_ub_aspects %>%
+  mutate(burn_status = case_when(
+    startsWith(tree_name, "ub") ~ "alive",
+    TRUE ~ NA_character_  # Optional: handle other cases if needed
+  )) %>%
+  #adding a zone column
+  mutate(zone = "persistent")
+
+filtered_trans_b_aspects <- filtered_trans_b_aspects %>%
+  mutate(burn_status = case_when(
+    startsWith(tree_name, "gb") ~ "green burn",
+    startsWith(tree_name, "db") ~ "dead burn",
+    TRUE ~ NA_character_  # Optional: handle other cases if needed
+  )) %>%
+  #adding a zone column
+  mutate(zone = "transitional")
+
+filtered_trans_ub_aspects <- filtered_trans_ub_aspects %>%
+  mutate(burn_status = case_when(
+    startsWith(tree_name, "ub") ~ "alive",
+    TRUE ~ NA_character_  # Optional: handle other cases if needed
+  )) %>%
+  mutate(zone = "transitional")
+```
+
+Differencing Dead burn and Green burn trees
+
+```{r}
+#creating a dataframe with green burn temp minus dead burn temp for the same aspects
+##north aspect
+persb_north_diff_data <- filtered_pers_b_aspects %>%
+  # Filter for north aspect
+  filter(aspect == 'north') %>%
+  # Filter out gb_w tree
+  filter(tree_name != 'gb_w') %>%
+  # Calculate differences by datetime
+  group_by(datetime) %>%
+  summarise(
+    gb_e_minus_db_s = mean(temp[tree_name == 'gb_e']) - mean(temp[tree_name == 'db_s']),
+    gb_s_minus_db_s = mean(temp[tree_name == 'gb_s']) - mean(temp[tree_name == 'db_s']),
+    gb_e_minus_db_n = mean(temp[tree_name == 'gb_e']) - mean(temp[tree_name == 'db_n']),
+    gb_s_minus_db_n = mean(temp[tree_name == 'gb_s']) - mean(temp[tree_name == 'db_n'])
+  ) %>%
+  ungroup()
+
+# Reshape data to long format
+persb_north_diff_long <- persb_north_diff_data %>%
+  pivot_longer(cols = starts_with("gb"), names_to = "comparison", values_to = "difference")
+
+# Plotting the boxplots
+persb_north_diff_plot <- ggplot(persb_north_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Temperature Differences Between North Aspect Green and Dead Burned Trees",
+       x = "Comparison",
+       y = "Temperature Difference (°C)",
+       fill = "Tree Comparison")
+
+print(persb_north_diff_plot)
+```
+
+```{r}
+##south aspect
+persb_south_diff_data <- filtered_pers_b_aspects %>%
+  # Filter for north aspect
+  filter(aspect == 'south') %>%
+  # Filter out gb_w tree
+  filter(tree_name != 'gb_w') %>%
+  # Calculate differences by datetime
+  group_by(datetime) %>%
+  summarise(
+    gb_e_minus_db_s = mean(temp[tree_name == 'gb_e']) - mean(temp[tree_name == 'db_s']),
+    gb_s_minus_db_s = mean(temp[tree_name == 'gb_s']) - mean(temp[tree_name == 'db_s']),
+    gb_e_minus_db_n = mean(temp[tree_name == 'gb_e']) - mean(temp[tree_name == 'db_n']),
+    gb_s_minus_db_n = mean(temp[tree_name == 'gb_s']) - mean(temp[tree_name == 'db_n'])
+  ) %>%
+  ungroup()
+
+# Reshape data to long format
+persb_south_diff_long <- persb_south_diff_data %>%
+  pivot_longer(cols = starts_with("gb"), names_to = "comparison", values_to = "difference")
+
+# Plotting the boxplots
+persb_south_diff_plot <- ggplot(persb_south_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Temperature Differences Between South Aspect Green and Dead Burned Trees",
+       x = "Comparison",
+       y = "Temperature Difference (°C)",
+       fill = "Tree Comparison")
+
+print(persb_south_diff_plot)
+```
+
+##\*\* Need to think about if doing it this way makes sense or if I should be doing a timestep of sorts? Or an average? Because having this many outliers seems wrong.
