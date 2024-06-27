@@ -26,3 +26,131 @@ library(RColorBrewer)
 
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
+
+### Calling in data
+
+```{r}
+#calling in tree temp data from n-drive
+## burned
+pers_b_aspects <- read_excel("nsf/105E_pers_burned/105E_pers_b_aspects.xlsx") %>%
+  mutate(datetime = ymd_hms(datetime))
+
+trans_b_aspects <- read_excel("nsf/105E_trans_burned/105E_trans_b_aspects.xlsx") %>%
+  mutate(datetime = ymd_hms(datetime))
+
+pers_n_gb_temp <- read_excel("nsf/105E_pers_burned/pers_n_gb_temp.xlsx")
+
+pers_n_db_temp <- read_excel("nsf/105E_pers_burned/pers_n_db_temp.xlsx")
+
+pers_s_gb_temp <- read_excel("nsf/105E_pers_burned/pers_s_gb_temp.xlsx")
+
+pers_s_db_temp <- read_excel("nsf/105E_pers_burned/pers_s_db_temp.xlsx")
+
+trans_n_gb_temp <- read_excel("nsf/105E_trans_burned/trans_n_gb_temp.xlsx")
+
+trans_n_db_temp <- read_excel("nsf/105E_trans_burned/trans_n_db_temp.xlsx")
+
+trans_s_gb_temp <- read_excel("nsf/105E_trans_burned/trans_s_gb_temp.xlsx")
+
+trans_s_db_temp <- read_excel("nsf/105E_trans_burned/trans_s_db_temp.xlsx")
+
+##unburned
+pers_ub_aspects <- read_excel("nsf/105E_pers_unburned/105E_pers_ub_aspects.xlsx") %>%
+  mutate(datetime = ymd_hms(datetime))
+
+trans_ub_aspects <- read_excel("nsf/105E_trans_unburned/105E_trans_ub_aspects.xlsx") %>%
+  mutate(datetime = ymd_hms(datetime))
+```
+
+```{r}
+#calling in weather station data from n-drive
+##persistent zone
+persb_wx_15min <- read_excel("nsf/pers_burned/pers_burned_wx_15min_r.xlsx")
+
+persub_wx_15min <- read_excel("nsf/pers_unburned/pers_unburned_wx_15min_composite.xlsx")
+
+##transitional
+transb_wx_15min <- read_excel("nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
+
+transub_wx_15min <- read_excel("nsf/trans_unburned/trans_unburned_wx_20240529.xlsx") %>%
+  #convert 5 min timestep to 15 minute timestep
+  # Ensure the timestamp column is in datetime format
+  mutate(TIMESTAMP = ymd_hms(TIMESTAMP)) %>%
+  # Create a new column for 15-minute intervals
+  mutate(interval = floor_date(TIMESTAMP, unit = "15 minutes")) %>%
+  # Group by the 15-minute interval
+  group_by(interval) %>%
+  # Calculate the mean for all other columns
+summarize(across(where(is.numeric), mean, na.rm = TRUE), .groups = 'drop') %>%  # Rename 'interval' to 'datetime' and remove the original 'datetime' column
+  rename(datetime = interval) %>%
+  #renaming columns to match trans/pers burned
+  rename(Batt_volt = BattVolt_Avg) %>%
+  rename(AirTC_Avg = AirTemp_Avg) %>%
+  rename(RH = RH_Avg) %>%
+  rename(WS_ms_Avg = WindSpeed) %>%
+  #no snow depth data from trans_ub weather station
+  select(datetime, RECORD, Batt_volt, AirTC_Avg, WS_ms_Avg, WindDir, RH, HrlySolRad_Avg, HrlySolRadOut_Avg,  everything())
+  
+#writing the 15min trans_ub weather to the n-drive
+write.xlsx(transub_wx_15min, "nsf/trans_unburned/trans_unburned_wx_15min_r.xlsx")
+```
+
+### Renaming weather dataframe columns so they match
+
+```{r}
+#matching the transitional and persistent weather station headers
+transb_wx_15min <- transb_wx_15min %>%
+  rename(AirTC_Avg = AirT_C) %>%
+  rename(RH = RH_percent) %>%
+  rename(WS_ms_Avg = `WS_m/s`) %>%
+  rename(WindDir = WindDir_deg) %>%
+  rename(NR_Avg = Net_Rad_Avg) %>%
+  rename(SWalbedo_Avg = SW_albedo) %>%
+  #reordering dataframe
+  select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
+
+#reordering persistent weather station data
+##pers burned
+persb_wx_15min <- persb_wx_15min %>%
+  rename(Batt_volt = BattV_Min) %>%
+  #timestamp column is UTC time
+  #don't know which columns are snow depths from Dan's weather station, need to figure this out then reorder/rename them
+  select(datetime,TIMESTAMP, RECORD, Batt_volt, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
+
+##pers unburned
+persub_wx_15min <- persub_wx_15min %>%
+  rename(Batt_volt = BattV_Min) %>%
+  #creating an RH average column to match pers burned and trans burned dataframes
+  mutate(RH = mean(c(RH_Min, RH_Max))) %>%
+  #changing timestamp column from UTC to MST
+  mutate(datetime = with_tz(TIMESTAMP, "America/Denver")) %>%
+  filter(datetime >= ymd_hms("2023-12-07 00:00:00", tz = 'MST')) %>%
+  #don't know which columns are snow depths from Dan's weather station, need to figure this out then reorder/rename them
+  select(datetime,TIMESTAMP, RECORD, Batt_volt, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
+
+##writing edited persistent unburned dataframe to n-drive
+write.xlsx(persub_wx_15min, "nsf/pers_unburned/pers_unburned_wx_15min_r.xlsx")
+```
+
+### Setting consistent timeframe
+
+```{r}
+#setting a consistent timeframe for all tree temp data for all burned/unburned zones
+##has to start at 2024-02-02 due to errors in data at transitional burned site
+
+#tree temp dataframes
+start_time <- ymd_hms("2024-02-02 00:00:00")
+end_time <- ymd_hms("2024-05-24 00:00:00")
+
+filtered_pers_b_aspects <- pers_b_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time)
+
+filtered_pers_ub_aspects <- pers_ub_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time)
+
+filtered_trans_b_aspects <- trans_b_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time)
+
+filtered_trans_ub_aspects <- trans_ub_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time)
+```
