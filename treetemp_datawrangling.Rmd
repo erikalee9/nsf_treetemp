@@ -114,19 +114,21 @@ transb_wx_15min <- transb_wx_15min %>%
 persb_wx_15min <- persb_wx_15min %>%
   rename(Batt_volt = BattV_Min) %>%
   #timestamp column is UTC time
-  #don't know which columns are snow depths from Dan's weather station, need to figure this out then reorder/rename them
-  select(datetime,TIMESTAMP, RECORD, Batt_volt, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
+  rename(SnowDepth_m = DBTCDT_Avg) %>%
+  #applying offset to snow depth column for the pers_burned zone
+  mutate(SnowDepth_m = (SnowDepth_m-0.03)) %>%
+  select(datetime,TIMESTAMP, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything())
 
 ##pers unburned
 persub_wx_15min <- persub_wx_15min %>%
   rename(Batt_volt = BattV_Min) %>%
+  rename(SnowDepth_m = DBTCDT_Avg) %>%
   #creating an RH average column to match pers burned and trans burned dataframes
   mutate(RH = mean(c(RH_Min, RH_Max))) %>%
   #changing timestamp column from UTC to MST
   mutate(datetime = with_tz(TIMESTAMP, "America/Denver")) %>%
   filter(datetime >= ymd_hms("2023-12-07 00:00:00", tz = 'MST')) %>%
-  #don't know which columns are snow depths from Dan's weather station, need to figure this out then reorder/rename them
-  select(datetime,TIMESTAMP, RECORD, Batt_volt, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
+  select(datetime,TIMESTAMP, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything())
 
 ##writing edited persistent unburned dataframe to n-drive
 write.xlsx(persub_wx_15min, "nsf/pers_unburned/pers_unburned_wx_15min_r.xlsx")
@@ -152,5 +154,22 @@ filtered_trans_b_aspects <- trans_b_aspects %>%
   filter(datetime >= start_time & datetime <= end_time)
 
 filtered_trans_ub_aspects <- trans_ub_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time)
+
+#filtered weather dataframes
+filtered_persb_wx_15min <- persb_wx_15min %>%
+  filter(datetime >= start_time & datetime <= end_time) %>%
+  #removed UTM column
+  select(-TIMESTAMP)
+
+filtered_persub_wx_15min <- persub_wx_15min %>%
+  filter(datetime >= start_time & datetime <= end_time) %>%
+  #removed UTM column
+  select(-TIMESTAMP)
+  
+filtered_transb_wx_15min <- transb_wx_15min %>%
+  filter(datetime >= start_time & datetime <= end_time)
+
+filtered_transun_wx_15min <- transub_wx_15min %>%
   filter(datetime >= start_time & datetime <= end_time)
 ```
