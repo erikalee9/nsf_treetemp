@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Data Wrangling
+# Data Wrangling
 
 ```{r}
 library(tidyverse)
@@ -25,6 +25,7 @@ library(plotly)
 library(rstatix)
 library(htmlwidgets)
 library(RColorBrewer)
+library(patchwork)
 
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
@@ -40,21 +41,21 @@ pers_b_aspects <- read_excel("nsf/105E_pers_burned/105E_pers_b_aspects.xlsx") %>
 trans_b_aspects <- read_excel("nsf/105E_trans_burned/105E_trans_b_aspects.xlsx") %>%
   mutate(datetime = ymd_hms(datetime))
 
-pers_n_gb_temp <- read_excel("nsf/105E_pers_burned/pers_n_gb_temp.xlsx")
+#pers_n_gb_temp <- read_excel("nsf/105E_pers_burned/pers_n_gb_temp.xlsx")
 
-pers_n_db_temp <- read_excel("nsf/105E_pers_burned/pers_n_db_temp.xlsx")
+#pers_n_db_temp <- read_excel("nsf/105E_pers_burned/pers_n_db_temp.xlsx")
 
-pers_s_gb_temp <- read_excel("nsf/105E_pers_burned/pers_s_gb_temp.xlsx")
+#pers_s_gb_temp <- read_excel("nsf/105E_pers_burned/pers_s_gb_temp.xlsx")
 
-pers_s_db_temp <- read_excel("nsf/105E_pers_burned/pers_s_db_temp.xlsx")
+#pers_s_db_temp <- read_excel("nsf/105E_pers_burned/pers_s_db_temp.xlsx")
 
-trans_n_gb_temp <- read_excel("nsf/105E_trans_burned/trans_n_gb_temp.xlsx")
+#trans_n_gb_temp <- read_excel("nsf/105E_trans_burned/trans_n_gb_temp.xlsx")
 
-trans_n_db_temp <- read_excel("nsf/105E_trans_burned/trans_n_db_temp.xlsx")
+#trans_n_db_temp <- read_excel("nsf/105E_trans_burned/trans_n_db_temp.xlsx")
 
-trans_s_gb_temp <- read_excel("nsf/105E_trans_burned/trans_s_gb_temp.xlsx")
+#trans_s_gb_temp <- read_excel("nsf/105E_trans_burned/trans_s_gb_temp.xlsx")
 
-trans_s_db_temp <- read_excel("nsf/105E_trans_burned/trans_s_db_temp.xlsx")
+#trans_s_db_temp <- read_excel("nsf/105E_trans_burned/trans_s_db_temp.xlsx")
 
 ##unburned
 pers_ub_aspects <- read_excel("nsf/105E_pers_unburned/105E_pers_ub_aspects.xlsx") %>%
@@ -176,7 +177,7 @@ filtered_transun_wx_15min <- transub_wx_15min %>%
   filter(datetime >= start_time & datetime <= end_time)
 ```
 
-## Tree Temp Comparison
+# Tree Temp Comparison
 
 ```{r}
 #adding in a burn status column to the aspect dataframes
@@ -214,7 +215,9 @@ filtered_trans_ub_aspects <- filtered_trans_ub_aspects %>%
   mutate(zone = "transitional")
 ```
 
-Differencing Dead burn and Green burn trees
+## Differencing Dead burn and Green burn trees
+
+### Persistent Zone
 
 ```{r}
 #creating a dataframe with green burn temp minus dead burn temp for the same aspects
@@ -242,7 +245,7 @@ persb_north_diff_long <- persb_north_diff_data %>%
 persb_north_diff_plot <- ggplot(persb_north_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
   geom_boxplot() +
   theme_minimal() +
-  labs(title = "Temperature Differences Between North Aspect Green and Dead Burned Trees",
+  labs(title = "North Aspect",
        x = "Comparison",
        y = "Temperature Difference (°C)",
        fill = "Tree Comparison")
@@ -275,7 +278,7 @@ persb_south_diff_long <- persb_south_diff_data %>%
 persb_south_diff_plot <- ggplot(persb_south_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
   geom_boxplot() +
   theme_minimal() +
-  labs(title = "Temperature Differences Between South Aspect Green and Dead Burned Trees",
+  labs(title = "South Aspect",
        x = "Comparison",
        y = "Temperature Difference (°C)",
        fill = "Tree Comparison")
@@ -283,4 +286,239 @@ persb_south_diff_plot <- ggplot(persb_south_diff_long, aes(x = comparison, y = d
 print(persb_south_diff_plot)
 ```
 
-##\*\* Need to think about if doing it this way makes sense or if I should be doing a timestep of sorts? Or an average? Because having this many outliers seems wrong.
+```{r}
+#combinging north and south plots
+persb_combined_aspectdiff_treetemp_plots <- persb_north_diff_plot + persb_south_diff_plot + plot_layout(nrow = 2) + plot_annotation(title = "Persistent Zone, Green & Dead Burn Tree Temp Difference")
+
+persb_combined_aspectdiff_treetemp_plots 
+
+#saving combined plot
+ggsave("persb_combined_aspectdiff_treetemp_plots.png", plot = persb_combined_aspectdiff_treetemp_plots , width = 8, height = 10, dpi = 300, bg = "white")
+
+```
+
+##IDEA - may want to cut the nightly temps and just analyze during the day?
+
+### Transitional Zone
+
+```{r}
+#creating a dataframe with green burn temp minus dead burn temp for the same aspects
+##north aspect
+transb_north_diff_data <- filtered_trans_b_aspects %>%
+  # Filter for north aspect
+  filter(aspect == 'north') %>%
+  # Calculate differences by datetime
+  group_by(datetime) %>%
+  summarise(
+    gb_n_minus_db_s = mean(temp[tree_name == 'gb_n']) - mean(temp[tree_name == 'db_s']),
+    gb_s_minus_db_s = mean(temp[tree_name == 'gb_s']) - mean(temp[tree_name == 'db_s']),
+    gb_n_minus_db_n = mean(temp[tree_name == 'gb_n']) - mean(temp[tree_name == 'db_n']),
+    gb_s_minus_db_n = mean(temp[tree_name == 'gb_s']) - mean(temp[tree_name == 'db_n'])
+  ) %>%
+  ungroup()
+
+# Reshape data to long format
+transb_north_diff_long <- transb_north_diff_data %>%
+  pivot_longer(cols = starts_with("gb"), names_to = "comparison", values_to = "difference")
+
+# Plotting the boxplots
+transb_north_diff_plot <- ggplot(transb_north_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "North Aspect",
+       x = "Comparison",
+       y = "Temperature Difference (°C)",
+       fill = "Tree Comparison")
+
+print(transb_north_diff_plot)
+```
+
+```{r}
+##south aspect
+transb_south_diff_data <- filtered_trans_b_aspects %>%
+  # Filter for north aspect
+  filter(aspect == 'south') %>%
+  # Calculate differences by datetime
+  group_by(datetime) %>%
+  summarise(
+    gb_n_minus_db_s = mean(temp[tree_name == 'gb_n']) - mean(temp[tree_name == 'db_s']),
+    gb_s_minus_db_s = mean(temp[tree_name == 'gb_s']) - mean(temp[tree_name == 'db_s']),
+    gb_n_minus_db_n = mean(temp[tree_name == 'gb_n']) - mean(temp[tree_name == 'db_n']),
+    gb_s_minus_db_n = mean(temp[tree_name == 'gb_s']) - mean(temp[tree_name == 'db_n'])
+  ) %>%
+  ungroup()
+
+# Reshape data to long format
+transb_south_diff_long <- transb_south_diff_data %>%
+  pivot_longer(cols = starts_with("gb"), names_to = "comparison", values_to = "difference")
+
+# Plotting the boxplots
+transb_south_diff_plot <- ggplot(transb_south_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "South Aspect",
+       x = "Comparison",
+       y = "Temperature Difference (°C)",
+       fill = "Tree Comparison")
+
+print(transb_south_diff_plot)
+```
+
+```{r}
+#combinging north and south plots
+transb_combined_aspectdiff_treetemp_plots <- transb_north_diff_plot + transb_south_diff_plot + plot_layout(nrow = 2) + plot_annotation(title = "Transitional Zone, Green & Dead Burn Tree Temp Difference")
+
+transb_combined_aspectdiff_treetemp_plots 
+
+#saving combined plot
+ggsave("transb_combined_aspectdiff_treetemp_plots.png", plot = transb_combined_aspectdiff_treetemp_plots , width = 8, height = 10, dpi = 300, bg = "white")
+```
+
+## Differencing by Individual Tree Aspect
+
+### Persistent Zone
+
+```{r}
+#creating a dataframe for each tree
+persb_gb_e_diff_data <- filtered_pers_b_aspects %>%
+  # Filter for gb_e tree
+  filter(tree_name == 'gb_e') %>%
+  # Calculate differences by datetime
+  group_by(datetime) %>%
+  summarise(
+    south_minus_north = mean(temp[aspect == 'south']) - mean(temp[aspect == 'north'])) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with("south"), names_to = "comparison", values_to = "difference") %>%
+  mutate(treename = 'gb_e')
+
+persb_gb_s_diff_data <- filtered_pers_b_aspects %>%
+  # Filter for gb_e tree
+  filter(tree_name == 'gb_s') %>%
+  # Calculate differences by datetime
+  group_by(datetime) %>%
+  summarise(
+    south_minus_north = mean(temp[aspect == 'south']) - mean(temp[aspect == 'north'])) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with("south"), names_to = "comparison", values_to = "difference") %>%
+  mutate(treename = 'gb_s')
+
+persb_db_n_diff_data <- filtered_pers_b_aspects %>%
+  # Filter for gb_e tree
+  filter(tree_name == 'db_n') %>%
+  # Calculate differences by datetime
+  group_by(datetime) %>%
+  summarise(
+    south_minus_north = mean(temp[aspect == 'south']) - mean(temp[aspect == 'north'])) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with("south"), names_to = "comparison", values_to = "difference") %>%
+  mutate(treename = 'db_n')
+
+persb_db_s_diff_data <- filtered_pers_b_aspects %>%
+  # Filter for gb_e tree
+  filter(tree_name == 'db_s') %>%
+  # Calculate differences by datetime
+  group_by(datetime) %>%
+  summarise(
+    south_minus_north = mean(temp[aspect == 'south']) - mean(temp[aspect == 'north'])) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with("south"), names_to = "comparison", values_to = "difference") %>%
+  mutate(treename = 'db_s')
+
+#creating a combined new dataframe
+persb_gbdb_combined_data <- bind_rows(persb_gb_e_diff_data, persb_gb_s_diff_data, persb_db_n_diff_data, persb_db_s_diff_data)
+```
+
+```{r}
+#plotting persistent north-south tree boxplots
+persb_gbdb_diff_plot <- ggplot(persb_gbdb_combined_data, aes(x = comparison, y = difference, fill = treename)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Persistent Zone",
+       x = "Comparison",
+       y = "Temperature Difference (°C)",
+       fill = "Tree Name")
+
+print(persb_gbdb_diff_plot)
+```
+
+### Transitional Zone
+
+```{r}
+#creating a dataframe for each tree
+transb_gb_n_diff_data <- filtered_trans_b_aspects %>%
+  # Filter for gb_e tree
+  filter(tree_name == 'gb_n') %>%
+  # Calculate differences by datetime
+  group_by(datetime) %>%
+  summarise(
+    south_minus_north = mean(temp[aspect == 'south']) - mean(temp[aspect == 'north'])) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with("south"), names_to = "comparison", values_to = "difference") %>%
+  mutate(treename = 'gb_n')
+
+transb_gb_s_diff_data <- filtered_trans_b_aspects %>%
+  # Filter for gb_e tree
+  filter(tree_name == 'gb_s') %>%
+  # Calculate differences by datetime
+  group_by(datetime) %>%
+  summarise(
+    south_minus_north = mean(temp[aspect == 'south']) - mean(temp[aspect == 'north'])) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with("south"), names_to = "comparison", values_to = "difference") %>%
+  mutate(treename = 'gb_s')
+
+transb_db_n_diff_data <- filtered_trans_b_aspects %>%
+  # Filter for gb_e tree
+  filter(tree_name == 'db_n') %>%
+  # Calculate differences by datetime
+  group_by(datetime) %>%
+  summarise(
+    south_minus_north = mean(temp[aspect == 'south']) - mean(temp[aspect == 'north'])) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with("south"), names_to = "comparison", values_to = "difference") %>%
+  mutate(treename = 'db_n')
+
+transb_db_s_diff_data <- filtered_trans_b_aspects %>%
+  # Filter for gb_e tree
+  filter(tree_name == 'db_s') %>%
+  # Calculate differences by datetime
+  group_by(datetime) %>%
+  summarise(
+    south_minus_north = mean(temp[aspect == 'south']) - mean(temp[aspect == 'north'])) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with("south"), names_to = "comparison", values_to = "difference") %>%
+  mutate(treename = 'db_s')
+
+#creating a combined new dataframe
+transb_gbdb_combined_data <- bind_rows(transb_gb_n_diff_data, transb_gb_s_diff_data, transb_db_n_diff_data, transb_db_s_diff_data)
+```
+
+```{r}
+#plotting transitional north-south tree boxplots
+transb_gbdb_diff_plot <- ggplot(transb_gbdb_combined_data, aes(x = comparison, y = difference, fill = treename)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Transitional Zone",
+       x = "Comparison",
+       y = "Temperature Difference (°C)",
+       fill = "Tree Name")
+
+print(transb_gbdb_diff_plot)
+```
+
+```{r}
+Temperature Differences by Tree - south minus north aspect
+#combinging north and south plots
+combined_bytree_aspect_treetemp_plots <- persb_gbdb_diff_plot + transb_gbdb_diff_plot + plot_layout(nrow = 1) + plot_annotation(title = "Temperature Differences by Tree - south minus north aspect")
+
+combined_bytree_aspect_treetemp_plots
+
+#saving combined plot
+ggsave("combined_bytree_aspect_treetemp_plots.png", plot = combined_bytree_aspect_treetemp_plots , width = 10, height = 6, dpi = 300, bg = "white")
+```
+
+**Interpretation of box plots**
+
+-   Consistent Boxes: Similar boxes indicate that the general trend and variability within the middle 50% of the data are consistent across different aspects.
+
+-   Many Outliers: The numerous outliers highlight that there are frequent instances of temperature differences that are much higher or lower than the typical range. This could point to specific factors or conditions that cause these deviations.
