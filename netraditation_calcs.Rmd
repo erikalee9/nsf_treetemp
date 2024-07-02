@@ -24,6 +24,8 @@ library(rstatix)
 library(htmlwidgets)
 library(RColorBrewer)
 library(patchwork)
+#package for scientific notation of numbers
+library(scales)
 
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
@@ -101,11 +103,41 @@ Create a 15 min Rl(in) calculation for trees based on the tree temp
 # Constants
 stefan_boltzmann_constant <- 5.67e-8
 emissivity <- 0.97
+#wedll depth and circumference are in meters
+welldepth <- 1
+circumference <- 0.40
+#average circumference of a lodgepole is ~ 16 inches = 0.40 meters
+#picking an average unit depth for well depth of 1 meter
 
-# Calculate incoming longwave radiation
+#constant for m2 
+m2 = welldepth*circumference
+
+# Define the time interval (15 minutes in seconds)
+time_interval_seconds <- 15 * 60
+
+# Calculate incoming longwave radiation and add to dataframe
 all_treetemps <- all_treetemps %>%
+  #add a date column for calculations later
+  mutate(date = as_date(datetime)) %>%
   mutate(
     temp_k= temp + 273.15, # Convert temperature to Kelvin
     tree_RL_in = emissivity * stefan_boltzmann_constant * (temp_k^4) # Calculate longwave radiation
-  )
+  ) %>%
+#the RL_in units are W/m2, the m2 component is 
+  #calculating watz (W)
+  #W is = to J/s
+  mutate(W = tree_RL_in*m2) %>%
+  # Convert instantaneous power (W) to energy (J) for each 15-minute interval
+  mutate(energy_J = W * time_interval_seconds)
+```
+
+```{r}
+# Aggregate energy (J) to get daily total energy in Joules
+daily_energy_J <- all_treetemps %>%
+  group_by(date) %>%
+  summarize(daily_energy_J = sum(energy_J, na.rm = TRUE))
+
+# Display the resulting dataframe with scientific notation
+daily_energy_J <- daily_energy_J %>%
+  mutate(daily_energy_J_sci = scientific(daily_energy_J))
 ```
