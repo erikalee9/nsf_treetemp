@@ -1,0 +1,111 @@
+---
+title: "netradiation_calcs"
+author: "Erika Lee"
+date: "2024-07-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(openxlsx)
+library(plotly)
+library(rstatix)
+library(htmlwidgets)
+library(RColorBrewer)
+library(patchwork)
+
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
+
+# Calling in Data
+
+```{r}
+#calling in weather station data from n-drive
+##persistent zone
+persb_wx_15min <- read_excel("nsf/pers_burned/pers_burned_wx_15min_r.xlsx")
+
+persub_wx_15min <- read_excel("nsf/pers_unburned/pers_unburned_wx_15min_composite.xlsx")
+
+##transitional
+transb_wx_15min <- read_excel("nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
+
+transub_wx_15min <- read_excel("nsf/trans_unburned/trans_unburned_wx_15min_r.xlsx")
+```
+
+```{r}
+#calling in tree temp data from n-drive
+## burned
+pers_b_aspects <- read_excel("nsf/105E_pers_burned/105E_pers_b_aspects.xlsx") %>%
+  mutate(datetime = ymd_hms(datetime))
+
+trans_b_aspects <- read_excel("nsf/105E_trans_burned/105E_trans_b_aspects.xlsx") %>%
+  mutate(datetime = ymd_hms(datetime))
+
+##unburned
+pers_ub_aspects <- read_excel("nsf/105E_pers_unburned/105E_pers_ub_aspects.xlsx") %>%
+  mutate(datetime = ymd_hms(datetime))
+
+trans_ub_aspects <- read_excel("nsf/105E_trans_unburned/105E_trans_ub_aspects.xlsx") %>%
+  mutate(datetime = ymd_hms(datetime))
+```
+
+```{r}
+#setting a consistent timeframe for all tree temp data for all burned/unburned zones
+##has to start at 2024-02-02 due to errors in data at transitional burned site
+
+#tree temp dataframes
+start_time <- ymd_hms("2024-02-02 00:00:00")
+end_time <- ymd_hms("2024-05-24 00:00:00")
+
+filtered_pers_b_aspects <- pers_b_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time) %>%
+  #adding in column for site name, for when combining dataframes
+  mutate(site = "pers_burned") %>%
+  mutate(tree_circ_m = '')
+
+filtered_pers_ub_aspects <- pers_ub_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time) %>%
+  mutate(site = "pers_unburned")
+
+filtered_trans_b_aspects <- trans_b_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time) %>%
+  mutate(site = "trans_burned")
+
+filtered_trans_ub_aspects <- trans_ub_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time) %>%
+  mutate(site = "trans_unburned")
+```
+
+```{r}
+#creating one compiled dataframe that has all tree temps in it
+
+all_treetemps <- bind_rows(filtered_pers_b_aspects, filtered_pers_ub_aspects, filtered_trans_b_aspects, filtered_trans_ub_aspects)
+```
+
+# RL for trees Calculations
+
+Create a 15 min Rl(in) calculation for trees based on the tree temp
+
+```{r}
+# Constants
+stefan_boltzmann_constant <- 5.67e-8
+emissivity <- 0.97
+
+# Calculate incoming longwave radiation
+all_treetemps <- all_treetemps %>%
+  mutate(
+    temp_k= temp + 273.15, # Convert temperature to Kelvin
+    tree_RL_in = emissivity * stefan_boltzmann_constant * (temp_k^4) # Calculate longwave radiation
+  )
+```
