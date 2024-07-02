@@ -75,7 +75,7 @@ persub_wx_15min <- read_excel("nsf/pers_unburned/pers_unburned_wx_15min_composit
 ##transitional
 transb_wx_15min <- read_excel("nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
 
-transub_wx_15min <- read_excel("nsf/trans_unburned/trans_unburned_wx_20240529.xlsx") %>%
+transub_wx_15min <- read_excel("nsf/trans_unburned/trans_ub_wx_composite.xlsx") %>%
   #convert 5 min timestep to 15 minute timestep
   # Ensure the timestamp column is in datetime format
   mutate(TIMESTAMP = ymd_hms(TIMESTAMP)) %>%
@@ -87,12 +87,12 @@ transub_wx_15min <- read_excel("nsf/trans_unburned/trans_unburned_wx_20240529.xl
 summarize(across(where(is.numeric), mean, na.rm = TRUE), .groups = 'drop') %>%  # Rename 'interval' to 'datetime' and remove the original 'datetime' column
   rename(datetime = interval) %>%
   #renaming columns to match trans/pers burned
-  rename(Batt_volt = BattVolt_Avg) %>%
+  rename(Batt_volt = BattV_Avg) %>%
   rename(AirTC_Avg = AirTemp_Avg) %>%
   rename(RH = RH_Avg) %>%
   rename(WS_ms_Avg = WindSpeed) %>%
-  #no snow depth data from trans_ub weather station
-  select(datetime, RECORD, Batt_volt, AirTC_Avg, WS_ms_Avg, WindDir, RH, HrlySolRad_Avg, HrlySolRadOut_Avg,  everything())
+  rename(SnowDepth_m = SnowDepth_Avg) %>%
+  select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
   
 #writing the 15min trans_ub weather to the n-drive
 write.xlsx(transub_wx_15min, "nsf/trans_unburned/trans_unburned_wx_15min_r.xlsx")
@@ -111,6 +111,8 @@ transb_wx_15min <- transb_wx_15min %>%
   rename(SWalbedo_Avg = SW_albedo) %>%
   #reordering dataframe
   select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
+
+write.xlsx(transb_wx_15min, "nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
 
 #reordering persistent weather station data
 ##pers burned
