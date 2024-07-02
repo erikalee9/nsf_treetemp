@@ -158,7 +158,10 @@ filtered_trans_b_aspects <- trans_b_aspects %>%
 
 filtered_trans_ub_aspects <- trans_ub_aspects %>%
   filter(datetime >= start_time & datetime <= end_time)
+```
 
+```{r}
+#setting consistent timeframe for weather data
 #filtered weather dataframes
 filtered_persb_wx_15min <- persb_wx_15min %>%
   filter(datetime >= start_time & datetime <= end_time) %>%
@@ -507,7 +510,6 @@ print(transb_gbdb_diff_plot)
 ```
 
 ```{r}
-Temperature Differences by Tree - south minus north aspect
 #combinging north and south plots
 combined_bytree_aspect_treetemp_plots <- persb_gbdb_diff_plot + transb_gbdb_diff_plot + plot_layout(nrow = 1) + plot_annotation(title = "Temperature Differences by Tree - south minus north aspect")
 
@@ -522,3 +524,97 @@ ggsave("combined_bytree_aspect_treetemp_plots.png", plot = combined_bytree_aspec
 -   Consistent Boxes: Similar boxes indicate that the general trend and variability within the middle 50% of the data are consistent across different aspects.
 
 -   Many Outliers: The numerous outliers highlight that there are frequent instances of temperature differences that are much higher or lower than the typical range. This could point to specific factors or conditions that cause these deviations.
+
+# Cutting timeframe
+
+## Creating day-only dataframes
+
+```{r}
+#persistent daytime dataframes
+dt_pers_b_aspects <- filtered_pers_b_aspects %>%
+  filter(hour(datetime) >= 6 & hour(datetime) <= 21)
+
+dt_pers_ub_aspects <- filtered_pers_ub_aspects %>%
+  filter(hour(datetime) >= 6 & hour(datetime) <= 21)
+
+#transitional daytime dataframes
+dt_trans_b_aspects <- filtered_trans_b_aspects %>%
+  filter(hour(datetime) >= 6 & hour(datetime) <= 21)
+
+dt_trans_ub_aspects <- filtered_trans_ub_aspects %>%
+  filter(hour(datetime) >= 6 & hour(datetime) <= 21)
+```
+
+## Plotting daytime DB/GB differencing
+
+### Persistent Zone
+
+```{r}
+#manipulating the dataset to only be hours between 6 am and 9 pm MST
+dt_persb_north_diff_long <- persb_north_diff_long %>%
+  filter(hour(datetime) >= 6 & hour(datetime) <= 21)
+
+dt_persb_south_diff_long <- persb_south_diff_long %>%
+  filter(hour(datetime) >= 6 & hour(datetime) <= 21)
+
+#plotting
+dt_persb_north_diff_plot <- ggplot(dt_persb_north_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Daytime North Aspect",
+       x = "Comparison",
+       y = "Temperature Difference (°C)",
+       fill = "Tree Comparison")
+
+print(dt_persb_north_diff_plot)
+
+dt_persb_south_diff_plot <- ggplot(dt_persb_south_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Daytime South Aspect",
+       x = "Comparison",
+       y = "Temperature Difference (°C)",
+       fill = "Tree Comparison")
+
+print(dt_persb_south_diff_plot)
+```
+
+## Plotting daytime aspect differencing
+
+### Persistent Zone
+
+```{r}
+#creating new dataframe with only daytime hours
+dt_persb_gbdb_combined_data <- persb_gbdb_combined_data %>%
+  filter(hour(datetime) >= 6 & hour(datetime) <= 21)
+
+#plotting
+dt_persb_gbdb_diff_plot <- ggplot(dt_persb_gbdb_combined_data, aes(x = comparison, y = difference, fill = treename)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Daytime Persistent Zone",
+       x = "Comparison",
+       y = "Temperature Difference (°C)",
+       fill = "Tree Name")
+
+print(dt_persb_gbdb_diff_plot)
+```
+
+Transitional Zone
+
+```{r}
+#creating new dataframe with only daytime hours
+dt_transb_gbdb_combined_data <- transb_gbdb_combined_data %>%
+  filter(hour(datetime) >= 6 & hour(datetime) <= 21)
+
+#plotting
+dt_transb_gbdb_diff_plot <- ggplot(dt_transb_gbdb_combined_data, aes(x = comparison, y = difference, fill = treename)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Daytime Transitional Zone",
+       x = "Comparison",
+       y = "Temperature Difference (°C)",
+       fill = "Tree Name")
+
+print(dt_transb_gbdb_diff_plot)
+```
