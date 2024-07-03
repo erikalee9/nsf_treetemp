@@ -27,7 +27,6 @@ library(htmlwidgets)
 library(RColorBrewer)
 library(patchwork)
 
-
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
 
@@ -67,14 +66,7 @@ trans_ub_aspects <- read_excel("nsf/105E_trans_unburned/105E_trans_ub_aspects.xl
 ```
 
 ```{r}
-#calling in weather station data from n-drive
-##persistent zone
-persb_wx_15min <- read_excel("nsf/pers_burned/pers_burned_wx_15min_r.xlsx")
-
-persub_wx_15min <- read_excel("nsf/pers_unburned/pers_unburned_wx_15min_composite.xlsx")
-
-##transitional
-transb_wx_15min <- read_excel("nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
+#manipulating trans unburned weather station data - ONLY run if you add new data to the trans_unburned composite excel sheet
 
 transub_wx_15min <- read_excel("nsf/trans_unburned/trans_ub_wx_composite.xlsx") %>%
   #convert 5 min timestep to 15 minute timestep
@@ -99,6 +91,19 @@ summarize(across(where(is.numeric), mean, na.rm = TRUE), .groups = 'drop') %>%  
 write.xlsx(transub_wx_15min, "nsf/trans_unburned/trans_unburned_wx_15min_r.xlsx")
 ```
 
+```{r}
+#calling in weather station data from n-drive
+##persistent zone
+persb_wx_15min <- read_excel("nsf/pers_burned/pers_burned_wx_15min_r.xlsx")
+
+persub_wx_15min <- read_excel("nsf/pers_unburned/pers_unburned_wx_15min_composite.xlsx")
+
+##transitional
+transb_wx_15min <- read_excel("nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
+
+transub_wx_15min <- read_excel("nsf/trans_unburned/trans_ub_wx_15min_r.xlsx")
+```
+
 ### Renaming weather dataframe columns so they match
 
 ```{r}
@@ -108,7 +113,7 @@ transb_wx_15min <- transb_wx_15min %>%
   rename(RH = RH_percent) %>%
   rename(WS_ms_Avg = `WS_m/s`) %>%
   rename(WindDir = WindDir_deg) %>%
-  rename(NR_Avg = Net_Rad_Avg) %>%
+  rename(NR_Avg = RN_Avg) %>%
   rename(SWalbedo_Avg = SW_albedo) %>%
   #reordering dataframe
   select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
@@ -124,6 +129,8 @@ persb_wx_15min <- persb_wx_15min %>%
   #applying offset to snow depth column for the pers_burned zone
   mutate(SnowDepth_m = (SnowDepth_m-0.03)) %>%
   select(datetime,TIMESTAMP, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything())
+
+write.xlsx(persb_wx_15min, "nsf/pers_burned/pers_burned_wx_15min_r.xlsx")
 
 ##pers unburned
 persub_wx_15min <- persub_wx_15min %>%
@@ -245,7 +252,11 @@ persb_north_diff_data <- filtered_pers_b_aspects %>%
 
 # Reshape data to long format
 persb_north_diff_long <- persb_north_diff_data %>%
-  pivot_longer(cols = starts_with("gb"), names_to = "comparison", values_to = "difference")
+  pivot_longer(cols = starts_with("gb"), names_to = "comparison", values_to = "difference") %>%
+  #adding in a zone and a burn status for later dataframe combinations
+  mutate(burn_status = "burned") %>%
+  mutate(zone = "persistent") %>%
+  mutate(aspect = "north")
 
 # Plotting the boxplots
 persb_north_diff_plot <- ggplot(persb_north_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
@@ -278,7 +289,11 @@ persb_south_diff_data <- filtered_pers_b_aspects %>%
 
 # Reshape data to long format
 persb_south_diff_long <- persb_south_diff_data %>%
-  pivot_longer(cols = starts_with("gb"), names_to = "comparison", values_to = "difference")
+  pivot_longer(cols = starts_with("gb"), names_to = "comparison", values_to = "difference") %>%
+  #adding in a zone and a burn status for later dataframe combinations
+  mutate(burn_status = "burned") %>%
+  mutate(zone = "persistent") %>%
+  mutate(aspect = "south")
 
 # Plotting the boxplots
 persb_south_diff_plot <- ggplot(persb_south_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
@@ -325,7 +340,11 @@ transb_north_diff_data <- filtered_trans_b_aspects %>%
 
 # Reshape data to long format
 transb_north_diff_long <- transb_north_diff_data %>%
-  pivot_longer(cols = starts_with("gb"), names_to = "comparison", values_to = "difference")
+  pivot_longer(cols = starts_with("gb"), names_to = "comparison", values_to = "difference") %>%
+  #adding in a zone and a burn status for later dataframe combinations
+  mutate(burn_status = "burned") %>%
+  mutate(zone = "transitional") %>%
+  mutate(aspect = "north")
 
 # Plotting the boxplots
 transb_north_diff_plot <- ggplot(transb_north_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
@@ -356,7 +375,11 @@ transb_south_diff_data <- filtered_trans_b_aspects %>%
 
 # Reshape data to long format
 transb_south_diff_long <- transb_south_diff_data %>%
-  pivot_longer(cols = starts_with("gb"), names_to = "comparison", values_to = "difference")
+  pivot_longer(cols = starts_with("gb"), names_to = "comparison", values_to = "difference") %>%
+  #adding in a zone and a burn status for later dataframe combinations
+  mutate(burn_status = "burned") %>%
+  mutate(zone = "transitional") %>%
+  mutate(aspect = "south")
 
 # Plotting the boxplots
 transb_south_diff_plot <- ggplot(transb_south_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
@@ -378,6 +401,11 @@ transb_combined_aspectdiff_treetemp_plots
 
 #saving combined plot
 ggsave("transb_combined_aspectdiff_treetemp_plots.png", plot = transb_combined_aspectdiff_treetemp_plots , width = 8, height = 10, dpi = 300, bg = "white")
+```
+
+```{r}
+#creating a combined dataframe for the db-gb comparisons
+full_dbgb_comparisons_data <- bind_rows(persb_north_diff_long, persb_south_diff_long, transb_north_diff_long, transb_south_diff_long)
 ```
 
 ## Differencing by Individual Tree Aspect
@@ -520,6 +548,31 @@ combined_bytree_aspect_treetemp_plots
 
 #saving combined plot
 ggsave("combined_bytree_aspect_treetemp_plots.png", plot = combined_bytree_aspect_treetemp_plots , width = 10, height = 6, dpi = 300, bg = "white")
+```
+
+```{r}
+#creating a full dataframe for both pers and transitional data for later plotting of the south-north comparison
+
+##individually editing pers and trans combined data before combining both dataframes
+# Add new column 'burn_status' based on conditions, and new column 'zone' based on location
+persb_gbdb_combined_data <- persb_gbdb_combined_data %>%
+  mutate(burn_status = case_when(
+    startsWith(treename, "gb") ~ "green_burned",
+    startsWith(treename, "db") ~ "dead_burned",
+    TRUE ~ NA_character_  # Handle other cases if needed
+  )) %>%
+  mutate(zone = "persistent")
+
+transb_gbdb_combined_data <- transb_gbdb_combined_data %>%
+  mutate(burn_status = case_when(
+    startsWith(treename, "gb") ~ "green_burned",
+    startsWith(treename, "db") ~ "dead_burned",
+    TRUE ~ NA_character_  # Handle other cases if needed
+  )) %>%
+  mutate(zone = "transitional")
+
+#creating a full combined dataset
+full_southnorth_comparison_data <- bind_rows(persb_gbdb_combined_data, transb_gbdb_combined_data)
 ```
 
 **Interpretation of box plots**
