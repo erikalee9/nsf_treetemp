@@ -133,11 +133,143 @@ all_treetemps <- all_treetemps %>%
 
 ```{r}
 # Aggregate energy (J) to get daily total energy in Joules
-daily_energy_J <- all_treetemps %>%
-  group_by(date) %>%
-  summarize(daily_energy_J = sum(energy_J, na.rm = TRUE))
-
-# Display the resulting dataframe with scientific notation
-daily_energy_J <- daily_energy_J %>%
-  mutate(daily_energy_J_sci = scientific(daily_energy_J))
+daily_energy_MJ <- all_treetemps %>%
+  group_by(date, tree_name, site, aspect) %>%
+  summarize(daily_energy_J = sum(energy_J, na.rm = TRUE)) %>%
+  ungroup() %>%
+  # Removing charred and uncharred aspects
+  filter(aspect %in% c("north", "south")) %>%
+  # Convert Joules to Megajoules
+  mutate(daily_energy_MJ = daily_energy_J / 1e6) %>%
+  select(-daily_energy_J)
 ```
+
+# Plotting RL
+
+```{r}
+#plotting the sum!
+# Ensure daily_energy_J is numeric
+daily_energy_J <- daily_energy_MJ %>%
+  mutate(daily_energy_J = as.numeric(daily_energy_J))
+
+custom_palette <- c(brewer.pal(9, "Set1"), "black")
+
+daily_RL_plot <- ggplot(daily_energy_MJ, aes(x = date, y = daily_energy_MJ, color = tree_name, shape = factor(aspect))) +
+  geom_point(size = 3) +  # Use size 3 for points
+  facet_wrap(~ site, scales = "free_y") +
+  scale_color_manual(values = custom_palette) +  # Using custom palette with 9 colors for tree_name
+  scale_shape_manual(values = c(15, 16, 17, 18, 19, 20)) +  # Define shapes for each aspect
+  labs(x = "Date", y = "Daily Energy (Joules)", color = "Tree Name", shape = "Aspect") +
+  theme_minimal() +
+  scale_y_continuous(breaks = seq(min(daily_energy_MJ$daily_energy_J), max(daily_energy_MJ$daily_energy_J), length.out = 10))
+
+print(daily_RL_plot)
+```
+
+```{r}
+#plotting the mean!
+##mean daily dataframe
+mean_daily_energy_J <- all_treetemps %>%
+  group_by(date, tree_name, site, aspect) %>%
+  summarize(daily_energy_J = mean(energy_J, na.rm = TRUE)) %>%
+  ungroup()
+
+mean_daily_RL_plot <- ggplot(mean_daily_energy_J, aes(x = date, y = daily_energy_J, color = tree_name, shape = factor(aspect))) +
+  geom_point(size = 3) +  # Use size 3 for points
+  facet_wrap(~ site, scales = "free_y") +
+  scale_color_manual(values = custom_palette) +  # Using custom palette with 9 colors for tree_name
+  scale_shape_manual(values = c(15, 16, 17, 18, 19, 20)) +  # Define shapes for each aspect
+  labs(x = "Date", y = "Daily Energy (Joules)", color = "Tree Name", shape = "Aspect") +
+  theme_minimal() +
+  scale_y_continuous(breaks = seq(min(daily_energy_J$daily_energy_J), max(daily_energy_J$daily_energy_J), length.out = 10))
+
+print(daily_RL_plot)
+```
+
+```{r}
+#coloring only by aspect and not doing a shape
+
+custom_palette <- c("north" = "darkgreen", "south" = "red")
+
+aspect_mean_daily_energy_plot <- ggplot(daily_energy_J, aes(x = date, y = daily_energy_J, color = aspect)) +
+  geom_point(size = 3, alpha = 0.7) +  # Use size 3 for points
+  facet_wrap(~ site, scales = "free_y") +
+  scale_color_manual(values = custom_palette) +  # Using custom palette with 10 colors for aspect
+  labs(x = "Date", y = "Daily Energy (Joules)", color = "Aspect") +
+  ggtitle("Daily Mean Energy by Aspect and Site") +  # Add title to the plot
+  theme_minimal() +
+  scale_y_continuous(breaks = seq(min(daily_energy_J$daily_energy_J), max(daily_energy_J$daily_energy_J), length.out = 10))
+
+print(aspect_mean_daily_energy_plot)
+```
+
+```{r}
+#saving aspect plot
+#saving combined plot
+ggsave("aspect_mean_daily_energy_plot.png", plot = aspect_mean_daily_energy_plot, width = 10, height = 6, dpi = 300, bg = "white")
+```
+
+```{r}
+#converting into a plotly graph and saving as an html
+
+plotly_aspect_mean_daily_energy <- ggplotly(aspect_mean_daily_energy_plot)
+
+plotly_aspect_mean_daily_energy
+
+#save as a html website link
+htmlwidgets::saveWidget(plotly_aspect_mean_daily_energy, "plotly_aspect_mean_daily_energy.html")
+```
+
+# Plotting RL Daily Average for sites
+
+This is plotting the average of the north and south RL energy for each zone/site/burnstatus
+
+```{r}
+#creating daily average dataframe
+average_daily_energy_by_site <- daily_energy_MJ %>%
+  group_by(date, site) %>%
+  summarize(average_energy_MJ = mean(daily_energy_MJ, na.rm = TRUE)) %>%
+  ungroup() %>%
+  #adding in columns for linetype purposes when plotting
+  mutate(
+    burned_status = if_else(grepl("_burned", site), "burned", "unburned"),
+    zone = case_when(
+      grepl("^pers", site) ~ "persistent",
+      grepl("^trans", site) ~ "transitional",
+      TRUE ~ NA_character_
+    )
+  )
+
+##this is giving me the daily average of the north and south aspect outgoing Radiation by site (trans/pers burned/unburned), in megajoules
+```
+
+```{r}
+#setting manual colors for sites
+burned_colors <- c("burned" = "red3", "unburned" = "dodgerblue3")
+
+#plotting daily average
+avg_daily_energy <- ggplot(average_daily_energy_by_site, aes(x = date, y = average_energy_MJ, color = burned_status, linetype = zone)) +
+  geom_line() +
+  labs(title = "Average daily RLout by burn status and zone",
+       x = "Date",
+       y = "Average RL out (MJ)",
+       color = "Burn Status",
+       linetype = "Zone") +
+  theme_minimal() +
+  scale_color_manual(values = burned_colors)
+
+avg_daily_energy
+```
+
+```{r}
+#converting to a plotly
+plotly_avg_daily_energy <- ggplotly(avg_daily_energy)
+
+#saving ggplot
+ggsave("avg_daily_energy.png", plot = avg_daily_energy, width = 10, height = 6, dpi = 300, bg = "white")
+
+#saving plotly as html
+htmlwidgets::saveWidget(plotly_avg_daily_energy, "plotly_avg_daily_energy.html")
+```
+
+The above plot looks good. Consider splitting it into a day and night plot?
