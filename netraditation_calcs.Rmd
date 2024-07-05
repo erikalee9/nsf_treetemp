@@ -128,13 +128,15 @@ all_treetemps <- all_treetemps %>%
   #W is = to J/s
   mutate(W = tree_RL_in*m2) %>%
   # Convert instantaneous power (W) to energy (J) for each 15-minute interval
-  mutate(energy_J = W * time_interval_seconds)
+  mutate(energy_J = W * time_interval_seconds) %>%
+  #adding in a time column for day/night parsing later
+  mutate(time = format(datetime, "%H:%M:%S") %>% hms())
 ```
 
 ```{r}
 # Aggregate energy (J) to get daily total energy in Joules
 daily_energy_MJ <- all_treetemps %>%
-  group_by(date, tree_name, site, aspect) %>%
+  group_by(date, time, tree_name, site, aspect) %>%
   summarize(daily_energy_J = sum(energy_J, na.rm = TRUE)) %>%
   ungroup() %>%
   # Removing charred and uncharred aspects
@@ -149,8 +151,8 @@ daily_energy_MJ <- all_treetemps %>%
 ```{r}
 #plotting the sum!
 # Ensure daily_energy_J is numeric
-daily_energy_J <- daily_energy_MJ %>%
-  mutate(daily_energy_J = as.numeric(daily_energy_J))
+daily_energy_MJ <- daily_energy_MJ %>%
+  mutate(daily_energy_MJ = as.numeric(daily_energy_MJ))
 
 custom_palette <- c(brewer.pal(9, "Set1"), "black")
 
@@ -227,7 +229,7 @@ This is plotting the average of the north and south RL energy for each zone/site
 ```{r}
 #creating daily average dataframe
 average_daily_energy_by_site <- daily_energy_MJ %>%
-  group_by(date, site) %>%
+  group_by(date, time, site) %>%
   summarize(average_energy_MJ = mean(daily_energy_MJ, na.rm = TRUE)) %>%
   ungroup() %>%
   #adding in columns for linetype purposes when plotting
@@ -273,3 +275,49 @@ htmlwidgets::saveWidget(plotly_avg_daily_energy, "plotly_avg_daily_energy.html")
 ```
 
 The above plot looks good. Consider splitting it into a day and night plot?
+
+# Day/Night Plots
+
+## Day Plots
+
+```{r}
+#setting a day and night time 
+daytime <- hms("08:30:00")
+nighttime <- hms("17:30:00")
+```
+
+```{r}
+#parsing out daytime/nightime dataframe
+dtnt_max_energy_bysite <- average_daily_energy_by_site %>%
+  #adding in a day/night column to facet wrap later
+  mutate(phase = case_when(
+    time >= daytime & time <= nighttime ~ "day",
+    time <= daytime | time >= nighttime ~ "night",
+    TRUE ~ NA_character_  # If none of the conditions match, handle accordingly
+  )) %>%
+  group_by(date, site, phase, burned_status, zone) %>%
+  summarize(daily_max_energy_MJ = max(average_energy_MJ, na.rm = TRUE))
+```
+
+```{r}
+#plotting daytime/nighttime plot
+dtnt_avg_energy_plot <- ggplot(dtnt_max_energy_bysite, aes(x = date, y = daily_max_energy_MJ, color = burned_status, linetype = zone)) +
+  geom_line() +   # Add lines
+  labs(title = "Maximum RLout by day/night",
+       x = "Date",
+       y = "Max RL out (MJ)",
+       color = "Burn Status",
+       linetype = "Zone") +
+  theme_minimal() +
+  facet_wrap(~ phase) +
+  scale_color_manual(values = burned_colors)
+
+dtnt_avg_energy_plot
+```
+
+```{r}
+#converting to a plotly
+plotly_dtnt_avg_energy <- ggplotly(dtnt_avg_energy_plot)
+
+plotly_dtnt_avg_energy
+```
