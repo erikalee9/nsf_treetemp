@@ -581,6 +581,156 @@ full_southnorth_comparison_data <- bind_rows(persb_gbdb_combined_data, transb_gb
 
 -   Many Outliers: The numerous outliers highlight that there are frequent instances of temperature differences that are much higher or lower than the typical range. This could point to specific factors or conditions that cause these deviations.
 
+# Calculating Statistics between gb/db and north/south
+
+```{r}
+#creating a combined new dataframe from original dataframes with individual tree temps - May not want a full combined dataset!
+full_burned_combined_data <- bind_rows(filtered_pers_b_aspects, filtered_trans_b_aspects)
+
+full_unburned_combined_data <- bind_rows(filtered_pers_ub_aspects, filtered_trans_ub_aspects)
+```
+
+## Persb - S/N aspect percent difference
+
+```{r}
+## I am not sure I need to do any of this!
+
+#now need to do the calculations to get % difference- decide on day/time step to do this at, and if I am doing % difference for all three combinations? Maybe easier to start with n-s combination? 
+
+##I think that this is not going to work with the full_burned data, I think it has to be by zone, but I could be wrong? 
+full_pers_ns_data <- full_burned_combined_data %>%
+  filter(!(aspect %in% c("charred", "uncharred"))) %>%
+  filter(zone == "persistent") %>%
+  #remove gb_w tree, so there is two gb and two db
+  filter(!(tree_name == "gb_w"))
+
+#calculating percent differencing using a loop
+percent_diff <- numeric()
+tree_names <- character()
+
+for (i in seq(1, nrow(full_pers_ns_data), by = 2)) {
+  if (i + 1 <= nrow(full_pers_ns_data)) {  # Check if there's a next pair to calculate
+    diff_percent <- ((full_pers_ns_data$temp[i + 1] - full_pers_ns_data$temp[i]) / full_pers_ns_data$temp[i]) * 100
+    percent_diff <- c(percent_diff, diff_percent)
+    tree_names <- c(tree_names, full_pers_ns_data$tree_name[i])  # Assuming tree_name is in full_pers_ns_data
+  }
+}
+
+# Create a dataframe with percent differences and tree_names
+persb_sn_percent_diff <- data.frame(
+  datetime = full_pers_ns_data$datetime[seq(1, nrow(full_pers_ns_data), by = 2)],  # Select datetime for first row of each pair
+  tree_name = tree_names,
+  percent_diff = percent_diff
+)
+
+#creating a daily mean % diff dataframe
+##Convert datetime column to POSIXct if not already
+persb_sn_percent_diff$datetime <- as.POSIXct(persb_sn_percent_diff$datetime)
+
+# Create a new column for date
+daily_mean_persb_sn_percent_diff <- df_percent_diff %>%
+  mutate(date = as.Date(datetime)) %>%  # Create a date column
+  group_by(date, tree_name) %>%
+  summarise(mean_percent_diff = mean(percent_diff, na.rm = TRUE))
+```
+
+\*\* the above process worked, now I just need to repeat it for the transitional zone.
+
+Creating a clean dataframe with columns for north and south temps, instead of rows (wide format)
+
+```{r}
+#persistent burned 
+
+full_pers_ns_data <- full_burned_combined_data %>%
+  filter(!(aspect %in% c("charred", "uncharred"))) %>%
+  filter(zone == "persistent") %>%
+  #remove gb_w tree, so there is two gb and two db
+  filter(!(tree_name == "gb_w"))
+
+
+clean_persb_ns_temps <- full_pers_ns_data %>%
+  group_by(datetime, tree_name, burn_status, zone) %>%
+  pivot_wider(names_from = aspect, values_from = temp) %>%
+  rename(north_temp = north, south_temp = south) %>%
+  summarize(north_temp, south_temp)
+
+##creatinging individual dataframes for north and south temps, then going to rebind them to get rid of the NA issues
+north_persb_temps <- clean_persb_ns_temps %>%
+  select(-south_temp) %>%
+  filter(!is.na(north_temp))# Filter out rows with NA
+
+south_persb_temps <- clean_persb_ns_temps %>%
+  select(-north_temp) %>%
+  filter(!is.na(south_temp))
+
+##joining north/south dataframes
+final_persb_ns_temps <- north_persb_temps %>%
+  inner_join(south_persb_temps)
+```
+
+```{r}
+#calculating statistics
+##temp difference
+final_persb_ns_temps <- final_persb_ns_temps %>%
+  mutate(temp_diff = south_temp - north_temp) %>%
+  #percent difference - absolute difference (no negatives)
+   mutate(percent_diff = abs(100*(temp_diff/mean(south_temp, north_temp))))
+
+stats_persb_ns_temp <- final_persb_ns_temps %>%
+  filter(!is.na(temp_diff) & temp_diff != 0) %>%  # Filter out NA and zero values
+  summarise(
+    avg_diff = mean(temp_diff, na.rm = TRUE),  # Calculate average difference
+    sd_diff = sd(temp_diff, na.rm = TRUE),     # Calculate standard deviation for diagnostics
+    cv_diff = ifelse(avg_diff != 0, sd_diff / avg_diff * 100, NA)  # Calculate CV, handling NA
+  )
+```
+
+## Transb - S/N aspect
+
+```{r}
+#transitional burned 
+
+full_trans_ns_data <- full_burned_combined_data %>%
+  filter(!(aspect %in% c("charred", "uncharred"))) %>%
+  filter(zone == "transitional")
+
+clean_transb_ns_temps <- full_trans_ns_data %>%
+  group_by(datetime, tree_name, burn_status, zone) %>%
+  pivot_wider(names_from = aspect, values_from = temp) %>%
+  rename(north_temp = north, south_temp = south) %>%
+  summarize(north_temp, south_temp)
+
+##creatinging individual dataframes for north and south temps, then going to rebind them to get rid of the NA issues
+north_transb_temps <- clean_transb_ns_temps %>%
+  select(-south_temp) %>%
+  filter(!is.na(north_temp))# Filter out rows with NA
+
+south_transb_temps <- clean_transb_ns_temps %>%
+  select(-north_temp) %>%
+  filter(!is.na(south_temp))
+
+##joining north/south dataframes
+final_transb_ns_temps <- north_transb_temps %>%
+  inner_join(south_transb_temps)
+```
+
+```{r}
+#calculating statistics
+##temp difference
+final_tranb_ns_temps <- final_transb_ns_temps %>%
+  mutate(temp_diff = south_temp - north_temp) %>%
+  #percent difference - absolute difference (no negatives)
+   mutate(percent_diff = abs(100*(temp_diff/mean(south_temp, north_temp))))
+
+stats_transb_ns_temp <- final_transb_ns_temps %>%
+  filter(!is.na(temp_diff) & temp_diff != 0) %>%  # Filter out NA and zero values
+  summarise(
+    avg_diff = mean(temp_diff, na.rm = TRUE),  # Calculate average difference
+    sd_diff = sd(temp_diff, na.rm = TRUE),     # Calculate standard deviation for diagnostics
+    cv_diff = ifelse(avg_diff != 0, sd_diff / avg_diff * 100, NA)  # Calculate CV, handling NA
+  )
+```
+
 # Cutting timeframe
 
 ## Creating day-only dataframes
