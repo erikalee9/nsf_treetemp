@@ -26,6 +26,7 @@ library(rstatix)
 library(htmlwidgets)
 library(RColorBrewer)
 library(patchwork)
+library(xlsx)
 
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
@@ -671,18 +672,67 @@ final_persb_ns_temps <- north_persb_temps %>%
 ```{r}
 #calculating statistics
 ##temp difference
-final_persb_ns_temps <- final_persb_ns_temps %>%
-  mutate(temp_diff = south_temp - north_temp) %>%
-  #percent difference - absolute difference (no negatives)
-   mutate(percent_diff = abs(100*(temp_diff/mean(south_temp, north_temp))))
 
-stats_persb_ns_temp <- final_persb_ns_temps %>%
-  filter(!is.na(temp_diff) & temp_diff != 0) %>%  # Filter out NA and zero values
-  summarise(
-    avg_diff = mean(temp_diff, na.rm = TRUE),  # Calculate average difference
-    sd_diff = sd(temp_diff, na.rm = TRUE),     # Calculate standard deviation for diagnostics
-    cv_diff = ifelse(avg_diff != 0, sd_diff / avg_diff * 100, NA)  # Calculate CV, handling NA
+# Compute the overall mean and standard deviation of temp_diff
+mean_diff <- mean(final_persb_ns_temps$south_temp - final_persb_ns_temps$north_temp, na.rm = TRUE)
+
+sd_diff <- sd(final_persb_ns_temps$south_temp - final_persb_ns_temps$north_temp, na.rm = TRUE)
+
+
+# Add new columns to the dataframe
+final_persb_ns_temps <- final_persb_ns_temps %>%
+  mutate(
+    avg_temp = (south_temp + north_temp) / 2,
+    temp_diff = south_temp - north_temp,
+    percent_diff = abs(100 * temp_diff / avg_temp),
+    avg_diff = mean_diff,
+    coeff_var = (sd_diff / abs(mean_diff)) * 100
+  ) 
+  #percent difference - absolute difference (no negatives)
+  #calculating the avg (mean) temp
+```
+
+Creating a daily dataframe and analysis
+
+```{r}
+# Convert timestamp to Date if not already done
+final_persb_ns_temps <- final_persb_ns_temps %>%
+  mutate(date = as.Date(datetime))
+
+#aggregate data
+daily_persb_ns_avg <- final_persb_ns_temps %>%
+  group_by(date) %>%
+  summarize(
+    avg_south_temp = mean(south_temp, na.rm = TRUE),
+    avg_north_temp = mean(north_temp, na.rm = TRUE),
+    avg_temp = mean(avg_temp, na.rm = TRUE),  # Assuming avg_temp is already calculated
+    avg_diff = mean(temp_diff, na.rm = TRUE),  # Assuming mean_diff is already calculated
+    percent_diff = mean(percent_diff, na.rm = TRUE),
+    coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming sd_diff and mean_diff are already calculated
+    # Add other columns as needed
   )
+```
+
+Creating a monthly dataframe and analysis
+
+```{r}
+# Convert datetime to Date if not already done
+final_persb_ns_temps <- final_persb_ns_temps %>%
+  mutate(month = format(datetime, "%Y-%m"))
+
+# Calculate monthly averages for all columns
+monthly_persb_ns_avg <- final_persb_ns_temps %>%
+  group_by(month) %>%
+  summarize(
+    avg_south_temp = mean(south_temp, na.rm = TRUE),
+    avg_north_temp = mean(north_temp, na.rm = TRUE),
+    avg_temp = mean(avg_temp, na.rm = TRUE),  # Assuming avg_temp is already calculated
+    avg_diff = mean(temp_diff, na.rm = TRUE),  # Assuming mean_diff is already calculated
+    percent_diff = mean(percent_diff, na.rm = TRUE),
+    coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming sd_diff and mean_diff are already calculated
+    # Add other columns as needed
+  ) %>%
+  mutate(zone = "persistent")
 ```
 
 ## Transb - S/N aspect
@@ -715,20 +765,80 @@ final_transb_ns_temps <- north_transb_temps %>%
 ```
 
 ```{r}
-#calculating statistics
-##temp difference
-final_tranb_ns_temps <- final_transb_ns_temps %>%
-  mutate(temp_diff = south_temp - north_temp) %>%
-  #percent difference - absolute difference (no negatives)
-   mutate(percent_diff = abs(100*(temp_diff/mean(south_temp, north_temp))))
 
-stats_transb_ns_temp <- final_transb_ns_temps %>%
-  filter(!is.na(temp_diff) & temp_diff != 0) %>%  # Filter out NA and zero values
-  summarise(
-    avg_diff = mean(temp_diff, na.rm = TRUE),  # Calculate average difference
-    sd_diff = sd(temp_diff, na.rm = TRUE),     # Calculate standard deviation for diagnostics
-    cv_diff = ifelse(avg_diff != 0, sd_diff / avg_diff * 100, NA)  # Calculate CV, handling NA
+# Compute the overall mean and standard deviation of temp_diff
+mean_diff <- mean(final_transb_ns_temps$south_temp - final_transb_ns_temps$north_temp, na.rm = TRUE)
+
+sd_diff <- sd(final_transb_ns_temps$south_temp - final_transb_ns_temps$north_temp, na.rm = TRUE)
+
+
+# Add new columns to the dataframe
+final_transb_ns_temps <- final_transb_ns_temps %>%
+  mutate(
+    avg_temp = (south_temp + north_temp) / 2,
+    temp_diff = south_temp - north_temp,
+    percent_diff = abs(100 * temp_diff / avg_temp),
+    avg_diff = mean_diff,
+    coeff_var = (sd_diff / abs(mean_diff)) * 100
+  ) 
+  #percent difference - absolute difference (no negatives)
+  #calculating the avg (mean) temp
+```
+
+Creating a daily dataframe
+
+```{r}
+# Convert timestamp to Date if not already done
+final_transb_ns_temps <- final_transb_ns_temps %>%
+  mutate(date = as.Date(datetime))
+
+#aggregate data
+daily_transb_ns_avg <- final_transb_ns_temps %>%
+  group_by(date) %>%
+  summarize(
+    avg_south_temp = mean(south_temp, na.rm = TRUE),
+    avg_north_temp = mean(north_temp, na.rm = TRUE),
+    avg_temp = mean(avg_temp, na.rm = TRUE),  # Assuming avg_temp is already calculated
+    avg_diff = mean(temp_diff, na.rm = TRUE),  # Assuming mean_diff is already calculated
+    percent_diff = mean(percent_diff, na.rm = TRUE),
+    coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming sd_diff and mean_diff are already calculated
+    # Add other columns as needed
   )
+```
+
+Creating a monthly dataframe
+
+```{r}
+# Convert datetime to Date if not already done
+final_transb_ns_temps <- final_transb_ns_temps %>%
+  mutate(month = format(datetime, "%Y-%m"))
+
+# Calculate monthly averages for all columns
+monthly_transb_ns_avg <- final_transb_ns_temps %>%
+  group_by(month) %>%
+  summarize(
+    avg_south_temp = mean(south_temp, na.rm = TRUE),
+    avg_north_temp = mean(north_temp, na.rm = TRUE),
+    avg_temp = mean(avg_temp, na.rm = TRUE),  # Assuming avg_temp is already calculated
+    avg_diff = mean(temp_diff, na.rm = TRUE),  # Assuming mean_diff is already calculated
+    percent_diff = mean(percent_diff, na.rm = TRUE),
+    coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming sd_diff and mean_diff are already calculated
+    # Add other columns as needed
+  ) %>%
+  mutate(zone = "transitional")
+```
+
+## Combining Pers and Trans monthly dataframes to make a table:
+
+```{r}
+monthly_stats_byzone <- bind_rows(monthly_persb_ns_avg, monthly_transb_ns_avg) %>%
+  select(zone, everything())
+```
+
+```{r}
+#saving the dataframe as an excel spreadsheet
+write.xlsx(monthly_stats_byzone, "monthly_stats_byzone.xlsx")
+#i dragged the excel sheet from n-drive to personal folder
 ```
 
 # Cutting timeframe
@@ -824,3 +934,49 @@ dt_transb_gbdb_diff_plot <- ggplot(dt_transb_gbdb_combined_data, aes(x = compari
 
 print(dt_transb_gbdb_diff_plot)
 ```
+
+# Understanding the Statistics
+
+When you calculate an average difference between two temperatures and analyze the percent difference, average, and coefficient of variation, each metric provides different insights into your data:
+
+1.  **Percent Difference**:
+
+    -   **What it tells you**: The percent difference gives you a relative measure of the difference between the two temperatures compared to their average. It tells you how large the difference is in relation to the overall magnitude of the temperatures.
+
+    -   **Interpretation**: A high percent difference indicates a significant discrepancy between the two temperatures, whereas a low percent difference suggests that the temperatures are relatively similar.
+
+2.  **Average**:
+
+    -   **What it tells you**: The average temperature difference provides a measure of the central tendency of the differences between the two temperatures. It is the mean value of all the calculated differences.
+
+    -   **Interpretation**: This metric gives you an idea of the typical or expected difference between the temperatures. It is useful for understanding the overall trend in the temperature differences.
+
+3.  **Coefficient of Variation (CV)**:
+
+    -   **What it tells you**: The coefficient of variation is a standardized measure of dispersion of the temperature differences. It is calculated as the ratio of the standard deviation to the mean and is usually expressed as a percentage.
+
+    -   **Interpretation**: A high CV indicates that the temperature differences are highly variable, suggesting inconsistency or high variability in the temperature differences. A low CV indicates that the temperature differences are relatively consistent and stable.
+
+### Example Scenario
+
+Suppose you have two sets of temperature readings (in °C) from two different sensors or locations. After calculating the differences between the corresponding readings, you obtain the following statistics:
+
+-   **Average Difference**: 2°C
+
+-   **Percent Difference**: 10%
+
+-   **Coefficient of Variation**: 25%
+
+#### Interpretation:
+
+-   **Average Difference**: On average, there is a 2°C difference between the temperatures recorded by the two sensors or at the two locations.
+
+-   **Percent Difference**: The 10% difference indicates that the temperature difference is relatively small compared to the average temperature values of the readings.
+
+-   **Coefficient of Variation**: A CV of 25% suggests moderate variability in the temperature differences. While there is some fluctuation in the differences, it is not extremely high, indicating that the differences are somewhat consistent but not entirely uniform.
+
+In summary, these metrics together help you understand the magnitude, relative size, and variability of the temperature differences in your data.
+
+## My Understanding of the Data
+
+-   very high coefficient of variation and percent differences mean that there is a lot of variability of temperatures, even on a daily and monthly scale.
