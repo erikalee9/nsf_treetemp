@@ -1,0 +1,163 @@
+---
+title: "daynight_comparison"
+author: "Erika Lee"
+date: "2024-07-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#initial set up
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(openxlsx)
+library(plotly)
+library(rstatix)
+library(htmlwidgets)
+library(patchwork)
+library(RColorBrewer)
+
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
+
+# Loading in Dataframes
+
+```{r}
+#reading in dataframes that I need - burned
+pers_b_aspects <- read_excel("nsf/105E_pers_burned/105E_pers_b_aspects.xlsx") %>%
+  mutate(zone = "persistent")
+
+trans_b_aspects <- read_excel("nsf/105E_trans_burned/105E_trans_b_aspects.xlsx") %>%
+  mutate(zone = "transitional")
+
+pers_burned_rad_air <- read_excel("nsf/pers_burned/pers_burned_rad_air.xlsx")
+
+trans_burned_rad_air <- read_excel("nsf/trans_burned/trans_burned_rad_air.xlsx")
+
+#read in dataframes that I need - unburned
+pers_ub_aspects <- read_excel("nsf/105E_pers_unburned/105E_pers_ub_aspects.xlsx") %>%
+  mutate(zone = "persistent")
+
+trans_ub_aspects <- read_excel("nsf/105E_trans_unburned/105E_trans_ub_aspects.xlsx") %>%
+  mutate(zone = "transitional")
+```
+
+# Data Wrangling
+
+```{r}
+#setting a timeframe
+start_datetime <- ymd_hms("2024-02-02 00:00:00")
+end_datetime <- ymd_hms("2024-05-25 00:00:00")
+
+#setting a day and night time 
+daytime <- hms("08:30:00")
+nighttime <- hms("17:30:00")
+
+#creating a dataframe that has all aspect temps, and includes zone and burn status
+ns_avg_treetemp_data <- bind_rows(pers_b_aspects, trans_b_aspects, pers_ub_aspects, trans_ub_aspects) %>%
+  #creating a timeframe with the same datetimes
+  filter(datetime >= start_datetime & datetime <= end_datetime) %>% filter(aspect == c("north", "south")) %>%
+  mutate(time = hms(format(datetime, "%H:%M:%S")),  # Extract time from datetime
+         phase = case_when(
+           time >= daytime & time < nighttime ~ "day",
+           time < daytime | time >= nighttime ~ "night",
+           TRUE ~ NA_character_  # If none of the conditions match, handle accordingly
+         )) %>%
+  #creating a burn status row
+   mutate(burn_status = case_when(
+      startsWith(tree_name, "gb") ~ "green burned",
+      startsWith(tree_name, "db") ~ "dead burned",
+      startsWith(tree_name, "ub") ~ "unburned",
+      TRUE ~ "unknown"  # Default case if none of the above conditions match
+    )) %>%
+  group_by(datetime, phase, zone, burn_status, aspect) %>%
+  summarise(avg_temp = mean(temp, na.rm = TRUE)) %>%
+  ungroup()
+## this dataframe has all zones and burn statuses, as well as only north and south aspect average temps for every 15 minute increment
+
+#creating an all_averaged temps dataset (not north/south) - this is averaging the n/s temps
+all_avg_treetemp_data <- bind_rows(pers_b_aspects, trans_b_aspects, pers_ub_aspects, trans_ub_aspects) %>%
+  #creating a timeframe with the same datetimes
+  filter(datetime >= start_datetime & datetime <= end_datetime) %>% filter(aspect == c("north", "south")) %>%
+  mutate(time = hms(format(datetime, "%H:%M:%S")),  # Extract time from datetime
+         phase = case_when(
+           time >= daytime & time < nighttime ~ "day",
+           time < daytime | time >= nighttime ~ "night",
+           TRUE ~ NA_character_  # If none of the conditions match, handle accordingly
+         )) %>%
+  #creating a burn status row
+   mutate(burn_status = case_when(
+      startsWith(tree_name, "gb") ~ "green burned",
+      startsWith(tree_name, "db") ~ "dead burned",
+      startsWith(tree_name, "ub") ~ "unburned",
+      TRUE ~ "unknown"  # Default case if none of the above conditions match
+    )) %>%
+  group_by(datetime, phase, zone, burn_status) %>%
+  summarise(avg_temp = mean(temp, na.rm = TRUE)) %>%
+  ungroup()
+```
+
+```{r}
+#writing full dataframe to N-drive
+write.xlsx(ns_avg_treetemp_data, "nsf/ns_avg_treetemps.xlsx")
+
+write.xlsx(all_avg_treetemp_data,"nsf/all_avg_treetemps.xlsx")
+```
+
+# Plotting
+
+## NS differences for all avg temps
+
+```{r}
+color_palette_manual <- c("green burned" = "royalblue2", 
+                          "dead burned" = "red3",
+                          "unburned" = "#008000")
+
+dtnt_ns_avg_temps_plots <- ggplotly(
+  ggplot() +
+    geom_line(data = ns_avg_treetemp_data, aes(x = datetime, y = avg_temp, color = burn_status, linetype = aspect), alpha = 0.8) + 
+    scale_color_manual(values = color_palette_manual, name = "burn status,") +
+    facet_wrap(~zone + phase) +
+    labs(x = "Datetime", y = "Avg Temp (C)", title = "Day vs nighttime average temp by sensor aspect") +
+    scale_linetype_manual(values = c("dashed", "solid")) # Flipped the order of linetypes
+)
+
+dtnt_ns_avg_temps_plots
+```
+
+## Total Avg Temps (n/s averaged)
+
+```{r}
+#this plot shows the total average temperature of all aspects, not divided by aspects
+dtnt_all_avg_temps_plots <- ggplotly(
+  ggplot() +
+    geom_line(data = all_avg_treetemp_data, aes(x = datetime, y = avg_temp, color = burn_status, linetype = zone), alpha = 0.7) + 
+    scale_color_manual(values = color_palette_manual, name = "burn status,") +
+    facet_wrap(~phase) +
+    labs(x = "Datetime", y = "Avg Temp (C)", title = "Day vs nighttime average temp of all sensors, by zone") +
+    scale_linetype_manual(values = c("solid", "dashed")) # Flipped the order of linetypes
+)
+
+dtnt_all_avg_temps_plots
+```
+
+## Saving plotlys
+
+```{r}
+#ns plots
+htmlwidgets::saveWidget(dtnt_ns_avg_temps_plots, "daynight_northsouth_allplots.html")
+
+#all avg plots
+htmlwidgets::saveWidget(dtnt_all_avg_temps_plots, "daynight_allavg_allplots.html")
+```
+
+#next, need to look at including SWin for these plots?
