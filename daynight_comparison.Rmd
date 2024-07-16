@@ -183,6 +183,13 @@ single_avg_ns_all_treetemps <- ns_avg_treetemp_data %>%
   ungroup()
 ```
 
+```{r}
+#writing full dataframe to N-drive
+write.xlsx(single_avg_ns_all_treetemps, "nsf/single_avg_ns_all_treetemps.xlsx")
+
+write.xlsx(single_avg_all_treetemps,"nsf/single_avg_all_treetemps.xlsx")
+```
+
 ## Plotting
 
 ### NS difference for single day/night avg temp
