@@ -635,8 +635,6 @@ daily_mean_persb_sn_percent_diff <- df_percent_diff %>%
   summarise(mean_percent_diff = mean(percent_diff, na.rm = TRUE))
 ```
 
-\*\* the above process worked, now I just need to repeat it for the transitional zone.
-
 Creating a clean dataframe with columns for north and south temps, instead of rows (wide format)
 
 ```{r}
@@ -710,7 +708,9 @@ daily_persb_ns_avg <- final_persb_ns_temps %>%
     percent_diff = mean(percent_diff, na.rm = TRUE),
     coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming sd_diff and mean_diff are already calculated
     # Add other columns as needed
-  )
+  ) %>%
+  #getting rid of the one date that coinsidentaly had a 0 for the avg diff, therefore an lnf for the percent_diff column
+  filter(date != as.Date("2024-05-15"))
 ```
 
 Creating a monthly dataframe and analysis
@@ -722,6 +722,8 @@ final_persb_ns_temps <- final_persb_ns_temps %>%
 
 # Calculate monthly averages for all columns
 monthly_persb_ns_avg <- final_persb_ns_temps %>%
+  #getting rid of the one date that coinsidentaly had a 0 for the avg diff, therefore an lnf for the percent_diff column
+  filter(date != as.Date("2024-05-15")) %>%
   group_by(month) %>%
   summarize(
     avg_south_temp = mean(south_temp, na.rm = TRUE),
@@ -980,3 +982,89 @@ In summary, these metrics together help you understand the magnitude, relative s
 ## My Understanding of the Data
 
 -   very high coefficient of variation and percent differences mean that there is a lot of variability of temperatures, even on a daily and monthly scale.
+
+# Calculating Statistics for Day vs Night Temp Differences
+
+## Calling in Data
+
+```{r}
+#dataframe with single mean daily values calculated for daytime and nighttime, averaging not between N/S but for all trees.
+single_avg_all_treetemps <- read_excel("nsf/single_avg_all_treetemps.xlsx")
+```
+
+```{r}
+#manipulating dataframe to run stats on
+stats_single_avg_all_treetemps <- single_avg_all_treetemps %>%
+  group_by(date, phase, burn_status, zone) %>%
+  pivot_wider(names_from = phase, values_from = avg_temp) %>%
+  rename(avg_day_temp = day, avg_night_temp = night) %>%
+  reframe(avg_day_temp, avg_night_temp)
+  
+##creatinging individual dataframes for day and night temps, then going to rebind them to get rid of the NA issues
+day_all_temps <- stats_single_avg_all_treetemps %>%
+  select(-avg_night_temp) %>%
+  filter(!is.na(avg_day_temp))# Filter out rows with NA
+
+night_all_temps <- stats_single_avg_all_treetemps %>%
+  select(-avg_day_temp) %>%
+  filter(!is.na(avg_night_temp))
+
+##joining north/south dataframes
+final_single_avg_all_treetemps <- day_all_temps %>%
+  inner_join(night_all_temps) %>%
+  #adding in week and month columns
+  mutate(
+    month = format(date, "%Y-%m"),
+    week = week(date)  # Extract week number from datetime
+  ) %>%
+  #adding in statistics calculations
+  mutate(
+    avg_temp = (avg_day_temp + avg_night_temp) / 2,
+    temp_diff = avg_day_temp - avg_night_temp,
+    percent_diff = abs(100 * temp_diff / avg_temp),
+    avg_diff = mean_diff,
+    coeff_var = (sd_diff / abs(mean_diff)) * 100
+  ) 
+```
+
+## Calculating Statistics
+
+```{r}
+#calculating weekly single avg stats
+weekly_single_avg_temps <- final_single_avg_all_treetemps %>%
+  group_by(burn_status, zone, month, week) %>%
+  summarize(
+    avg_day_temp = mean(avg_day_temp, na.rm = TRUE),
+    avg_night_temp = mean(avg_night_temp, na.rm = TRUE),
+    avg_temp = mean(avg_temp, na.rm = TRUE),  # Assuming avg_temp is already calculated
+    avg_diff = mean(temp_diff, na.rm = TRUE),  # Assuming temp_diff is already calculated
+    percent_diff = mean(percent_diff, na.rm = TRUE),
+    coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming coeff_var is already calculated
+    # Add other columns as needed
+  )
+```
+
+```{r}
+#creating monthly single avg stats
+monthly_single_avg_temps <- final_single_avg_all_treetemps %>%
+  group_by(burn_status, zone, month) %>%
+  summarize(
+    avg_day_temp = mean(avg_day_temp, na.rm = TRUE),
+    avg_night_temp = mean(avg_night_temp, na.rm = TRUE),
+    avg_temp = mean(avg_temp, na.rm = TRUE),  # Assuming avg_temp is already calculated
+    avg_diff = mean(temp_diff, na.rm = TRUE),  # Assuming temp_diff is already calculated
+    percent_diff = mean(percent_diff, na.rm = TRUE),
+    coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming coeff_var is already calculated
+    # Add other columns as needed
+  )
+```
+
+### Exporting Tables
+
+```{r}
+##this step is not working, not sure why?!
+#saving the dataframe as an excel spreadsheet
+write.xlsx(monthly_single_avg_temps, "nsf/monthly_single_avg_temps.xlsx")
+
+write.xlsx(weekly_single_avg_temps, "nsf/weekly_single_avg_temps.xlsx")
+```
