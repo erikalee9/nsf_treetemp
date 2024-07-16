@@ -42,22 +42,6 @@ pers_b_aspects <- read_excel("nsf/105E_pers_burned/105E_pers_b_aspects.xlsx") %>
 trans_b_aspects <- read_excel("nsf/105E_trans_burned/105E_trans_b_aspects.xlsx") %>%
   mutate(datetime = ymd_hms(datetime))
 
-#pers_n_gb_temp <- read_excel("nsf/105E_pers_burned/pers_n_gb_temp.xlsx")
-
-#pers_n_db_temp <- read_excel("nsf/105E_pers_burned/pers_n_db_temp.xlsx")
-
-#pers_s_gb_temp <- read_excel("nsf/105E_pers_burned/pers_s_gb_temp.xlsx")
-
-#pers_s_db_temp <- read_excel("nsf/105E_pers_burned/pers_s_db_temp.xlsx")
-
-#trans_n_gb_temp <- read_excel("nsf/105E_trans_burned/trans_n_gb_temp.xlsx")
-
-#trans_n_db_temp <- read_excel("nsf/105E_trans_burned/trans_n_db_temp.xlsx")
-
-#trans_s_gb_temp <- read_excel("nsf/105E_trans_burned/trans_s_gb_temp.xlsx")
-
-#trans_s_db_temp <- read_excel("nsf/105E_trans_burned/trans_s_db_temp.xlsx")
-
 ##unburned
 pers_ub_aspects <- read_excel("nsf/105E_pers_unburned/105E_pers_ub_aspects.xlsx") %>%
   mutate(datetime = ymd_hms(datetime))
@@ -318,8 +302,6 @@ persb_combined_aspectdiff_treetemp_plots
 ggsave("persb_combined_aspectdiff_treetemp_plots.png", plot = persb_combined_aspectdiff_treetemp_plots , width = 8, height = 10, dpi = 300, bg = "white")
 
 ```
-
-##IDEA - may want to cut the nightly temps and just analyze during the day?
 
 ### Transitional Zone
 
@@ -737,6 +719,13 @@ monthly_persb_ns_avg <- final_persb_ns_temps %>%
   mutate(zone = "persistent")
 ```
 
+```{r}
+#exporting important dataframes for use later
+write_csv(final_persb_ns_temps, "nsf/105E_pers_burned/final_persb_ns_temps.csv")
+
+write_csv(monthly_persb_ns_avg, "nsf/105E_pers_burned/monthly_persb_ns_avg.csv")
+```
+
 ## Transb - S/N aspect
 
 ```{r}
@@ -828,6 +817,13 @@ monthly_transb_ns_avg <- final_transb_ns_temps %>%
     # Add other columns as needed
   ) %>%
   mutate(zone = "transitional")
+```
+
+```{r}
+#exporting important dataframes for use later
+write_csv(final_transb_ns_temps, "nsf/105E_trans_burned/final_transb_ns_temps.csv")
+
+write_csv(monthly_persb_ns_avg, "nsf/105E_trans_burned/monthly_transb_ns_avg.csv")
 ```
 
 ## Combining Pers and Trans monthly dataframes to make a table:
@@ -983,6 +979,8 @@ In summary, these metrics together help you understand the magnitude, relative s
 
 -   very high coefficient of variation and percent differences mean that there is a lot of variability of temperatures, even on a daily and monthly scale.
 
+------------------------------------------------------------------------
+
 # Calculating Statistics for Day vs Night Temp Differences
 
 ## Calling in Data
@@ -990,6 +988,8 @@ In summary, these metrics together help you understand the magnitude, relative s
 ```{r}
 #dataframe with single mean daily values calculated for daytime and nighttime, averaging not between N/S but for all trees.
 single_avg_all_treetemps <- read_excel("nsf/single_avg_all_treetemps.xlsx")
+
+
 ```
 
 ```{r}
@@ -1067,4 +1067,34 @@ monthly_single_avg_temps <- final_single_avg_all_treetemps %>%
 write.xlsx(monthly_single_avg_temps, "nsf/monthly_single_avg_temps.xlsx")
 
 write.xlsx(weekly_single_avg_temps, "nsf/weekly_single_avg_temps.xlsx")
+```
+
+# Exporting all Stats to Tables
+
+```{r}
+#single daily average, day/night comparison - monthly table
+write_csv(monthly_single_avg_temps, "nsf/monthly_single_avg_temps.csv")
+
+#single daily average, day/night comparison - weekly table
+write_csv(weekly_single_avg_temps, "nsf/weekly_single_avg_temps.csv")
+```
+
+# Reading in Stats Tables for Later Use
+
+```{r}
+#csvs for day/night stats comparison
+monthly_single_avg_temps <- read_csv("nsf/monthly_single_avg_temps.csv")
+
+weekly_single_avg_temps <- read_csv("nsf/weekly_single_avg_temps.csv")
+```
+
+```{r}
+#csvs for north/south stats comparison
+final_persb_ns_temps <- read_csv("nsf/105E_pers_burned/final_persb_ns_temps.csv")
+
+monthly_persb_ns_avg <- read_csv("nsf/105E_pers_burned/monthly_persb_ns_avg.csv")
+
+final_transb_ns_temps <- read_csv("nsf/105E_trans_burned/final_transb_ns_temps.csv")
+
+monthly_transb_ns_avg <- read_csv("nsf/105E_trans_burned/monthly_transb_ns_avg.csv")
 ```
