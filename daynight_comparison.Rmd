@@ -161,3 +161,66 @@ htmlwidgets::saveWidget(dtnt_all_avg_temps_plots, "daynight_allavg_allplots.html
 ```
 
 #next, need to look at including SWin for these plots?
+
+# Creating daily/nightly single value average dataframe
+
+## Data Wrangling
+
+```{r}
+#creating dataframes with a single average temp per day - for all tree temps
+single_avg_all_treetemps <- all_avg_treetemp_data %>%
+  #adding a date column
+  mutate(date = as_date(datetime)) %>%
+  group_by(date, phase, zone, burn_status) %>%
+  summarise(avg_temp = mean(avg_temp, na.rm = TRUE)) %>%
+  ungroup()
+
+#creating a dataframe with single average temps per day and per aspect
+single_avg_ns_all_treetemps <- ns_avg_treetemp_data %>%
+  mutate(date = as_date(datetime)) %>%
+  group_by(date, phase, zone, burn_status, aspect) %>%
+  summarise(avg_temp = mean(avg_temp, na.rm = TRUE)) %>%
+  ungroup()
+```
+
+## Plotting
+
+### NS difference for single day/night avg temp
+
+```{r}
+single_dtnt_ns_avg_temps_plots <- ggplotly(
+  ggplot() +
+    geom_line(data = single_avg_ns_all_treetemps, aes(x = date, y = avg_temp, color = burn_status, linetype = aspect), alpha = 0.8) + 
+    scale_color_manual(values = color_palette_manual, name = "burn status,") +
+    facet_wrap(~zone + phase) +
+    labs(x = "Datetime", y = "Avg Temp (C)", title = "Day vs nighttime average temp by sensor aspect") +
+    scale_linetype_manual(values = c("dashed", "solid")) # Flipped the order of linetypes
+)
+
+single_dtnt_ns_avg_temps_plots
+```
+
+### Total Avg Temps (n/s averaged together) for single day/night value
+
+```{r}
+single_dtnt_avg_all_temps_plots <- ggplotly(
+  ggplot() +
+    geom_line(data = single_avg_ns_all_treetemps, aes(x = date, y = avg_temp, color = burn_status, linetype = zone), alpha = 0.7) + 
+    scale_color_manual(values = color_palette_manual, name = "burn status,") +
+    facet_wrap(~phase) +
+    labs(x = "Datetime", y = "Avg Temp (C)", title = "Day vs nighttime average temp of all sensors, by zone") +
+    scale_linetype_manual(values = c("solid", "dashed")) # Flipped the order of linetypes
+)
+
+single_dtnt_avg_all_temps_plots
+```
+
+### Saving Plots
+
+```{r}
+#ns single plots
+htmlwidgets::saveWidget(single_dtnt_ns_avg_temps_plots, "singlevalue_daynight_northsouth_allplots.html")
+
+#all avg single plots
+htmlwidgets::saveWidget(single_dtnt_avg_all_temps_plots, "singlevalue_daynight_allavg_allplots.html")
+```
