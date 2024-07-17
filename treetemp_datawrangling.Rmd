@@ -1305,7 +1305,7 @@ final_15min_gbdb_b <- bind_rows(final_persb_gbdb_temps, final_transb_gbdb_temps)
 ### Unburned
 
 ```{r}
-#persistent burned 
+#persistent unburned 
 
 full_pers_ub_gbdb_data <- full_unburned_combined_data %>%
   filter(zone == "persistent") %>%
@@ -1321,16 +1321,41 @@ clean_pers_ub_gbdb_temps <- full_pers_ub_gbdb_data %>%
   pivot_wider(names_from = burn_status, values_from = temp) %>%
   rename(ub_temp = "unburned")
 
-##creatinging individual dataframes for north and south temps, then going to rebind them to get rid of the NA issues
-gb_persb_temps <- clean_persb_gbdb_temps %>%
-  select(-db_temp) %>%
-  filter(!is.na(gb_temp))# Filter out rows with NA
-
-db_persb_temps <- clean_persb_gbdb_temps %>%
-  select(-gb_temp) %>%
-  filter(!is.na(db_temp))
-
-##joining north/south dataframes
-final_persb_gbdb_temps <- gb_persb_temps %>%
-  inner_join(db_persb_temps)
+#renaming and creating identical order as pers/trans gb/db dataframes
+final_pers_ub_temps <- clean_pers_ub_gbdb_temps %>%
+  select(datetime, zone, ub_temp)
 ```
+
+```{r}
+#unburned transitional 
+
+full_trans_ub_gbdb_data <- full_unburned_combined_data %>%
+  filter(zone == "transitional") %>%
+  filter(tree_name == "ub_e") %>%
+  #selecting only the south aspect temps
+  filter(aspect == "south") %>%
+  select(-sensor_id) %>%
+  mutate(burn_status = "unburned")
+
+
+clean_trans_ub_gbdb_temps <- full_trans_ub_gbdb_data %>%
+  group_by(datetime, burn_status, zone) %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(ub_temp = "unburned")
+
+#renaming and creating identical order as pers/trans gb/db dataframes
+final_trans_ub_temps <- clean_trans_ub_gbdb_temps %>%
+  select(datetime, zone, ub_temp)
+```
+
+```{r}
+#calculating mean temp difference for pers and trans at the 15-minute timestep
+
+final_15min_gbdb_ub <- bind_rows(final_pers_ub_temps, final_trans_ub_temps) %>%
+  #adding in day & month
+  mutate(day = as.Date(datetime), month = month(datetime)) %>%
+  #adding in mean temp of north and south temps
+  mutate(avg_temp = ub_temp)
+```
+
+#next step - come up with how to do differencing b/t gb/db/ub -\> need to create new dataframes for gb/ub, db/ub and then do a db/db differencing as well... this will get complicated! But follow workflow for n/s stats!
