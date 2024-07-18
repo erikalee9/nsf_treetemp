@@ -30,6 +30,36 @@ library(scales)
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
 
+# Color Set Up
+
+```{r}
+#to display the colors
+display.brewer.pal(n = 8, name = "Dark2")
+
+#to get the hex number of the colors
+brewer.pal(n = 8, name = "Dark2")
+```
+
+```{r}
+#setting a color-blind friendly custom palette for gb/db/ubn- using RColorBrewer
+##blue is green burned, orange is dead burned, green is unburned
+three_custom_colors <- c("#2166AC", "#D95F02", "#1B7837")
+
+## orange is burned, green is unburned
+two_custom_colors <- c("#D95F02", "#1B7837")
+```
+
+```{r}
+#to display the colors
+display.brewer.pal(n = 8, name = "YlOrRd")
+
+#to get the hex number of the colors
+brewer.pal(n = 8, name = "YlOrRd")
+
+#first color is incoming R, second color is outgoing R
+solar_rad_colors <- c("#B10026", "#FD8D3C")
+```
+
 # Calling in Data
 
 ```{r}
@@ -246,9 +276,6 @@ average_daily_energy_by_site <- daily_energy_MJ %>%
 ```
 
 ```{r}
-#setting manual colors for sites
-burned_colors <- c("burned" = "red3", "unburned" = "dodgerblue3")
-
 #plotting daily average
 avg_daily_energy <- ggplot(average_daily_energy_by_site, aes(x = date, y = average_energy_MJ, color = burned_status, linetype = zone)) +
   geom_line() +
@@ -258,7 +285,7 @@ avg_daily_energy <- ggplot(average_daily_energy_by_site, aes(x = date, y = avera
        color = "Burn Status",
        linetype = "Zone") +
   theme_minimal() +
-  scale_color_manual(values = burned_colors)
+  scale_color_manual(values = two_custom_colors)
 
 avg_daily_energy
 ```
@@ -278,7 +305,7 @@ The above plot looks good. Consider splitting it into a day and night plot?
 
 # Day/Night Plots
 
-## Day Plots
+## Max Daynight Plots
 
 ```{r}
 #setting a day and night time 
@@ -287,7 +314,7 @@ nighttime <- hms("17:30:00")
 ```
 
 ```{r}
-#parsing out daytime/nightime dataframe
+#parsing out daytime/nightime dataframe - MAX RLout
 dtnt_max_energy_bysite <- average_daily_energy_by_site %>%
   #adding in a day/night column to facet wrap later
   mutate(phase = case_when(
@@ -301,11 +328,59 @@ dtnt_max_energy_bysite <- average_daily_energy_by_site %>%
 
 ```{r}
 #plotting daytime/nighttime plot
-dtnt_avg_energy_plot <- ggplot(dtnt_max_energy_bysite, aes(x = date, y = daily_max_energy_MJ, color = burned_status, linetype = zone)) +
+dtnt_max_energy_plot <- ggplot(dtnt_max_energy_bysite, aes(x = date, y = daily_max_energy_MJ, color = burned_status, linetype = zone)) +
   geom_line() +   # Add lines
   labs(title = "Maximum RLout by day/night",
        x = "Date",
        y = "Max RL out (MJ)",
+       color = "Burn Status",
+       linetype = "Zone") +
+  theme_minimal() +
+  facet_wrap(~ phase) +
+  scale_color_manual(values = burned_colors)
+
+dtnt_max_energy_plot
+```
+
+```{r}
+#converting to a plotly
+plotly_dtnt_max_energy <- ggplotly(dtnt_max_energy_plot)
+
+plotly_dtnt_max_energy
+```
+
+```{r}
+#saving ggplot
+ggsave("dtnt_max_RLout_plot.png", plot = dtnt_max_energy_plot, width = 10, height = 6, dpi = 300, bg = "white")
+
+
+#saving plotly as a html website link
+htmlwidgets::saveWidget(plotly_dtnt_max_energy, "plotly_dtnt_max_RLout.html")
+```
+
+## Avg Daynight Plots
+
+```{r}
+{r}
+#parsing out daytime/nightime dataframe - AVG RLout
+dtnt_avg_energy_bysite <- average_daily_energy_by_site %>%
+  #adding in a day/night column to facet wrap later
+  mutate(phase = case_when(
+    time >= daytime & time <= nighttime ~ "day",
+    time <= daytime | time >= nighttime ~ "night",
+    TRUE ~ NA_character_  # If none of the conditions match, handle accordingly
+  )) %>%
+  group_by(date, site, phase, burned_status, zone) %>%
+  summarize(daily_avg_energy_MJ = mean(average_energy_MJ, na.rm = TRUE))
+```
+
+```{r}
+#plotting daytime/nighttime plot
+dtnt_avg_energy_plot <- ggplot(dtnt_avg_energy_bysite, aes(x = date, y = daily_avg_energy_MJ, color = burned_status, linetype = zone)) +
+  geom_line() +   # Add lines
+  labs(title = "Average RLout by day/night",
+       x = "Date",
+       y = "Avg RL out (MJ)",
        color = "Burn Status",
        linetype = "Zone") +
   theme_minimal() +
@@ -320,4 +395,13 @@ dtnt_avg_energy_plot
 plotly_dtnt_avg_energy <- ggplotly(dtnt_avg_energy_plot)
 
 plotly_dtnt_avg_energy
+```
+
+```{r}
+#saving ggplot
+ggsave("dtnt_avg_RLout_plot.png", plot = dtnt_avg_energy_plot, width = 10, height = 6, dpi = 300, bg = "white")
+
+
+#saving plotly as a html website link
+htmlwidgets::saveWidget(plotly_dtnt_avg_energy, "plotly_dtnt_avg_RLout.html")
 ```
