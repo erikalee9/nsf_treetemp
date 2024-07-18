@@ -573,49 +573,14 @@ full_burned_combined_data <- bind_rows(filtered_pers_b_aspects, filtered_trans_b
 full_unburned_combined_data <- bind_rows(filtered_pers_ub_aspects, filtered_trans_ub_aspects)
 ```
 
-## Persb - S/N aspect percent difference
-
 ```{r}
-## I am not sure I need to do any of this!
+#exporting important dataframes to N-Drive. These are what are used for stats calculations
+write_csv(full_burned_combined_data, "nsf/treetemp_data/full_burned_combined_data.csv")
 
-#now need to do the calculations to get % difference- decide on day/time step to do this at, and if I am doing % difference for all three combinations? Maybe easier to start with n-s combination? 
-
-##I think that this is not going to work with the full_burned data, I think it has to be by zone, but I could be wrong? 
-full_pers_ns_data <- full_burned_combined_data %>%
-  filter(!(aspect %in% c("charred", "uncharred"))) %>%
-  filter(zone == "persistent") %>%
-  #remove gb_w tree, so there is two gb and two db
-  filter(!(tree_name == "gb_w"))
-
-#calculating percent differencing using a loop
-percent_diff <- numeric()
-tree_names <- character()
-
-for (i in seq(1, nrow(full_pers_ns_data), by = 2)) {
-  if (i + 1 <= nrow(full_pers_ns_data)) {  # Check if there's a next pair to calculate
-    diff_percent <- ((full_pers_ns_data$temp[i + 1] - full_pers_ns_data$temp[i]) / full_pers_ns_data$temp[i]) * 100
-    percent_diff <- c(percent_diff, diff_percent)
-    tree_names <- c(tree_names, full_pers_ns_data$tree_name[i])  # Assuming tree_name is in full_pers_ns_data
-  }
-}
-
-# Create a dataframe with percent differences and tree_names
-persb_sn_percent_diff <- data.frame(
-  datetime = full_pers_ns_data$datetime[seq(1, nrow(full_pers_ns_data), by = 2)],  # Select datetime for first row of each pair
-  tree_name = tree_names,
-  percent_diff = percent_diff
-)
-
-#creating a daily mean % diff dataframe
-##Convert datetime column to POSIXct if not already
-persb_sn_percent_diff$datetime <- as.POSIXct(persb_sn_percent_diff$datetime)
-
-# Create a new column for date
-daily_mean_persb_sn_percent_diff <- df_percent_diff %>%
-  mutate(date = as.Date(datetime)) %>%  # Create a date column
-  group_by(date, tree_name) %>%
-  summarise(mean_percent_diff = mean(percent_diff, na.rm = TRUE))
+write_csv(full_unburned_combined_data, "nsf/treetemp_data/full_unburned_combined_data.csv")
 ```
+
+## Persb - S/N aspect percent difference
 
 Creating a clean dataframe with columns for north and south temps, instead of rows (wide format)
 
@@ -850,8 +815,6 @@ monthly_transb_ns_avg <- final_transb_ns_temps %>%
 ```{r}
 #exporting important dataframes for use later
 write_csv(final_transb_ns_temps, "nsf/105E_trans_burned/final_transb_ns_temps.csv")
-
-write_csv(monthly_persb_ns_avg, "nsf/105E_trans_burned/monthly_transb_ns_avg.csv")
 ```
 
 ## Trans ub - S/N temps
@@ -884,24 +847,37 @@ final_trans_ub_ns_temps <- north_trans_ub_temps %>%
 
 ## Combining burned and unburned dataframes by zone
 
+-   important step
+
 ```{r}
 #combining persistent and transitional unburned to create a 15min_unburned datatable
 
-final_15min_ub <- bind_rows(final_pers_ub_ns_temps, final_trans_ub_ns_temps) %>%
+final_15min_ns_ub <- bind_rows(final_pers_ub_ns_temps, final_trans_ub_ns_temps) %>%
   #adding in day & month
   mutate(day = as.Date(datetime), month = month(datetime)) %>%
   #adding in mean temp of north and south temps
-  mutate(avg_temp = mean((south_temp + north_temp) / 2))
+  mutate(avg_temp = mean((south_temp + north_temp) / 2)) %>%
+  mutate(burn_status = "unburned") %>%
+  select(datetime, day, month, zone, burn_status, tree_name, everything())
 ```
 
 ```{r}
 #combining persistent and transitional burnedto create a 15min_burned datatable
 
-final_15min_b <- bind_rows(final_persb_ns_temps, final_transb_ns_temps) %>%
+final_15min_ns_b <- bind_rows(final_persb_ns_temps, final_transb_ns_temps) %>%
   #adding in day & month
   mutate(day = as.Date(datetime), month = month(datetime)) %>%
   #adding in mean temp of north and south temps
-  mutate(avg_temp = mean((south_temp + north_temp) / 2))
+  mutate(avg_temp = mean((south_temp + north_temp) / 2)) %>%
+  select(-date) %>%
+  select(datetime, day, month, zone, burn_status, tree_name, everything())
+```
+
+```{r}
+#writing final n/s combined dataframes to n-drive
+write_csv(final_15min_ns_b, "nsf/treetemp_data/final_15min_ns_b.csv")
+
+write_csv(final_15min_ns_ub, "nsf/treetemp_data/final_15min_ns_ub.csv")
 ```
 
 ## Combining Pers and Trans monthly dataframes to make a table:
@@ -1066,8 +1042,6 @@ In summary, these metrics together help you understand the magnitude, relative s
 ```{r}
 #dataframe with single mean daily values calculated for daytime and nighttime, averaging not between N/S but for all trees.
 single_avg_all_treetemps <- read_excel("nsf/single_avg_all_treetemps.xlsx")
-
-
 ```
 
 ```{r}
@@ -1156,206 +1130,3 @@ write_csv(monthly_single_avg_temps, "nsf/monthly_single_avg_temps.csv")
 #single daily average, day/night comparison - weekly table
 write_csv(weekly_single_avg_temps, "nsf/weekly_single_avg_temps.csv")
 ```
-
-# Reading in Stats Tables for Later Use
-
-```{r}
-#csvs for day/night stats comparison
-monthly_single_avg_temps <- read_csv("nsf/monthly_single_avg_temps.csv")
-
-weekly_single_avg_temps <- read_csv("nsf/weekly_single_avg_temps.csv")
-```
-
-```{r}
-#csvs for north/south stats comparison
-final_persb_ns_temps <- read_csv("nsf/105E_pers_burned/final_persb_ns_temps.csv")
-
-monthly_persb_ns_avg <- read_csv("nsf/105E_pers_burned/monthly_persb_ns_avg.csv")
-
-final_transb_ns_temps <- read_csv("nsf/105E_trans_burned/final_transb_ns_temps.csv")
-
-monthly_transb_ns_avg <- read_csv("nsf/105E_trans_burned/monthly_transb_ns_avg.csv")
-```
-
-# New Stats - NS temps
-
-```{r}
-#based on meeting w/ Stephanie on 7/17/24 - I am going to calculate avg_temp and mean_diff for 15min timestep, then do the other calculations by month
-
-#burned stats
-stats_monthly_b <- final_15min_b %>%
-  select(datetime, day, month, zone, tree_name, burn_status, everything()) %>%
-  #calculating temp_diff for 15-minute interval
-  mutate(temp_diff = south_temp - north_temp) %>%
-  group_by(month, zone, burn_status) %>%
-  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100
-  )
-```
-
-```{r}
-#unburned stats
-stats_monthly_ub <- final_15min_ub %>%
-  select(datetime, day, month, zone, tree_name, burn_status, everything()) %>%
-  #calculating temp_diff for 15-minute interval
-  mutate(temp_diff = south_temp - north_temp) %>%
-  group_by(month, zone, burn_status) %>%
-  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100
-  )
-```
-
-```{r}
-#combining stats for burned and unburned monthly data
-stats_monthly_full <- bind_rows(stats_monthly_b, stats_monthly_ub) %>%
-  ungroup() %>%
-  # Arrange by zone so that it sticks when I export as csv
-  arrange(zone, month, burn_status)
-```
-
-```{r}
-#saving monthly ns stats table
-write_csv(stats_monthly_full, "nsf/monthly_ns_stats_allsites.csv")
-```
-
-# New Stats - burn status comparison
-
-## Creating gb/db comparison dataframes
-
-### Burned
-
-```{r}
-#persistent burned 
-
-full_pers_gbdb_data <- full_burned_combined_data %>%
-  filter(zone == "persistent") %>%
-  #remove gb_w tree, so there is two gb and two db
-  filter(!(tree_name == "gb_w")) %>%
-  #selecting only the south aspect temps
-  filter(aspect == "south") %>%
-  select(-sensor_id) %>%
-  #had to pick only two trees to assess here
-  filter(tree_name %in% c("db_s", "gb_s")) 
-
-
-clean_persb_gbdb_temps <- full_pers_gbdb_data %>%
-  group_by(datetime, burn_status, zone) %>%
-  pivot_wider(names_from = burn_status, values_from = temp) %>%
-  rename(gb_temp = "green burn", db_temp = "dead burn")%>%
-  summarize(gb_temp, db_temp)
-
-##creatinging individual dataframes for north and south temps, then going to rebind them to get rid of the NA issues
-gb_persb_temps <- clean_persb_gbdb_temps %>%
-  select(-db_temp) %>%
-  filter(!is.na(gb_temp))# Filter out rows with NA
-
-db_persb_temps <- clean_persb_gbdb_temps %>%
-  select(-gb_temp) %>%
-  filter(!is.na(db_temp))
-
-##joining north/south dataframes
-final_persb_gbdb_temps <- gb_persb_temps %>%
-  inner_join(db_persb_temps)
-```
-
-\*\* should I just do the average of all south aspects, or does picking ONE db and one gb tree make sense?
-
-```{r}
-#transitional burned
-
-full_trans_gbdb_data <- full_burned_combined_data %>%
-  filter(zone == "transitional") %>%
-  #selecting only the south aspect temps
-  filter(aspect == "south") %>%
-  select(-sensor_id) %>%
-  #had to pick only two trees to assess here
-  filter(tree_name %in% c("db_s", "gb_s")) 
-
-
-clean_transb_gbdb_temps <- full_trans_gbdb_data %>%
-  group_by(datetime, burn_status, zone) %>%
-  pivot_wider(names_from = burn_status, values_from = temp) %>%
-  rename(gb_temp = "green burn", db_temp = "dead burn")%>%
-  summarize(gb_temp, db_temp)
-
-##creatinging individual dataframes for north and south temps, then going to rebind them to get rid of the NA issues
-gb_transb_temps <- clean_transb_gbdb_temps %>%
-  select(-db_temp) %>%
-  filter(!is.na(gb_temp))# Filter out rows with NA
-
-db_transb_temps <- clean_transb_gbdb_temps %>%
-  select(-gb_temp) %>%
-  filter(!is.na(db_temp))
-
-##joining north/south dataframes
-final_transb_gbdb_temps <- gb_transb_temps %>%
-  inner_join(db_transb_temps)
-```
-
-```{r}
-#calculating mean temp difference for pers and trans at the 15-minute timestep
-
-final_15min_gbdb_b <- bind_rows(final_persb_gbdb_temps, final_transb_gbdb_temps) %>%
-  #adding in day & month
-  mutate(day = as.Date(datetime), month = month(datetime)) %>%
-  #adding in mean temp of north and south temps
-  mutate(avg_temp = mean((gb_temp + db_temp) / 2))
-```
-
-### Unburned
-
-```{r}
-#persistent unburned 
-
-full_pers_ub_gbdb_data <- full_unburned_combined_data %>%
-  filter(zone == "persistent") %>%
-  filter(tree_name == "ub_s") %>%
-  #selecting only the south aspect temps
-  filter(aspect == "south") %>%
-  select(-sensor_id) %>%
-  mutate(burn_status = "unburned")
-
-
-clean_pers_ub_gbdb_temps <- full_pers_ub_gbdb_data %>%
-  group_by(datetime, burn_status, zone) %>%
-  pivot_wider(names_from = burn_status, values_from = temp) %>%
-  rename(ub_temp = "unburned")
-
-#renaming and creating identical order as pers/trans gb/db dataframes
-final_pers_ub_temps <- clean_pers_ub_gbdb_temps %>%
-  select(datetime, zone, ub_temp)
-```
-
-```{r}
-#unburned transitional 
-
-full_trans_ub_gbdb_data <- full_unburned_combined_data %>%
-  filter(zone == "transitional") %>%
-  filter(tree_name == "ub_e") %>%
-  #selecting only the south aspect temps
-  filter(aspect == "south") %>%
-  select(-sensor_id) %>%
-  mutate(burn_status = "unburned")
-
-
-clean_trans_ub_gbdb_temps <- full_trans_ub_gbdb_data %>%
-  group_by(datetime, burn_status, zone) %>%
-  pivot_wider(names_from = burn_status, values_from = temp) %>%
-  rename(ub_temp = "unburned")
-
-#renaming and creating identical order as pers/trans gb/db dataframes
-final_trans_ub_temps <- clean_trans_ub_gbdb_temps %>%
-  select(datetime, zone, ub_temp)
-```
-
-```{r}
-#calculating mean temp difference for pers and trans at the 15-minute timestep
-
-final_15min_gbdb_ub <- bind_rows(final_pers_ub_temps, final_trans_ub_temps) %>%
-  #adding in day & month
-  mutate(day = as.Date(datetime), month = month(datetime)) %>%
-  #adding in mean temp of north and south temps
-  mutate(avg_temp = ub_temp)
-```
-
-#next step - come up with how to do differencing b/t gb/db/ub -\> need to create new dataframes for gb/ub, db/ub and then do a db/db differencing as well... this will get complicated! But follow workflow for n/s stats!
