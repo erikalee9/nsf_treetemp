@@ -1,0 +1,214 @@
+---
+title: "treetemp_stats"
+author: "Erika Lee"
+date: "2024-07-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Stats Calculations
+
+```{r}
+#initial set up
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(openxlsx)
+library(plotly)
+library(rstatix)
+library(htmlwidgets)
+library(RColorBrewer)
+library(patchwork)
+library(xlsx)
+#packages for exporting csvs as tables
+library(knitr)
+library(kableExtra)
+library(pagedown)
+
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
+
+## Loading Data
+
+```{r}
+final_15min_ns_b <- read_csv("nsf/treetemp_data/final_15min_ns_b.csv")
+
+final_15min_ns_ub <- read_csv("nsf/treetemp_data/final_15min_ns_ub.csv")
+
+final_15min_gbdb_b <- read_csv("nsf/treetemp_data/final_15min_gbdb_b.csv")
+
+final_15min_gbdb_ub <- read_csv("nsf/treetemp_data/final_15min_gbdb_ub.csv")
+```
+
+## Calculating Stats
+
+### N/S Differenced Data
+
+Based on meeting w/ Stephanie on 7/17/24 - I already calculated avg_temp for 15min timestep in "data_wrangling" rmarkdown, now I will calculate the mean_diff for 15minute timestep, then do the other calculations by month
+
+```{r}
+#burned n/s stats
+stats_monthly_ns_b <- final_15min_ns_b %>%
+  #calculating temp_diff for 15-minute interval
+  mutate(temp_diff = south_temp - north_temp) %>%
+  #calculating monthly stats
+  group_by(month, zone, burn_status) %>%
+  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100
+  ) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
+```{r}
+#unburned n/s stats
+stats_monthly_ns_ub <- final_15min_ns_ub %>%
+  #calculating temp_diff for 15-minute interval
+  mutate(temp_diff = south_temp - north_temp) %>%
+  #calculating monthly stats
+  group_by(month, zone, burn_status) %>%
+  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100
+  ) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
+### GB/DB Differenced Data
+
+```{r}
+#gb/db stats - db minus gb! 
+stats_monthly_gbdb <- final_15min_gbdb_b %>%
+  #calculating temp_diff for 15-minute interval
+  mutate(temp_diff = db_temp - gb_temp) %>%
+  #calculating monthly stats
+  group_by(month, zone, burn_status) %>%
+  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100
+  ) %>%
+  select(-burn_status) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
+### GB/UB Differenced Data
+
+```{r}
+#have to create new dataframes to difference gb from unburned
+
+##manipulating loaded gbdb_ub dataframe first
+final_15min_gbdb_ub <- final_15min_gbdb_ub %>%
+  #removing avg_temp column from ub dataframe
+  select(-c(avg_temp, burn_status))
+
+final_15min_gbub <- final_15min_gbdb_b %>%
+  #removing db data from dataframe
+  select(-c(db_temp, avg_temp, burn_status)) %>%
+  inner_join(final_15min_gbdb_ub, by = c("datetime", "day", "month", "zone", "aspect")) %>%
+  #calculating avg_temp for 15-minute interval
+  mutate(avg_temp = (gb_temp+ub_temp)/2) 
+```
+
+```{r}
+#exporting new gb/ub dataframe
+write_csv(final_15min_gbub, "nsf/treetemp_data/final_15min_gbub.csv")
+```
+
+```{r}
+#stats calculations
+stats_monthly_gbub <- final_15min_gbub %>%
+  #calculating temp_diff for 15-minute interval
+  mutate(temp_diff = gb_temp - ub_temp) %>%
+  #calculating monthly stats
+  group_by(month, zone) %>%
+  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
+### DB/UB Differenced Data
+
+```{r}
+#have to create new dataframes to difference db from unburned
+final_15min_dbub <- final_15min_gbdb_b %>%
+  #removing db data from dataframe
+  select(-c(gb_temp, avg_temp, burn_status)) %>%
+  inner_join(final_15min_gbdb_ub, by = c("datetime", "day", "month", "zone", "aspect")) %>%
+  #calculating avg_temp for 15-minute interval
+  mutate(avg_temp = (db_temp+ub_temp)/2)
+```
+
+```{r}
+#exporting new gb/ub dataframe
+write_csv(final_15min_dbub, "nsf/treetemp_data/final_15min_dbub.csv")
+```
+
+```{r}
+#stats calculations
+stats_monthly_dbub <- final_15min_dbub %>%
+  #calculating temp_diff for 15-minute interval
+  mutate(temp_diff = db_temp - ub_temp) %>%
+  #calculating monthly stats
+  group_by(month, zone) %>%
+  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
+## Saving Stats CSV
+
+### Exporting CSVs to N-drive
+
+```{r}
+write_csv(stats_monthly_ns_b, "nsf/treetemp_data/stats_monthly_ns_b.csv")
+
+write_csv(stats_monthly_ns_ub, "nsf/treetemp_data/stats_monthly_ns_ub.csv")
+
+write_csv(stats_monthly_gbdb, "nsf/treetemp_data/stats_monthly_gbdb.csv")
+
+write_csv(stats_monthly_gbub, "nsf/treetemp_data/stats_monthly_gbub.csv")
+
+write_csv(stats_monthly_dbub, "nsf/treetemp_data/stats_monthly_dbub.csv")
+```
+
+### Converting CSVs to Tables
+
+```{r}
+#creating one NS table with subtitles of burned and unburned (seperate tables)
+
+# Create HTML table with kable and kableExtra
+ns_b_statstable <- kable(stats_monthly_ns_b, "html", caption = "Monthly Statistics of North and South Aspect Tree Temp Comparison, for Burned Zone") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+ns_ub_statstable <- kable(stats_monthly_ns_ub, "html", caption = "unburned") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+# Save the HTML tables to separate files
+html_file_ns_b <- "ns_b_stats_table.html"
+writeLines(as.character(ns_b_statstable), html_file_ns_b)
+
+html_file_ns_ub <- "ns_ub_stats_table.html"
+writeLines(as.character(ns_ub_statstable), html_file_ns_ub)
+
+# Optionally, open the HTML files in the default web browser
+browseURL(html_file_ns_b)
+browseURL(html_file_ns_ub)
+```
+
+\
+
+```{r}
+
+```
+
+#the above process worked, but the html table doesn't look that good. Consider trying to make one large table, with all the sub tables included with sub-headers. That would work better I think?
