@@ -84,6 +84,20 @@ stats_monthly_ns_ub <- final_15min_ns_ub %>%
   mutate_if(is.numeric, round, 3)
 ```
 
+#### Creating N/S differencing tables that are organized by burn status (gb, db, ub)
+
+```{r}
+#green burned n/s differences
+stats_monthly_ns_gb <- stats_monthly_ns_b %>%
+  filter(burn_status == "green burn")
+
+#dead burned n/s differences
+stats_monthly_ns_db <- stats_monthly_ns_b %>%
+  filter(burn_status == "dead burn")
+
+##don't need to do for ub because I already have that
+```
+
 ### GB/DB Differenced Data
 
 ```{r}
@@ -153,6 +167,10 @@ stats_monthly_daynight <- final_daynight_singleavg_temps %>%
 write_csv(stats_monthly_ns_b, "nsf/treetemp_data/stats_monthly_ns_b.csv")
 
 write_csv(stats_monthly_ns_ub, "nsf/treetemp_data/stats_monthly_ns_ub.csv")
+
+write_csv(stats_monthly_ns_gb, "nsf/treetemp_data/stats_monthly_ns_gb.csv")
+
+write_csv(stats_monthly_ns_db, "nsf/treetemp_data/stats_monthly_ns_db.csv")
 
 write_csv(stats_monthly_gbdb, "nsf/treetemp_data/stats_monthly_gbdb.csv")
 
