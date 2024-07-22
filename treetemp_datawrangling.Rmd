@@ -213,7 +213,7 @@ filtered_trans_ub_aspects <- filtered_trans_ub_aspects %>%
   mutate(zone = "transitional")
 ```
 
-## Differencing Dead burn and Green burn trees
+## Differencing Dead burn and Green burn trees - For Plotting later!
 
 ### Persistent Zone
 
@@ -242,7 +242,11 @@ persb_north_diff_long <- persb_north_diff_data %>%
   mutate(burn_status = "burned") %>%
   mutate(zone = "persistent") %>%
   mutate(aspect = "north")
+```
 
+North Aspect Boxplots
+
+```{r}
 # Plotting the boxplots
 persb_north_diff_plot <- ggplot(persb_north_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
   geom_boxplot() +
@@ -279,7 +283,11 @@ persb_south_diff_long <- persb_south_diff_data %>%
   mutate(burn_status = "burned") %>%
   mutate(zone = "persistent") %>%
   mutate(aspect = "south")
+```
 
+South Aspect Boxplots
+
+```{r}
 # Plotting the boxplots
 persb_south_diff_plot <- ggplot(persb_south_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
   geom_boxplot() +
@@ -292,6 +300,8 @@ persb_south_diff_plot <- ggplot(persb_south_diff_long, aes(x = comparison, y = d
 print(persb_south_diff_plot)
 ```
 
+Combining Plots
+
 ```{r}
 #combinging north and south plots
 persb_combined_aspectdiff_treetemp_plots <- persb_north_diff_plot + persb_south_diff_plot + plot_layout(nrow = 2) + plot_annotation(title = "Persistent Zone, Green & Dead Burn Tree Temp Difference")
@@ -300,7 +310,6 @@ persb_combined_aspectdiff_treetemp_plots
 
 #saving combined plot
 ggsave("persb_combined_aspectdiff_treetemp_plots.png", plot = persb_combined_aspectdiff_treetemp_plots , width = 8, height = 10, dpi = 300, bg = "white")
-
 ```
 
 ### Transitional Zone
@@ -328,7 +337,11 @@ transb_north_diff_long <- transb_north_diff_data %>%
   mutate(burn_status = "burned") %>%
   mutate(zone = "transitional") %>%
   mutate(aspect = "north")
+```
 
+North Aspect Boxplots
+
+```{r}
 # Plotting the boxplots
 transb_north_diff_plot <- ggplot(transb_north_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
   geom_boxplot() +
@@ -363,7 +376,11 @@ transb_south_diff_long <- transb_south_diff_data %>%
   mutate(burn_status = "burned") %>%
   mutate(zone = "transitional") %>%
   mutate(aspect = "south")
+```
 
+South Aspect Boxplots
+
+```{r}
 # Plotting the boxplots
 transb_south_diff_plot <- ggplot(transb_south_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
   geom_boxplot() +
@@ -376,6 +393,8 @@ transb_south_diff_plot <- ggplot(transb_south_diff_long, aes(x = comparison, y =
 print(transb_south_diff_plot)
 ```
 
+Combining Plots
+
 ```{r}
 #combinging north and south plots
 transb_combined_aspectdiff_treetemp_plots <- transb_north_diff_plot + transb_south_diff_plot + plot_layout(nrow = 2) + plot_annotation(title = "Transitional Zone, Green & Dead Burn Tree Temp Difference")
@@ -386,9 +405,17 @@ transb_combined_aspectdiff_treetemp_plots
 ggsave("transb_combined_aspectdiff_treetemp_plots.png", plot = transb_combined_aspectdiff_treetemp_plots , width = 8, height = 10, dpi = 300, bg = "white")
 ```
 
+Combining Dataframes
+
 ```{r}
 #creating a combined dataframe for the db-gb comparisons
 full_dbgb_comparisons_data <- bind_rows(persb_north_diff_long, persb_south_diff_long, transb_north_diff_long, transb_south_diff_long)
+```
+
+Saving Combined dataframe
+
+```{r}
+write_csv(full_dbgb_comparisons_data, "nsf/treetemp_data/full_dbgb_comparisons_data.csv")
 ```
 
 ## Differencing by Individual Tree Aspect
@@ -444,6 +471,8 @@ persb_db_s_diff_data <- filtered_pers_b_aspects %>%
 #creating a combined new dataframe
 persb_gbdb_combined_data <- bind_rows(persb_gb_e_diff_data, persb_gb_s_diff_data, persb_db_n_diff_data, persb_db_s_diff_data)
 ```
+
+Plotting
 
 ```{r}
 #plotting persistent north-south tree boxplots
@@ -510,6 +539,8 @@ transb_db_s_diff_data <- filtered_trans_b_aspects %>%
 transb_gbdb_combined_data <- bind_rows(transb_gb_n_diff_data, transb_gb_s_diff_data, transb_db_n_diff_data, transb_db_s_diff_data)
 ```
 
+Plotting
+
 ```{r}
 #plotting transitional north-south tree boxplots
 transb_gbdb_diff_plot <- ggplot(transb_gbdb_combined_data, aes(x = comparison, y = difference, fill = treename)) +
@@ -523,6 +554,8 @@ transb_gbdb_diff_plot <- ggplot(transb_gbdb_combined_data, aes(x = comparison, y
 print(transb_gbdb_diff_plot)
 ```
 
+Combined Plots
+
 ```{r}
 #combinging north and south plots
 combined_bytree_aspect_treetemp_plots <- persb_gbdb_diff_plot + transb_gbdb_diff_plot + plot_layout(nrow = 1) + plot_annotation(title = "Temperature Differences by Tree - south minus north aspect")
@@ -532,6 +565,8 @@ combined_bytree_aspect_treetemp_plots
 #saving combined plot
 ggsave("combined_bytree_aspect_treetemp_plots.png", plot = combined_bytree_aspect_treetemp_plots , width = 10, height = 6, dpi = 300, bg = "white")
 ```
+
+Combined NS Dataframe
 
 ```{r}
 #creating a full dataframe for both pers and transitional data for later plotting of the south-north comparison
@@ -555,7 +590,12 @@ transb_gbdb_combined_data <- transb_gbdb_combined_data %>%
   mutate(zone = "transitional")
 
 #creating a full combined dataset
-full_southnorth_comparison_data <- bind_rows(persb_gbdb_combined_data, transb_gbdb_combined_data)
+full_ns_comparison_data <- bind_rows(persb_gbdb_combined_data, transb_gbdb_combined_data)
+```
+
+```{r}
+#exporting full ns comparison dataframe
+write_csv(full_ns_comparison_data, "nsf/treetemp_data/full_ns_comparison_data.csv")
 ```
 
 **Interpretation of box plots**
@@ -564,7 +604,7 @@ full_southnorth_comparison_data <- bind_rows(persb_gbdb_combined_data, transb_gb
 
 -   Many Outliers: The numerous outliers highlight that there are frequent instances of temperature differences that are much higher or lower than the typical range. This could point to specific factors or conditions that cause these deviations.
 
-# Calculating Statistics between gb/db and north/south
+# Pivoting to long dataframes for temp comparisons
 
 ```{r}
 #creating a combined new dataframe from original dataframes with individual tree temps - May not want a full combined dataset!
@@ -573,6 +613,8 @@ full_burned_combined_data <- bind_rows(filtered_pers_b_aspects, filtered_trans_b
 full_unburned_combined_data <- bind_rows(filtered_pers_ub_aspects, filtered_trans_ub_aspects)
 ```
 
+Combined Full, Filtered Aspect/temp dataframes
+
 ```{r}
 #exporting important dataframes to N-Drive. These are what are used for stats calculations
 write_csv(full_burned_combined_data, "nsf/treetemp_data/full_burned_combined_data.csv")
@@ -580,7 +622,7 @@ write_csv(full_burned_combined_data, "nsf/treetemp_data/full_burned_combined_dat
 write_csv(full_unburned_combined_data, "nsf/treetemp_data/full_unburned_combined_data.csv")
 ```
 
-## Persb - S/N aspect percent difference
+## Pers_b
 
 Creating a clean dataframe with columns for north and south temps, instead of rows (wide format)
 
@@ -615,83 +657,11 @@ final_persb_ns_temps <- north_persb_temps %>%
 ```
 
 ```{r}
-#calculating statistics
-##temp difference
-
-# Compute the overall mean and standard deviation of temp_diff
-mean_diff <- mean(final_persb_ns_temps$south_temp - final_persb_ns_temps$north_temp, na.rm = TRUE)
-
-sd_diff <- sd(final_persb_ns_temps$south_temp - final_persb_ns_temps$north_temp, na.rm = TRUE)
-
-
-# Add new columns to the dataframe
-final_persb_ns_temps <- final_persb_ns_temps %>%
-  mutate(
-    avg_temp = (south_temp + north_temp) / 2,
-    temp_diff = south_temp - north_temp,
-    percent_diff = abs(100 * temp_diff / avg_temp),
-    avg_diff = mean_diff,
-    coeff_var = (sd_diff / abs(mean_diff)) * 100
-  ) 
-  #percent difference - absolute difference (no negatives)
-  #calculating the avg (mean) temp
-```
-
-Creating a daily dataframe and analysis
-
-```{r}
-# Convert timestamp to Date if not already done
-final_persb_ns_temps <- final_persb_ns_temps %>%
-  mutate(date = as.Date(datetime))
-
-#aggregate data
-daily_persb_ns_avg <- final_persb_ns_temps %>%
-  group_by(date) %>%
-  summarize(
-    avg_south_temp = mean(south_temp, na.rm = TRUE),
-    avg_north_temp = mean(north_temp, na.rm = TRUE),
-    avg_temp = mean(avg_temp, na.rm = TRUE),  # Assuming avg_temp is already calculated
-    avg_diff = mean(temp_diff, na.rm = TRUE),  # Assuming mean_diff is already calculated
-    percent_diff = mean(percent_diff, na.rm = TRUE),
-    coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming sd_diff and mean_diff are already calculated
-    # Add other columns as needed
-  ) %>%
-  #getting rid of the one date that coinsidentaly had a 0 for the avg diff, therefore an lnf for the percent_diff column
-  filter(date != as.Date("2024-05-15"))
-```
-
-Creating a monthly dataframe and analysis
-
-```{r}
-# Convert datetime to Date if not already done
-final_persb_ns_temps <- final_persb_ns_temps %>%
-  mutate(month = format(datetime, "%Y-%m"))
-
-# Calculate monthly averages for all columns
-monthly_persb_ns_avg <- final_persb_ns_temps %>%
-  #getting rid of the one date that coinsidentaly had a 0 for the avg diff, therefore an lnf for the percent_diff column
-  filter(date != as.Date("2024-05-15")) %>%
-  group_by(month) %>%
-  summarize(
-    avg_south_temp = mean(south_temp, na.rm = TRUE),
-    avg_north_temp = mean(north_temp, na.rm = TRUE),
-    avg_temp = mean(avg_temp, na.rm = TRUE),  # Assuming avg_temp is already calculated
-    avg_diff = mean(temp_diff, na.rm = TRUE),  # Assuming mean_diff is already calculated
-    percent_diff = mean(percent_diff, na.rm = TRUE),
-    coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming sd_diff and mean_diff are already calculated
-    # Add other columns as needed
-  ) %>%
-  mutate(zone = "persistent")
-```
-
-```{r}
 #exporting important dataframes for use later
 write_csv(final_persb_ns_temps, "nsf/105E_pers_burned/final_persb_ns_temps.csv")
-
-write_csv(monthly_persb_ns_avg, "nsf/105E_pers_burned/monthly_persb_ns_avg.csv")
 ```
 
-## Pers ub - S/N aspect
+## Pers_ub
 
 ```{r}
 #persistent unburned final dataset
@@ -719,7 +689,7 @@ final_pers_ub_ns_temps <- north_pers_ub_temps %>%
   inner_join(south_pers_ub_temps)
 ```
 
-## Transb - S/N aspect
+## Trans_b
 
 ```{r}
 #transitional burned 
@@ -749,75 +719,11 @@ final_transb_ns_temps <- north_transb_temps %>%
 ```
 
 ```{r}
-
-# Compute the overall mean and standard deviation of temp_diff
-mean_diff <- mean(final_transb_ns_temps$south_temp - final_transb_ns_temps$north_temp, na.rm = TRUE)
-
-sd_diff <- sd(final_transb_ns_temps$south_temp - final_transb_ns_temps$north_temp, na.rm = TRUE)
-
-
-# Add new columns to the dataframe
-final_transb_ns_temps <- final_transb_ns_temps %>%
-  mutate(
-    avg_temp = (south_temp + north_temp) / 2,
-    temp_diff = south_temp - north_temp,
-    percent_diff = abs(100 * temp_diff / avg_temp),
-    avg_diff = mean_diff,
-    coeff_var = (sd_diff / abs(mean_diff)) * 100
-  ) 
-  #percent difference - absolute difference (no negatives)
-  #calculating the avg (mean) temp
-```
-
-Creating a daily dataframe
-
-```{r}
-# Convert timestamp to Date if not already done
-final_transb_ns_temps <- final_transb_ns_temps %>%
-  mutate(date = as.Date(datetime))
-
-#aggregate data
-daily_transb_ns_avg <- final_transb_ns_temps %>%
-  group_by(date) %>%
-  summarize(
-    avg_south_temp = mean(south_temp, na.rm = TRUE),
-    avg_north_temp = mean(north_temp, na.rm = TRUE),
-    avg_temp = mean(avg_temp, na.rm = TRUE),  # Assuming avg_temp is already calculated
-    avg_diff = mean(temp_diff, na.rm = TRUE),  # Assuming mean_diff is already calculated
-    percent_diff = mean(percent_diff, na.rm = TRUE),
-    coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming sd_diff and mean_diff are already calculated
-    # Add other columns as needed
-  )
-```
-
-Creating a monthly dataframe
-
-```{r}
-# Convert datetime to Date if not already done
-final_transb_ns_temps <- final_transb_ns_temps %>%
-  mutate(month = format(datetime, "%Y-%m"))
-
-# Calculate monthly averages for all columns
-monthly_transb_ns_avg <- final_transb_ns_temps %>%
-  group_by(month) %>%
-  summarize(
-    avg_south_temp = mean(south_temp, na.rm = TRUE),
-    avg_north_temp = mean(north_temp, na.rm = TRUE),
-    avg_temp = mean(avg_temp, na.rm = TRUE),  # Assuming avg_temp is already calculated
-    avg_diff = mean(temp_diff, na.rm = TRUE),  # Assuming mean_diff is already calculated
-    percent_diff = mean(percent_diff, na.rm = TRUE),
-    coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming sd_diff and mean_diff are already calculated
-    # Add other columns as needed
-  ) %>%
-  mutate(zone = "transitional")
-```
-
-```{r}
 #exporting important dataframes for use later
 write_csv(final_transb_ns_temps, "nsf/105E_trans_burned/final_transb_ns_temps.csv")
 ```
 
-## Trans ub - S/N temps
+## Trans_ub
 
 ```{r}
 #tranitional unburned final dataset
@@ -845,9 +751,12 @@ final_trans_ub_ns_temps <- north_trans_ub_temps %>%
   inner_join(south_trans_ub_temps)
 ```
 
-## Combining burned and unburned dataframes by zone
+# Final 15-minute Dataframes 
+
+Combining burned and unburned dataframes by zone and 15-minute timestep - this is what is used for stats calculations
 
 -   important step
+-   Also adding avg_temp for 15-minute timestep
 
 ```{r}
 #combining persistent and transitional unburned to create a 15min_unburned datatable
@@ -869,7 +778,6 @@ final_15min_ns_b <- bind_rows(final_persb_ns_temps, final_transb_ns_temps) %>%
   mutate(day = as.Date(datetime), month = month(datetime)) %>%
   #adding in mean temp of north and south temps
   mutate(avg_temp = mean((south_temp + north_temp) / 2)) %>%
-  select(-date) %>%
   select(datetime, day, month, zone, burn_status, tree_name, everything())
 ```
 
@@ -880,20 +788,9 @@ write_csv(final_15min_ns_b, "nsf/treetemp_data/final_15min_ns_b.csv")
 write_csv(final_15min_ns_ub, "nsf/treetemp_data/final_15min_ns_ub.csv")
 ```
 
-## Combining Pers and Trans monthly dataframes to make a table:
+## 
 
-```{r}
-monthly_stats_byzone <- bind_rows(monthly_persb_ns_avg, monthly_transb_ns_avg) %>%
-  select(zone, everything())
-```
-
-```{r}
-#saving the dataframe as an excel spreadsheet
-write.xlsx(monthly_stats_byzone, "monthly_stats_byzone.xlsx")
-#i dragged the excel sheet from n-drive to personal folder
-```
-
-# Cutting timeframe
+# Day/Night timeframes
 
 ## Creating day-only dataframes
 
@@ -913,7 +810,7 @@ dt_trans_ub_aspects <- filtered_trans_ub_aspects %>%
   filter(hour(datetime) >= 6 & hour(datetime) <= 21)
 ```
 
-## Plotting daytime DB/GB differencing
+## Plotting - DB/GB differencing
 
 ### Persistent Zone
 
@@ -924,7 +821,9 @@ dt_persb_north_diff_long <- persb_north_diff_long %>%
 
 dt_persb_south_diff_long <- persb_south_diff_long %>%
   filter(hour(datetime) >= 6 & hour(datetime) <= 21)
+```
 
+```{r}
 #plotting
 dt_persb_north_diff_plot <- ggplot(dt_persb_north_diff_long, aes(x = comparison, y = difference, fill = comparison)) +
   geom_boxplot() +
@@ -947,7 +846,7 @@ dt_persb_south_diff_plot <- ggplot(dt_persb_south_diff_long, aes(x = comparison,
 print(dt_persb_south_diff_plot)
 ```
 
-## Plotting daytime aspect differencing
+## Plotting - aspect differencing
 
 ### Persistent Zone
 
@@ -955,7 +854,9 @@ print(dt_persb_south_diff_plot)
 #creating new dataframe with only daytime hours
 dt_persb_gbdb_combined_data <- persb_gbdb_combined_data %>%
   filter(hour(datetime) >= 6 & hour(datetime) <= 21)
+```
 
+```{r}
 #plotting
 dt_persb_gbdb_diff_plot <- ggplot(dt_persb_gbdb_combined_data, aes(x = comparison, y = difference, fill = treename)) +
   geom_boxplot() +
@@ -968,13 +869,15 @@ dt_persb_gbdb_diff_plot <- ggplot(dt_persb_gbdb_combined_data, aes(x = compariso
 print(dt_persb_gbdb_diff_plot)
 ```
 
-Transitional Zone
+### Transitional Zone
 
 ```{r}
 #creating new dataframe with only daytime hours
 dt_transb_gbdb_combined_data <- transb_gbdb_combined_data %>%
   filter(hour(datetime) >= 6 & hour(datetime) <= 21)
+```
 
+```{r}
 #plotting
 dt_transb_gbdb_diff_plot <- ggplot(dt_transb_gbdb_combined_data, aes(x = comparison, y = difference, fill = treename)) +
   geom_boxplot() +
@@ -987,62 +890,18 @@ dt_transb_gbdb_diff_plot <- ggplot(dt_transb_gbdb_combined_data, aes(x = compari
 print(dt_transb_gbdb_diff_plot)
 ```
 
-# Understanding the Statistics
+# Day vs Night Stats Dataframes
 
-When you calculate an average difference between two temperatures and analyze the percent difference, average, and coefficient of variation, each metric provides different insights into your data:
+### Calling in Data
 
-1.  **Percent Difference**:
-
-    -   **What it tells you**: The percent difference gives you a relative measure of the difference between the two temperatures compared to their average. It tells you how large the difference is in relation to the overall magnitude of the temperatures.
-
-    -   **Interpretation**: A high percent difference indicates a significant discrepancy between the two temperatures, whereas a low percent difference suggests that the temperatures are relatively similar.
-
-2.  **Average**:
-
-    -   **What it tells you**: The average temperature difference provides a measure of the central tendency of the differences between the two temperatures. It is the mean value of all the calculated differences.
-
-    -   **Interpretation**: This metric gives you an idea of the typical or expected difference between the temperatures. It is useful for understanding the overall trend in the temperature differences.
-
-3.  **Coefficient of Variation (CV)**:
-
-    -   **What it tells you**: The coefficient of variation is a standardized measure of dispersion of the temperature differences. It is calculated as the ratio of the standard deviation to the mean and is usually expressed as a percentage.
-
-    -   **Interpretation**: A high CV indicates that the temperature differences are highly variable, suggesting inconsistency or high variability in the temperature differences. A low CV indicates that the temperature differences are relatively consistent and stable.
-
-### Example Scenario
-
-Suppose you have two sets of temperature readings (in °C) from two different sensors or locations. After calculating the differences between the corresponding readings, you obtain the following statistics:
-
--   **Average Difference**: 2°C
-
--   **Percent Difference**: 10%
-
--   **Coefficient of Variation**: 25%
-
-#### Interpretation:
-
--   **Average Difference**: On average, there is a 2°C difference between the temperatures recorded by the two sensors or at the two locations.
-
--   **Percent Difference**: The 10% difference indicates that the temperature difference is relatively small compared to the average temperature values of the readings.
-
--   **Coefficient of Variation**: A CV of 25% suggests moderate variability in the temperature differences. While there is some fluctuation in the differences, it is not extremely high, indicating that the differences are somewhat consistent but not entirely uniform.
-
-In summary, these metrics together help you understand the magnitude, relative size, and variability of the temperature differences in your data.
-
-## My Understanding of the Data
-
--   very high coefficient of variation and percent differences mean that there is a lot of variability of temperatures, even on a daily and monthly scale.
-
-------------------------------------------------------------------------
-
-# Calculating Statistics for Day vs Night Temp Differences
-
-## Calling in Data
+The single_avg temps are where a single tree was chosen, then the north/south aspects were averaged
 
 ```{r}
 #dataframe with single mean daily values calculated for daytime and nighttime, averaging not between N/S but for all trees.
 single_avg_all_treetemps <- read_excel("nsf/single_avg_all_treetemps.xlsx")
 ```
+
+Data Wrangling
 
 ```{r}
 #manipulating dataframe to run stats on
@@ -1062,71 +921,18 @@ night_all_temps <- stats_single_avg_all_treetemps %>%
   filter(!is.na(avg_night_temp))
 
 ##joining north/south dataframes
-final_single_avg_all_treetemps <- day_all_temps %>%
+final_daynight_singleavg_temps <- day_all_temps %>%
   inner_join(night_all_temps) %>%
   #adding in week and month columns
   mutate(
     month = format(date, "%Y-%m"),
     week = week(date)  # Extract week number from datetime
   ) %>%
-  #adding in statistics calculations
-  mutate(
-    avg_temp = (avg_day_temp + avg_night_temp) / 2,
-    temp_diff = avg_day_temp - avg_night_temp,
-    percent_diff = abs(100 * temp_diff / avg_temp),
-    avg_diff = mean_diff,
-    coeff_var = (sd_diff / abs(mean_diff)) * 100
-  ) 
+  mutate(avg_temp = (avg_day_temp + avg_night_temp) / 2)
 ```
 
-## Calculating Statistics
+Exporting final daynight single_avg dataset
 
 ```{r}
-#calculating weekly single avg stats
-weekly_single_avg_temps <- final_single_avg_all_treetemps %>%
-  group_by(burn_status, zone, month, week) %>%
-  summarize(
-    avg_day_temp = mean(avg_day_temp, na.rm = TRUE),
-    avg_night_temp = mean(avg_night_temp, na.rm = TRUE),
-    avg_temp = mean(avg_temp, na.rm = TRUE),  # Assuming avg_temp is already calculated
-    avg_diff = mean(temp_diff, na.rm = TRUE),  # Assuming temp_diff is already calculated
-    percent_diff = mean(percent_diff, na.rm = TRUE),
-    coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming coeff_var is already calculated
-    # Add other columns as needed
-  )
-```
-
-```{r}
-#creating monthly single avg stats
-monthly_single_avg_temps <- final_single_avg_all_treetemps %>%
-  group_by(burn_status, zone, month) %>%
-  summarize(
-    avg_day_temp = mean(avg_day_temp, na.rm = TRUE),
-    avg_night_temp = mean(avg_night_temp, na.rm = TRUE),
-    avg_temp = mean(avg_temp, na.rm = TRUE),  # Assuming avg_temp is already calculated
-    avg_diff = mean(temp_diff, na.rm = TRUE),  # Assuming temp_diff is already calculated
-    percent_diff = mean(percent_diff, na.rm = TRUE),
-    coeff_var = mean(coeff_var, na.rm = TRUE)  # Assuming coeff_var is already calculated
-    # Add other columns as needed
-  )
-```
-
-### Exporting Tables
-
-```{r}
-##this step is not working, not sure why?!
-#saving the dataframe as an excel spreadsheet
-write.xlsx(monthly_single_avg_temps, "nsf/monthly_single_avg_temps.xlsx")
-
-write.xlsx(weekly_single_avg_temps, "nsf/weekly_single_avg_temps.xlsx")
-```
-
-# Exporting all Stats to Tables
-
-```{r}
-#single daily average, day/night comparison - monthly table
-write_csv(monthly_single_avg_temps, "nsf/monthly_single_avg_temps.csv")
-
-#single daily average, day/night comparison - weekly table
-write_csv(weekly_single_avg_temps, "nsf/weekly_single_avg_temps.csv")
+write_csv(final_daynight_singleavg_temps, "nsf/treetemp_data/final_daynight_singleavg_temps.csv")
 ```
