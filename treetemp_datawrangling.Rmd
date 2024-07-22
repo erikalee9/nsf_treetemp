@@ -763,8 +763,6 @@ Creating a clean dataframe with columns for gb, db, and ub temps, instead of row
 #persistent burned 
 
 full_pers_gbdb_data <- full_burned_combined_data %>%
-  #there is a missing datetime for db_north, so I have to filter this dataset specifically to exclude the first datetime reading
-  filter(datetime >= ymd_hms("2024-02-02 00:30:00")) %>%
   filter(!(aspect %in% c("charred", "uncharred"))) %>%
   filter(zone == "persistent", aspect == "south") %>%
   #remove gb_w tree, so there is two gb and two db
@@ -776,7 +774,7 @@ clean_persb_gbdb_temps <- full_pers_gbdb_data %>%
   rename(gb_temp = "green burn", db_temp = "dead burn") %>%
   # Selecting only rows where tree_name is "gb_s" or "db_s"
   filter(tree_name %in% c("gb_s", "db_s")) %>%
-  select(-tree_name)
+  select(c(-tree_name, -sensor_id))
 
 
 ##creatinging individual dataframes for north and south temps, then going to rebind them to get rid of the NA issues
@@ -791,10 +789,78 @@ db_persb_temps <- clean_persb_gbdb_temps %>%
 
 ##joining north/south dataframes
 final_persb_gbdb_temps <- gb_persb_temps %>%
-  left_join(db_persb_temps)
+  full_join(db_persb_temps, by = c("datetime", "aspect", "zone"))
 ```
 
-\*\* still cannot get the above chunk to join correctly! Need to keep working on this
+### Trans_b
+
+```{r}
+#transitional burned 
+
+full_trans_gbdb_data <- full_burned_combined_data %>%
+  #there is a missing datetime for db_north, so I have to filter this dataset specifically to exclude the first datetime reading
+  filter(!(aspect %in% c("charred", "uncharred"))) %>%
+  filter(zone == "transitional", aspect == "south")
+
+clean_transb_gbdb_temps <- full_trans_gbdb_data %>%
+  group_by(datetime, burn_status, zone, aspect) %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(gb_temp = "green burn", db_temp = "dead burn") %>%
+  # Selecting only rows where tree_name is "gb_s" or "db_s"
+  filter(tree_name %in% c("gb_s", "db_s")) %>%
+  select(c(-tree_name, -sensor_id))
+
+
+##creatinging individual dataframes for north and south temps, then going to rebind them to get rid of the NA issues
+gb_transb_temps <- clean_transb_gbdb_temps %>%
+  select(-db_temp) %>%
+  # Filter out rows with NA
+  filter(!is.na(gb_temp))
+
+db_transb_temps <- clean_transb_gbdb_temps %>%
+  select(-gb_temp) %>%
+  filter(!is.na(db_temp))
+
+##joining north/south dataframes
+final_transb_gbdb_temps <- gb_persb_temps %>%
+  full_join(db_persb_temps, by = c("datetime", "aspect", "zone"))
+```
+
+### Pers_ub
+
+```{r}
+full_pers_ub_data <- full_unburned_combined_data %>%
+  filter(zone == "persistent", aspect == "south")
+
+clean_pers_ub_temps <- full_pers_ub_data %>%
+  group_by(datetime, burn_status, zone, aspect) %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(ub_temp = "alive") %>%
+  #selecting one tree, "ub_s"
+  filter(tree_name == "ub_s") %>%
+  select(c(-tree_name, -sensor_id))
+
+# final pers_ub temps dataframe
+final_pers_ub_temps <- clean_pers_ub_temps
+```
+
+### Trans_ub
+
+```{r}
+full_trans_ub_data <- full_unburned_combined_data %>%
+  filter(zone == "transitional", aspect == "south")
+
+clean_trans_ub_temps <- full_trans_ub_data %>%
+  group_by(datetime, burn_status, zone, aspect) %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(ub_temp = "alive") %>%
+  #selecting one tree, "ub_e"
+  filter(tree_name == "ub_e") %>%
+  select(c(-tree_name, -sensor_id))
+
+# final pers_ub temps dataframe
+final_trans_ub_temps <- clean_trans_ub_temps
+```
 
 # Final 15-minute Dataframes
 
@@ -835,15 +901,65 @@ write_csv(final_15min_ns_b, "nsf/treetemp_data/final_15min_ns_b.csv")
 write_csv(final_15min_ns_ub, "nsf/treetemp_data/final_15min_ns_ub.csv")
 ```
 
-## GB/DB/UB Aspects\*\*\*
+## GB/DB/UB Aspects
 
 ```{r}
-final_15min_gbdb_b <- bind_rows(final_persb_ns_temps, final_transb_ns_temps) %>%
+# GB/DB comparison
+final_15min_gbdb <- bind_rows(final_persb_gbdb_temps, final_transb_gbdb_temps) %>%
   #adding in day & month
   mutate(day = as.Date(datetime), month = month(datetime)) %>%
   #adding in mean temp of north and south temps
-  mutate(avg_temp = mean((south_temp + north_temp) / 2)) %>%
-  select(datetime, day, month, zone, burn_status, tree_name, everything())
+  mutate(avg_temp = mean((gb_temp + db_temp) / 2)) %>%
+  select(datetime, day, month, zone, everything())
+```
+
+```{r}
+#creating dataframe for combined ub temps
+
+final_15min_gbdb_ub <- bind_rows(final_pers_ub_temps, final_trans_ub_temps) %>%
+  #adding in day & month
+  mutate(day = as.Date(datetime), month = month(datetime)) %>%
+  select(datetime, day, month, zone, everything())
+```
+
+```{r}
+#GB/UB comparison
+
+##have to create a new dataframe for this step that gets rid of db temps
+final_gb_temps <- final_15min_gbdb %>%
+  select(c(-db_temp, -avg_temp))
+
+final_15min_gbub <- final_gb_temps %>%
+  full_join(final_15min_gbdb_ub, by = c("datetime", "day", "month", "aspect", "zone")) %>%
+  #adding in mean temp of north and south temps
+  mutate(avg_temp = mean((gb_temp + ub_temp) / 2)) %>%
+  select(datetime, day, month, zone, everything())
+```
+
+```{r}
+#DB/UB comparison
+final_db_temps <- final_15min_gbdb %>%
+  select(c(-gb_temp, -avg_temp))
+
+final_15min_dbub <- final_db_temps %>%
+  full_join(final_15min_gbdb_ub, by = c("datetime", "day", "month", "aspect", "zone")) %>%
+  #adding in mean temp of north and south temps
+  mutate(avg_temp = mean((db_temp + ub_temp) / 2)) %>%
+  select(datetime, day, month, zone, everything())
+```
+
+### Writing CSV
+
+```{r}
+#writing final gb/db/ub 15-minute comparison dataframes to n-drive
+write_csv(final_15min_gbdb, "nsf/treetemp_data/final_15min_gbdb.csv")
+
+#this one is only the unburned temps! Not a comparison
+write_csv(final_15min_gbdb_ub, "nsf/treetemp_data/final_15min_gbdb_ub.csv")
+
+write_csv(final_15min_gbub, "nsf/treetemp_data/final_15min_gbub.csv")
+
+write_csv(final_15min_dbub, "nsf/treetemp_data/final_15min_dbub.csv")
 ```
 
 # Day/Night timeframes
