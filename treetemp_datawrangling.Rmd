@@ -622,7 +622,9 @@ write_csv(full_burned_combined_data, "nsf/treetemp_data/full_burned_combined_dat
 write_csv(full_unburned_combined_data, "nsf/treetemp_data/full_unburned_combined_data.csv")
 ```
 
-## Pers_b
+## N/S Aspect Dataframes
+
+### Pers_b
 
 Creating a clean dataframe with columns for north and south temps, instead of rows (wide format)
 
@@ -661,7 +663,7 @@ final_persb_ns_temps <- north_persb_temps %>%
 write_csv(final_persb_ns_temps, "nsf/105E_pers_burned/final_persb_ns_temps.csv")
 ```
 
-## Pers_ub
+### Pers_ub
 
 ```{r}
 #persistent unburned final dataset
@@ -689,7 +691,7 @@ final_pers_ub_ns_temps <- north_pers_ub_temps %>%
   inner_join(south_pers_ub_temps)
 ```
 
-## Trans_b
+### Trans_b
 
 ```{r}
 #transitional burned 
@@ -723,7 +725,7 @@ final_transb_ns_temps <- north_transb_temps %>%
 write_csv(final_transb_ns_temps, "nsf/105E_trans_burned/final_transb_ns_temps.csv")
 ```
 
-## Trans_ub
+### Trans_ub
 
 ```{r}
 #tranitional unburned final dataset
@@ -751,12 +753,57 @@ final_trans_ub_ns_temps <- north_trans_ub_temps %>%
   inner_join(south_trans_ub_temps)
 ```
 
-# Final 15-minute Dataframes 
+## DB/GB/UB Dataframes \*\*\*
+
+### Pers_b
+
+Creating a clean dataframe with columns for gb, db, and ub temps, instead of rows (wide format)
+
+```{r}
+#persistent burned 
+
+full_pers_gbdb_data <- full_burned_combined_data %>%
+  #there is a missing datetime for db_north, so I have to filter this dataset specifically to exclude the first datetime reading
+  filter(datetime >= ymd_hms("2024-02-02 00:30:00")) %>%
+  filter(!(aspect %in% c("charred", "uncharred"))) %>%
+  filter(zone == "persistent", aspect == "south") %>%
+  #remove gb_w tree, so there is two gb and two db
+  filter(!(tree_name == "gb_w"))
+
+clean_persb_gbdb_temps <- full_pers_gbdb_data %>%
+  group_by(datetime, burn_status, zone, aspect) %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(gb_temp = "green burn", db_temp = "dead burn") %>%
+  # Selecting only rows where tree_name is "gb_s" or "db_s"
+  filter(tree_name %in% c("gb_s", "db_s")) %>%
+  select(-tree_name)
+
+
+##creatinging individual dataframes for north and south temps, then going to rebind them to get rid of the NA issues
+gb_persb_temps <- clean_persb_gbdb_temps %>%
+  select(-db_temp) %>%
+  # Filter out rows with NA
+  filter(!is.na(gb_temp))
+
+db_persb_temps <- clean_persb_gbdb_temps %>%
+  select(-gb_temp) %>%
+  filter(!is.na(db_temp))
+
+##joining north/south dataframes
+final_persb_gbdb_temps <- gb_persb_temps %>%
+  left_join(db_persb_temps)
+```
+
+\*\* still cannot get the above chunk to join correctly! Need to keep working on this
+
+# Final 15-minute Dataframes
 
 Combining burned and unburned dataframes by zone and 15-minute timestep - this is what is used for stats calculations
 
 -   important step
 -   Also adding avg_temp for 15-minute timestep
+
+## North/South Aspects
 
 ```{r}
 #combining persistent and transitional unburned to create a 15min_unburned datatable
@@ -788,7 +835,16 @@ write_csv(final_15min_ns_b, "nsf/treetemp_data/final_15min_ns_b.csv")
 write_csv(final_15min_ns_ub, "nsf/treetemp_data/final_15min_ns_ub.csv")
 ```
 
-## 
+## GB/DB/UB Aspects\*\*\*
+
+```{r}
+final_15min_gbdb_b <- bind_rows(final_persb_ns_temps, final_transb_ns_temps) %>%
+  #adding in day & month
+  mutate(day = as.Date(datetime), month = month(datetime)) %>%
+  #adding in mean temp of north and south temps
+  mutate(avg_temp = mean((south_temp + north_temp) / 2)) %>%
+  select(datetime, day, month, zone, burn_status, tree_name, everything())
+```
 
 # Day/Night timeframes
 
@@ -822,6 +878,8 @@ dt_persb_north_diff_long <- persb_north_diff_long %>%
 dt_persb_south_diff_long <- persb_south_diff_long %>%
   filter(hour(datetime) >= 6 & hour(datetime) <= 21)
 ```
+
+Plotting
 
 ```{r}
 #plotting
@@ -876,6 +934,8 @@ print(dt_persb_gbdb_diff_plot)
 dt_transb_gbdb_combined_data <- transb_gbdb_combined_data %>%
   filter(hour(datetime) >= 6 & hour(datetime) <= 21)
 ```
+
+Plotting
 
 ```{r}
 #plotting
