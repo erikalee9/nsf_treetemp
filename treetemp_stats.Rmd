@@ -46,6 +46,8 @@ final_15min_ns_ub <- read_csv("nsf/treetemp_data/final_15min_ns_ub.csv")
 final_15min_gbdb_b <- read_csv("nsf/treetemp_data/final_15min_gbdb_b.csv")
 
 final_15min_gbdb_ub <- read_csv("nsf/treetemp_data/final_15min_gbdb_ub.csv")
+
+final_single_avg_all_treetemps <- read_csv("nsf/treetemp_data/final_daynight_singleavg_temps.csv")
 ```
 
 ## Calculating Stats
@@ -165,6 +167,21 @@ stats_monthly_dbub <- final_15min_dbub %>%
   mutate_if(is.numeric, round, 3)
 ```
 
+Day/Night Differenced Data
+
+```{r}
+#monthly stats calculations by day/night zone & burn status
+stats_monthly_daynight <- final_daynight_singleavg_temps %>%
+  #calculating temp_diff for 15-minute interval
+  mutate(temp_diff = avg_day_temp - avg_night_temp) %>%
+  #calculating monthly stats
+  group_by(month, zone, burn_status) %>%
+  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
 ## Saving Stats CSV
 
 ### Exporting CSVs to N-drive
@@ -179,9 +196,11 @@ write_csv(stats_monthly_gbdb, "nsf/treetemp_data/stats_monthly_gbdb.csv")
 write_csv(stats_monthly_gbub, "nsf/treetemp_data/stats_monthly_gbub.csv")
 
 write_csv(stats_monthly_dbub, "nsf/treetemp_data/stats_monthly_dbub.csv")
+
+write_csv(stats_monthly_daynight, "nsf/treetemp_data/stats_monthly_daynight.csv")
 ```
 
-### Converting CSVs to Tables
+# Converting CSVs to Tables
 
 ```{r}
 #creating one NS table with subtitles of burned and unburned (seperate tables)
@@ -205,10 +224,56 @@ browseURL(html_file_ns_b)
 browseURL(html_file_ns_ub)
 ```
 
-\
-
 ```{r}
 
 ```
 
 #the above process worked, but the html table doesn't look that good. Consider trying to make one large table, with all the sub tables included with sub-headers. That would work better I think?
+
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+
+# Understanding the Statistics
+
+When you calculate an average difference between two temperatures and analyze the percent difference, average, and coefficient of variation, each metric provides different insights into your data:
+
+1.  **Percent Difference**:
+
+    -   **What it tells you**: The percent difference gives you a relative measure of the difference between the two temperatures compared to their average. It tells you how large the difference is in relation to the overall magnitude of the temperatures.
+
+    -   **Interpretation**: A high percent difference indicates a significant discrepancy between the two temperatures, whereas a low percent difference suggests that the temperatures are relatively similar.
+
+2.  **Average**:
+
+    -   **What it tells you**: The average temperature difference provides a measure of the central tendency of the differences between the two temperatures. It is the mean value of all the calculated differences.
+
+    -   **Interpretation**: This metric gives you an idea of the typical or expected difference between the temperatures. It is useful for understanding the overall trend in the temperature differences.
+
+3.  **Coefficient of Variation (CV)**:
+
+    -   **What it tells you**: The coefficient of variation is a standardized measure of dispersion of the temperature differences. It is calculated as the ratio of the standard deviation to the mean and is usually expressed as a percentage.
+
+    -   **Interpretation**: A high CV indicates that the temperature differences are highly variable, suggesting inconsistency or high variability in the temperature differences. A low CV indicates that the temperature differences are relatively consistent and stable.
+
+### Example Scenario
+
+Suppose you have two sets of temperature readings (in °C) from two different sensors or locations. After calculating the differences between the corresponding readings, you obtain the following statistics:
+
+-   **Average Difference**: 2°C
+
+-   **Percent Difference**: 10%
+
+-   **Coefficient of Variation**: 25%
+
+#### Interpretation:
+
+-   **Average Difference**: On average, there is a 2°C difference between the temperatures recorded by the two sensors or at the two locations.
+
+-   **Percent Difference**: The 10% difference indicates that the temperature difference is relatively small compared to the average temperature values of the readings.
+
+-   **Coefficient of Variation**: A CV of 25% suggests moderate variability in the temperature differences. While there is some fluctuation in the differences, it is not extremely high, indicating that the differences are somewhat consistent but not entirely uniform.
+
+In summary, these metrics together help you understand the magnitude, relative size, and variability of the temperature differences in your data.
+
+## My Understanding of the Data
+
+-   very high coefficient of variation and percent differences mean that there is a lot of variability of temperatures, even on a daily and monthly scale.
