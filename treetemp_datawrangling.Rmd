@@ -822,8 +822,8 @@ db_transb_temps <- clean_transb_gbdb_temps %>%
   filter(!is.na(db_temp))
 
 ##joining north/south dataframes
-final_transb_gbdb_temps <- gb_persb_temps %>%
-  full_join(db_persb_temps, by = c("datetime", "aspect", "zone"))
+final_transb_gbdb_temps <- gb_transb_temps %>%
+  full_join(db_transb_temps, by = c("datetime", "aspect", "zone"))
 ```
 
 ### Pers_ub
