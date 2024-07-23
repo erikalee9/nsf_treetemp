@@ -99,6 +99,7 @@ trans_ub_aspects <- read_excel("nsf/105E_trans_unburned/105E_trans_ub_aspects.xl
 #tree temp dataframes
 start_time <- ymd_hms("2024-02-02 00:00:00")
 end_time <- ymd_hms("2024-05-24 00:00:00")
+end_time_2 <- ymd_hms("2024-04-21 00:00:00")
 
 filtered_pers_b_aspects <- pers_b_aspects %>%
   filter(datetime >= start_time & datetime <= end_time) %>%
@@ -151,12 +152,12 @@ all_treetemps <- all_treetemps %>%
   mutate(date = as_date(datetime)) %>%
   mutate(
     temp_k= temp + 273.15, # Convert temperature to Kelvin
-    tree_RL_in = emissivity * stefan_boltzmann_constant * (temp_k^4) # Calculate longwave radiation
+    tree_RL_out = emissivity * stefan_boltzmann_constant * (temp_k^4) # Calculate longwave radiation
   ) %>%
 #the RL_in units are W/m2, the m2 component is 
   #calculating watz (W)
   #W is = to J/s
-  mutate(W = tree_RL_in*m2) %>%
+  mutate(W = tree_RL_out*m2) %>%
   # Convert instantaneous power (W) to energy (J) for each 15-minute interval
   mutate(energy_J = W * time_interval_seconds) %>%
   #adding in a time column for day/night parsing later
@@ -431,7 +432,7 @@ ggsave("dtnt_avg_RLout_plot.png", plot = dtnt_avg_energy_plot, width = 10, heigh
 htmlwidgets::saveWidget(plotly_dtnt_avg_energy, "plotly_dtnt_avg_RLout.html")
 ```
 
-## South-only Max/Avg day/night 
+## South-only Max/Avg day/night
 
 ```{r}
 #south only dtnt_max energy by site
@@ -677,33 +678,86 @@ test_wxR_plot <- ggplot(daily_avg_combined_R_data) +
 print(test_wxR_plot)
 ```
 
-Plotting day-only SW and LW plots, with a seperate MJ plot
+Plotting day-only SW and LW plots, with a seperate MJ plot?
+
+Figuring out issues with transitional weather data?
 
 ```{r}
-#dt dataframes
-daytime_avg_combined_R_data <- daily_avg_combined_R_data %>%
-  filter(phase == "day")
+#these plots are going by datetime, but if I can just get them to be by phase (day-only), I think there will not be as much of a drop? Or I could do average per daytime values?
+
+pers_burned_wxR <- ggplot(filtered_pers_b_wx) +
+  geom_line(aes(x = datetime, y = SWin_Avg, color = "SWin_Avg")) +
+  geom_line(aes(x = datetime, y = SWout_Avg, color = "SWout_Avg"))+
+  geom_line(aes(x = datetime, y = LWin_Avg, color = "LWin_Avg")) +
+  geom_line(aes(x = datetime, y = LWout_Avg, color = "LWout_Avg")) +
+  labs(
+    title = "Persistent Average Daily Radiation Components",
+    x = "Date",
+    y = "Radiation Components (W/m2)"
+  ) +
+  theme_minimal()
+
+
+trans_burned_wxR <- ggplot(filtered_trans_b_wx) +
+  geom_line(aes(x = datetime, y = SWin_Avg, color = "SWin_Avg")) +
+  geom_line(aes(x = datetime, y = SWout_Avg, color = "SWout_Avg"))+
+  geom_line(aes(x = datetime, y = LWin_Avg, color = "LWin_Avg")) +
+  geom_line(aes(x = datetime, y = LWout_Avg, color = "LWout_Avg"))
+
+pers_burned_wxR
+
+trans_burned_wxR
+```
+
+# New RL Out Dataframes
+
+```{r}
+#creating a RLout dataframe for all zones/burn status
+
+#full 15-minute dataframe
+full_LWout_data <- all_treetemps %>%
+  select(datetime, aspect, site, tree_RL_out, energy_J) %>%
+  mutate(
+    burn_status = case_when(
+      site == "pers_burned" ~ "burned",
+      site == "pers_unburned" ~ "unburned",
+      site == "trans_burned" ~ "burned",
+      site == "trans_unburned" ~ "unburned",
+      TRUE ~ NA_character_  # Or specify another value or condition as needed
+    ),
+    zone = case_when(
+      site == "pers_burned" ~ "persistent",
+      site == "pers_unburned" ~ "persistent",
+      site == "trans_burned" ~ "transitional",
+      site == "trans_unburned" ~ "transitional",
+      TRUE ~ NA_character_  # Or specify another value or condition as needed
+    )
+  ) %>%
+  mutate(
+    # Extract the date part
+    date = date(datetime),
+    # Extract the time part
+    time = format(datetime, "%H:%M:%S")
+  ) %>%
+  select(-site) %>%
+  select(datetime, date, time, zone, burn_status, aspect, everything()) %>%
+  #adding in a phase column to parse out day and night times
+  mutate(time = hms(time)) %>%
+  mutate(phase = case_when(
+    time >= daytime & time < nighttime ~ "day",
+    time < daytime | time >= nighttime ~ "night",
+    TRUE ~ NA_character_  # Handle cases where none of the conditions match
+  ))
 ```
 
 ```{r}
-#plotting individual plotsm then arranging using ggarrange
-
-dt_persistent_Rplot <- ggplot(daytime_avg_combined_R_data) +
-  geom_line(aes(x = date, y = SWin_Avg, color = "SWin_Avg", linetype = burn_status)) +
-  geom_line(aes(x = date, y = SWout_Avg, color = "SWout_Avg", linetype = burn_status)) +
-  geom_line(aes(x = date, y = LWin_Avg, color = "LWin_Avg", linetype = burn_status)) +
-  geom_line(aes(x = date, y = LWout_Avg, color = "LWout_Avg", linetype = burn_status)) +
-  facet_wrap(~ zone + burn_status, scales = "free_y", dir = "v") +  # Facet by zone and phase
-  labs(
-    title = "Average Daily Radiation Components",
-    x = "Date",
-    y = "Value",
-    color = "Variable",
-    linetype = "Burn Status"
-  ) +
-  theme_minimal() +  # Use a minimal theme for a clean look
-  scale_color_manual(values = color_values) +  # Customize color scheme
-  scale_linetype_manual(values = line_types)
-
-dt_persistent_Rplot
+#day average daily dataframes for RLout - taking the average of daytime RLout readings, for SOUTH ASPECT ONLY
+dt_avg_LW_out_data <- full_LWout_data %>%
+  filter(phase == "day", aspect == "south") %>%
+  group_by(date, zone, burn_status, phase) %>%
+  summarize(
+    avg_tree_RL_out = round(mean(tree_RL_out, na.rm = TRUE), 3),
+    .groups = 'drop'  # Ensure grouping is dropped after summarizing
+  ) %>%
+  rename(dt_avg_tree_LWout_wperm2 = avg_tree_RL_out)
 ```
