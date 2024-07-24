@@ -54,6 +54,13 @@ final_15min_dbub <- read_csv("nsf/treetemp_data/final_15min_dbub.csv")
 final_daynight_singleavg_temps <- read_csv("nsf/treetemp_data/final_daynight_singleavg_temps.csv")
 ```
 
+```{r}
+#new full dataframes to load
+full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv")
+
+full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv")
+```
+
 ## Calculating Stats
 
 ### N/S Differenced Data
@@ -120,8 +127,6 @@ stats_monthly_gbdb <- final_15min_gbdb %>%
 ```{r}
 #stats calculations
 stats_monthly_gbub <- final_15min_gbub %>%
-  #calculating temp_diff for 15-minute interval
-  mutate(temp_diff = gb_temp - ub_temp) %>%
   #calculating monthly stats
   group_by(month, zone) %>%
   summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
@@ -135,8 +140,8 @@ stats_monthly_gbub <- final_15min_gbub %>%
 ```{r}
 #stats calculations
 stats_monthly_dbub <- final_15min_dbub %>%
-  #calculating temp_diff for 15-minute interval
-  mutate(temp_diff = db_temp - ub_temp) %>%
+  # Removing rows with NAs
+  drop_na() %>%
   #calculating monthly stats
   group_by(month, zone) %>%
   summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
@@ -145,7 +150,7 @@ stats_monthly_dbub <- final_15min_dbub %>%
   mutate_if(is.numeric, round, 3)
 ```
 
-Day/Night Differenced Data
+### Day/Night Differenced Data
 
 ```{r}
 #monthly stats calculations by day/night zone & burn status
@@ -158,6 +163,93 @@ stats_monthly_daynight <- final_daynight_singleavg_temps %>%
     coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
+```
+
+### New Differenced Data from full datasets
+
+#### NS Comparison
+
+```{r}
+#creating a monthly dataframe to carry over avg and temp_difference data into full stats dataframe - can't bind this with the stats because we need 15-minute numbers to get the correct stats
+monthly_ns_data <- full_15min_ns %>%
+  group_by(month, zone, burn_status) %>%
+  summarize(mean_north_temp = mean(north_temp, na.rm = TRUE), mean_south_temp = mean(south_temp, na.rm = TRUE), ns_avg_temp = mean(ns_avg_temp, na.rm = TRUE), temp_diff = mean(temp_diff, na.rm = TRUE), .groups = 'drop')
+```
+
+```{r}
+#n/s monthly stats
+stats_monthly_ns <- full_15min_ns %>%
+  #calculating monthly stats
+  group_by(month, zone, burn_status) %>%
+  summarize(ns_mean_temp = mean(ns_avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
+#### GBDBUB Comparison
+
+```{r}
+monthly_gbdbub_data <- full_15min_gbdbub %>%
+  group_by(month, zone) %>%
+  summarize(mean_gb_temp = mean(gb_temp, na.rm = TRUE), mean_db_temp = mean(db_temp, na.rm = TRUE), mean_ub_temp = mean(ub_temp, na.rm = TRUE), gbdb_avg_temp = mean(gbdb_avg_temp, na.rm = TRUE), gbub_avg_temp = mean(gbub_avg_temp, na.rm = TRUE), dbub_avg_temp = mean(dbub_avg_temp, na.rm = TRUE), gbdb_temp_diff = mean(gbdb_temp_diff, na.rm = TRUE), gbub_temp_diff = mean(gbub_temp_diff, na.rm = TRUE), dbub_temp_diff = mean(dbub_temp_diff, na.rm = TRUE), .groups = 'drop')
+```
+
+```{r}
+#making a stats dataframe with combined data did not work, so I am going to bind the already created gbdbub dataframes so I have a full gbdbub stats dataframe
+
+#gb/db stats - db minus gb! 
+stats_monthly_gbdb_V2 <- final_15min_gbdb %>%
+  #calculating temp_diff for 15-minute interval
+  mutate(gbdb_temp_diff = db_temp - gb_temp)%>%
+  #calculating monthly stats
+  group_by(month, zone) %>%
+  summarize(gbdb_mean_temp = mean(avg_temp), gbdb_mean_diff = mean(gbdb_temp_diff), gbdb_sd = sd(gbdb_temp_diff, na.rm = TRUE),
+    gbdb_coeff_var = (sd(gbdb_temp_diff, na.rm = TRUE) / abs(mean(gbdb_temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+
+#gb/ub stats
+stats_monthly_gbub_V2 <- final_15min_gbub %>%
+  #calculating temp_diff for 15-minute interval
+  mutate(gbub_temp_diff = gb_temp - ub_temp)%>%
+  #calculating monthly stats
+  group_by(month, zone) %>%
+  summarize(gbub_mean_temp = mean(avg_temp), gbub_mean_diff = mean(gbub_temp_diff), gbub_sd = sd(gbub_temp_diff, na.rm = TRUE),
+    gbub_coeff_var = (sd(gbub_temp_diff, na.rm = TRUE) / abs(mean(gbub_temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+
+#db/ub stats
+stats_monthly_dbub_V2 <- final_15min_dbub %>%
+  #calculating temp_diff for 15-minute interval
+  mutate(dbub_temp_diff = db_temp - ub_temp)%>%
+  #calculating monthly stats
+  group_by(month, zone) %>%
+  drop_na() %>%
+  summarize(dbub_mean_temp = mean(avg_temp), dbub_mean_diff = mean(dbub_temp_diff), dbub_sd = sd(dbub_temp_diff, na.rm = TRUE),
+    dbub_coeff_var = (sd(dbub_temp_diff, na.rm = TRUE) / abs(mean(dbub_temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+
+##joining all V2 dataframes
+stats_monthly_gbdbub <- stats_monthly_gbdb_V2 %>%
+  full_join(stats_monthly_gbub_V2) %>%
+  full_join(stats_monthly_dbub_V2)
+```
+
+#### Saving New full stats as CSVs
+
+These are full csv tables, not seperated by burn/unburned status
+
+```{r}
+write_csv(monthly_ns_data, "nsf/treetemp_data/monthly_ns_data.csv")
+
+write_csv(stats_monthly_ns, "nsf/treetemp_data/stats_monthly_ns.csv")
+
+write_csv(monthly_gbdbub_data, "nsf/treetemp_data/monthly_gbdbub_data.csv")
+
+write_csv(stats_monthly_gbdbub, "nsf/treetemp_data/monthly_gbdbub_data.csv")
 ```
 
 ## Saving Stats CSV
@@ -208,10 +300,13 @@ browseURL(html_file_ns_b)
 browseURL(html_file_ns_ub)
 ```
 
-```         
-```
-
 #the above process worked, but the html table doesn't look that good. Consider trying to make one large table, with all the sub tables included with sub-headers. That would work better I think?
+
+# Plotting Temp Differences
+
+```{r}
+
+```
 
 # Process to turn csv's into tables after exported
 
