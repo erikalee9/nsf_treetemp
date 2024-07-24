@@ -42,11 +42,11 @@ brewer.pal(n = 8, name = "Dark2")
 
 ```{r}
 #setting a color-blind friendly custom palette for gb/db/ubn- using RColorBrewer
-##blue is green burned, orange is dead burned, green is unburned
-three_custom_colors <- c("#2166AC", "#D95F02", "#1B7837")
+##blue is unburned, orange is dead burned, green is green burned
+three_custom_colors <- c("#D95F02","#1B7837", "#2166AC")
 
-## orange is burned, green is unburned
-two_custom_colors <- c("#D95F02", "#1B7837")
+## orange is burned, blue is unburned
+two_custom_colors <- c("#D95F02", "#2166AC")
 ```
 
 ```{r}
@@ -92,9 +92,9 @@ trans_ub_aspects <- read_excel("nsf/105E_trans_unburned/105E_trans_ub_aspects.xl
   mutate(datetime = ymd_hms(datetime))
 ```
 
+Setting Constants
+
 ```{r}
-#setting a consistent timeframe for all tree temp data for all burned/unburned zones
-##has to start at 2024-02-02 due to errors in data at transitional burned site
 
 #tree temp dataframes
 start_time <- ymd_hms("2024-02-02 00:00:00")
@@ -102,33 +102,59 @@ end_time <- ymd_hms("2024-05-24 00:00:00")
 #2nd end time is for weather staion/ radiation data, as persistent burned weather data only goes to 4-22-2024
 end_time_2 <- ymd_hms("2024-04-21 00:00:00")
 
-filtered_pers_b_aspects <- pers_b_aspects %>%
-  filter(datetime >= start_time & datetime <= end_time) %>%
-  #adding in column for site name, for when combining dataframes
-  mutate(zone = "persistent", burn_status = "burned")
-
-filtered_pers_ub_aspects <- pers_ub_aspects %>%
-  filter(datetime >= start_time & datetime <= end_time) %>%
-  mutate(zone = "persistent", burn_status = "unburned")
-
-filtered_trans_b_aspects <- trans_b_aspects %>%
-  filter(datetime >= start_time & datetime <= end_time) %>%
-  mutate(zone = "transitional", burn_status = "burned")
-
-filtered_trans_ub_aspects <- trans_ub_aspects %>%
-  filter(datetime >= start_time & datetime <= end_time) %>%
-  mutate(zone = "transitional", burn_status = "unburned")
+#setting a day and night time 
+daytime <- hms("08:30:00")
+nighttime <- hms("17:30:00")
 ```
 
 ```{r}
-#creating one compiled dataframe that has all tree temps in it
+#setting a consistent timeframe for all tree temp data for all burned/unburned zones
+##has to start at 2024-02-02 due to errors in data at transitional burned site
+
+#adding in a burn status column to the aspect dataframes
+filtered_pers_b_aspects <- filtered_pers_b_aspects %>%
+  mutate(burn_status = case_when(
+    startsWith(tree_name, "gb") ~ "green burn",
+    startsWith(tree_name, "db") ~ "dead burn",
+    TRUE ~ NA_character_  # Optional: handle other cases if needed
+  )) %>%
+  #adding a zone column
+  mutate(zone = "persistent")
+
+filtered_pers_ub_aspects <- filtered_pers_ub_aspects %>%
+  mutate(burn_status = case_when(
+    startsWith(tree_name, "ub") ~ "unburned",
+    TRUE ~ NA_character_  # Optional: handle other cases if needed
+  )) %>%
+  #adding a zone column
+  mutate(zone = "persistent")
+
+filtered_trans_b_aspects <- filtered_trans_b_aspects %>%
+  mutate(burn_status = case_when(
+    startsWith(tree_name, "gb") ~ "green burn",
+    startsWith(tree_name, "db") ~ "dead burn",
+    TRUE ~ NA_character_  # Optional: handle other cases if needed
+  )) %>%
+  #adding a zone column
+  mutate(zone = "transitional")
+
+filtered_trans_ub_aspects <- filtered_trans_ub_aspects %>%
+  mutate(burn_status = case_when(
+    startsWith(tree_name, "ub") ~ "unburned",
+    TRUE ~ NA_character_  # Optional: handle other cases if needed
+  )) %>%
+  mutate(zone = "transitional")
+```
+
+```{r}
+#creating one compiled dataframe that has all tree temps in it for all trees, not just an average
 
 all_treetemps <- bind_rows(filtered_pers_b_aspects, filtered_pers_ub_aspects, filtered_trans_b_aspects, filtered_trans_ub_aspects)
 ```
 
 # RL for trees Calculations
 
-Create a 15 min Rl(out) calculation for trees based on the tree temp
+Create a 15 min LWout calculation for trees based on the tree temp
 
 ```{r}
 # Constants
@@ -166,178 +192,63 @@ all_treetemps <- all_treetemps %>%
   select(datetime, date, time, everything())
 ```
 
-```{r}
-#creating a daily w/m2 dataframe for the trees LWout values - to be used later with the weather station radiation components and plotting!
-daily_avg_tree_LWout_wperm2 <- all_treetemps %>%
-  select(datetime, date, time, zone, burn_status, tree_name, aspect, tree_RL_out) %>%
-  rename(tree_LWout_wperm2 = "tree_RL_out") %>%
-  filter(aspect %in% c("north", "south")) %>%
-  
-  mutate(phase = case_when(
-    time >= daytime & time <= nighttime ~ "day",
-    time <= daytime | time >= nighttime ~ "night",
-    TRUE ~ NA_character_  # If none of the conditions match, handle accordingly
-  )) %>%
-  group_by(date, phase, burn_status, zone) %>%
-  summarize(tree_LWout_avg_wperm2 = mean(tree_LWout_wperm2, na.rm = TRUE))
-```
+Southern temp tree average - averaging all the gb/db/ub trees instead of analyzing each individual tree
 
 ```{r}
-# Aggregate energy (J) to get daily total energy in Joules
-##this daily total energy is the LWout from the trees!
-daily_energy_MJ <- all_treetemps %>%
-  group_by(date, time, tree_name, zone, burn_status, aspect) %>%
-  summarize(daily_energy_J = sum(energy_J, na.rm = TRUE)) %>%
+#creating a dataframe that is the average of the tree temps by burn_status and zone, only southern temps.
+avg_s_all_treetemps <- all_treetemps %>%
+  filter(aspect == "south") %>%
+  group_by(datetime, zone, burn_status) %>%
+  # This step gets the mean of all the south aspect tree temps by zone and burn_status
+  summarize(
+    temp = mean(temp, na.rm = TRUE), 
+    temp_k = mean(temp_k, na.rm = TRUE), 
+    tree_LWout_wperm2 = mean(tree_RL_out, na.rm = TRUE), 
+    W = mean(W, na.rm = TRUE), 
+    energy_J = mean(energy_J, na.rm = TRUE)
+  ) %>%
   ungroup() %>%
-  # Removing charred and uncharred aspects
-  filter(aspect %in% c("north", "south")) %>%
-  # Convert Joules to Megajoules
-  mutate(daily_energy_MJ = daily_energy_J / 1e6) %>%
-  select(-daily_energy_J)
-```
-
-Creating south-only daily energy dataframe
-
-```{r}
-south_daily_e_MJ <- daily_energy_MJ %>%
-  filter(aspect == "south")
-```
-
-# Plotting RL
-
-```{r}
-#* Not needed/used
-#plotting the sum!
-# Ensure daily_energy_J is numeric
-daily_energy_MJ <- daily_energy_MJ %>%
-  mutate(daily_energy_MJ = as.numeric(daily_energy_MJ))
-
-custom_palette <- c(brewer.pal(9, "Set1"), "black")
-
-daily_RL_plot <- ggplot(daily_energy_MJ, aes(x = date, y = daily_energy_MJ, color = tree_name, shape = factor(aspect))) +
-  geom_point(size = 3) +  # Use size 3 for points
-  facet_wrap(~ site, scales = "free_y") +
-  scale_color_manual(values = custom_palette) +  # Using custom palette with 9 colors for tree_name
-  scale_shape_manual(values = c(15, 16, 17, 18, 19, 20)) +  # Define shapes for each aspect
-  labs(x = "Date", y = "Daily Energy (Joules)", color = "Tree Name", shape = "Aspect") +
-  theme_minimal()
-
-print(daily_RL_plot)
+  # Adding in a date, time, and phase columns for day/night parsing later
+  mutate(
+    # Extract the date part
+    date = date(datetime),
+    # Extract the time part
+    time = format(datetime, "%H:%M:%S"),
+    # Convert time, daytime, and nighttime to POSIXct for comparison
+    time = hms(time),
+    daytime = hms(daytime),
+    nighttime = hms(nighttime)
+  ) %>%
+  mutate(phase = case_when(
+    time >= daytime & time < nighttime ~ "day",
+    time < daytime | time >= nighttime ~ "night",
+    TRUE ~ NA_character_  # Handle cases where none of the conditions match
+  )) %>%
+  select(c(-daytime, -nighttime)) %>%
+  #adding in a MJ conversion
+  mutate(energy_MJ = energy_J / 1e6) %>%
+  select(datetime, date, time, phase, everything()) %>%
+  mutate(time = format(time, "%H:%M:%S"))
 ```
 
 ```{r}
-#plotting the mean!
-##mean daily dataframe
-mean_daily_energy_J <- all_treetemps %>%
-  group_by(date, tree_name, site, aspect) %>%
-  summarize(daily_energy_J = mean(energy_J, na.rm = TRUE)) %>%
-  ungroup()
-
-mean_daily_RL_plot <- ggplot(mean_daily_energy_J, aes(x = date, y = daily_energy_J, color = tree_name, shape = factor(aspect))) +
-  geom_point(size = 3) +  # Use size 3 for points
-  facet_wrap(~ site, scales = "free_y") +
-  scale_color_manual(values = custom_palette) +  # Using custom palette with 9 colors for tree_name
-  scale_shape_manual(values = c(15, 16, 17, 18, 19, 20)) +  # Define shapes for each aspect
-  labs(x = "Date", y = "Daily Energy (Joules)", color = "Tree Name", shape = "Aspect") +
-  theme_minimal() +
-  scale_y_continuous(breaks = seq(min(daily_energy_J$daily_energy_J), max(daily_energy_J$daily_energy_J), length.out = 10))
-
-print(daily_RL_plot)
+#creating a daily energy dataframe for the trees LWout values (w/m2 and MJ) - to be used later with the weather station radiation components and plotting!
+s_daily_avg_tree_e <- avg_s_all_treetemps %>%
+  select(datetime, date, time, phase, zone, burn_status, tree_LWout_wperm2, energy_MJ) %>%
+  #grouping to get daily average
+  group_by(date, phase, burn_status, zone) %>%
+  summarize(tree_LWout_avg_wperm2 = mean(tree_LWout_wperm2, na.rm = TRUE), tree_LWout_avg_MJ = mean(energy_MJ, na.rm = TRUE))
 ```
 
-```{r}
-#coloring only by aspect and not doing a shape
+# Plotting LWout Daily Avg
 
-custom_palette <- c("north" = "darkgreen", "south" = "red")
-
-aspect_mean_daily_energy_plot <- ggplot(daily_energy_J, aes(x = date, y = daily_energy_J, color = aspect)) +
-  geom_point(size = 3, alpha = 0.7) +  # Use size 3 for points
-  facet_wrap(~ site, scales = "free_y") +
-  scale_color_manual(values = custom_palette) +  # Using custom palette with 10 colors for aspect
-  labs(x = "Date", y = "Daily Energy (Joules)", color = "Aspect") +
-  ggtitle("Daily Mean Energy by Aspect and Site") +  # Add title to the plot
-  theme_minimal() +
-  scale_y_continuous(breaks = seq(min(daily_energy_J$daily_energy_J), max(daily_energy_J$daily_energy_J), length.out = 10))
-
-print(aspect_mean_daily_energy_plot)
-```
-
-```{r}
-#saving aspect plot
-#saving combined plot
-ggsave("aspect_mean_daily_energy_plot.png", plot = aspect_mean_daily_energy_plot, width = 10, height = 6, dpi = 300, bg = "white")
-```
-
-```{r}
-#converting into a plotly graph and saving as an html
-
-plotly_aspect_mean_daily_energy <- ggplotly(aspect_mean_daily_energy_plot)
-
-plotly_aspect_mean_daily_energy
-
-#save as a html website link
-htmlwidgets::saveWidget(plotly_aspect_mean_daily_energy, "plotly_aspect_mean_daily_energy.html")
-```
-
-# Plotting RL Daily Average for sites
-
-This is plotting the average of the north and south RL energy for each zone/site/burnstatus
-
-```{r}
-#creating daily average dataframe
-average_daily_energy_by_site <- daily_energy_MJ %>%
-  group_by(date, time, zone, burn_status) %>%
-  summarize(average_energy_MJ = mean(daily_energy_MJ, na.rm = TRUE)) %>%
-  ungroup()
-
-##this is giving me the daily average of the north and south aspect outgoing Radiation by site (trans/pers burned/unburned), in megajoules
-```
-
-```{r}
-#south only average daily energy 
-s_avg_daily_e_by_site <- south_daily_e_MJ %>%
-  group_by(date, time, zone, burn_status) %>%
-  summarize(average_energy_MJ = mean(daily_energy_MJ, na.rm = TRUE)) %>%
-  ungroup()
-```
-
-```{r}
-#plotting daily average
-avg_daily_energy <- ggplot(average_daily_energy_by_site, aes(x = date, y = average_energy_MJ, color = burned_status, linetype = zone)) +
-  geom_line() +
-  labs(title = "Average daily RLout by burn status and zone",
-       x = "Date",
-       y = "Average RL out (MJ)",
-       color = "Burn Status",
-       linetype = "Zone") +
-  theme_minimal() +
-  scale_color_manual(values = two_custom_colors)
-
-avg_daily_energy
-```
-
-```{r}
-#converting to a plotly
-plotly_avg_daily_energy <- ggplotly(avg_daily_energy)
-
-#saving ggplot
-ggsave("avg_daily_energy.png", plot = avg_daily_energy, width = 10, height = 6, dpi = 300, bg = "white")
-
-#saving plotly as html
-htmlwidgets::saveWidget(plotly_avg_daily_energy, "plotly_avg_daily_energy.html")
-```
-
-The above plot looks good. Consider splitting it into a day and night plot?
+Deleted these for now, as I don't think I need this analysis?
 
 # Day/Night Plots
 
 ## Max Daynight Plots
 
-```{r}
-#setting a day and night time 
-daytime <- hms("08:30:00")
-nighttime <- hms("17:30:00")
-```
+\*\* Don't think I need any of these dtnt dataframes, as I already added the "phase" to my main dataframe and I can facet wrap from there?
 
 ```{r}
 #parsing out daytime/nightime dataframe - MAX RLout
@@ -416,23 +327,6 @@ dtnt_avg_energy_bysite <- average_daily_energy_by_site %>%
 ```
 
 ```{r}
-#don't use this plot, use the one below that is facet-wrapping by zone and phase
-#plotting daytime/nighttime plot
-dtnt_avg_energy_plot <- ggplot(dtnt_avg_energy_bysite, aes(x = date, y = daily_avg_energy_MJ, color = burned_status, linetype = zone)) +
-  geom_line() +   # Add lines
-  labs(title = "Average RLout by day/night",
-       x = "Date",
-       y = "Avg RL out (MJ)",
-       color = "Burn Status",
-       linetype = "Zone") +
-  theme_minimal() +
-  facet_wrap(~ phase) +
-  scale_color_manual(values = two_custom_colors)
-
-dtnt_avg_energy_plot
-```
-
-```{r}
 #new plot, facet wrapped by zone and phase
 dtnt_avg_energy_plot_V2 <- ggplot(dtnt_avg_energy_bysite, aes(x = date, y = daily_avg_energy_MJ, color = burn_status)) +
   geom_line() +   # Add lines
@@ -493,38 +387,39 @@ s_dtnt_avg_e <- s_avg_daily_e_by_site %>%
 
 # Final Day/Night Plots
 
-```{r}
-#south-only dataframes, arranged correctly with facet wrap by zone and phase
-
-#plotting daytime/nighttime plot
-s_dtnt_avg_e_plot_V2 <- ggplot(s_dtnt_avg_e, aes(x = date, y = daily_avg_energy_MJ, color = burn_status)) +
-  geom_line() +   # Add lines
-  labs(title = "South Aspect Average LWout from trees by day/night",
-       x = "Date",
-       y = "Avg RL out (MJ)",
-       color = "Burn Status",
-       linetype = "Zone") +
-  theme_minimal() +
-  facet_wrap(~ zone + phase, dir = "v") +
-  scale_color_manual(values = two_custom_colors)
-
-s_dtnt_avg_e_plot_V2
-```
+NEW PLOTS - from 2024.07.24, with simple dataframe reference
 
 ```{r}
-#south max LWout day/night plot
-s_dtnt_max_e_plot_V2 <- ggplot(s_dtnt_max_e, aes(x = date, y = daily_max_energy_MJ, color = burn_status)) +
+#MJ plot
+s_dtnt_avg_e_MJ_plot <- ggplot(s_daily_avg_tree_e, aes(x = date, y = tree_LWout_avg_MJ, color = burn_status)) +
   geom_line() +   # Add lines
-  labs(title = "South Aspect Maximum LWout from trees by day/night",
+  labs(title = "South Aspect Daily Avg LWout (MJ) from trees by day/night",
        x = "Date",
-       y = "Max RL out (MJ)",
+       y = "Avg LW out (MJ)",
        color = "Burn Status") +
   theme_minimal() +
   facet_wrap(~ zone + phase, dir = "v") +
-  scale_color_manual(values = two_custom_colors)
+  scale_color_manual(values = three_custom_colors)
 
-s_dtnt_max_e_plot_V2
+s_dtnt_avg_e_MJ_plot
 ```
+
+```{r}
+#MJ plot
+s_dtnt_avg_e_wperm2_plot <- ggplot(s_daily_avg_tree_e, aes(x = date, y = tree_LWout_avg_wperm2, color = burn_status)) +
+  geom_line() +   # Add lines
+  labs(title = "South Aspect Daily Avg LWout (W/m2) from trees by day/night",
+       x = "Date",
+       y = "Avg LW out (W/m2)",
+       color = "Burn Status") +
+  theme_minimal() +
+  facet_wrap(~ zone + phase, dir = "v") +
+  scale_color_manual(values = three_custom_colors)
+
+s_dtnt_avg_e_wperm2_plot
+```
+
+as of 2024.07.24 - keep working on what's below this point, need to reference main "s_daily_avg_tree_e" dataframe as much as possible, and make a simple combined dataframe where applicable. Also need to convert radiative components from wx station into MJ.
 
 # Tree RL + Weather Station Data
 
@@ -545,7 +440,7 @@ filtered_pers_ub_wx <- persub_wx_15min %>%
   filter(datetime >= start_time & datetime <= end_time_2) %>%
   mutate(zone = "persistent") %>%
   mutate(burn_status = "unburned") %>%
-  mutate(date = as_date(datetime),time = format(datetime, "%H:%M:%S"))%>%
+  mutate(date = as_date(datetime),time = format(datetime, "%H:%M:%S")) %>%
   select(c(datetime, date, time, zone, burn_status, SWin_Avg, SWout_Avg, LWin_Avg, LWout_Avg))
 
 filtered_trans_b_wx <- transb_wx_15min %>%
@@ -765,14 +660,14 @@ pers_burned_wxR
 trans_burned_wxR
 ```
 
-# New RL Out Dataframes
+# New LWout Dataframes
 
 ```{r}
 #creating a RLout dataframe for all zones/burn status
 
 #full 15-minute dataframe
 full_LWout_data <- all_treetemps %>%
-  select(datetime, aspect, site, tree_RL_out, energy_J) %>%
+  select(datetime, zone, burn_status, aspect, tree_RL_out, energy_J) %>%
   mutate(
     burn_status = case_when(
       site == "pers_burned" ~ "burned",
