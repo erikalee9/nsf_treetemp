@@ -43,9 +43,13 @@ final_15min_ns_b <- read_csv("nsf/treetemp_data/final_15min_ns_b.csv")
 
 final_15min_ns_ub <- read_csv("nsf/treetemp_data/final_15min_ns_ub.csv")
 
-final_15min_gbdb <- read_csv("nsf/treetemp_data/final_15min_gbdb_b.csv")
+final_15min_gbdb <- read_csv("nsf/treetemp_data/final_15min_gbdb.csv")
 
 final_15min_gbdb_ub <- read_csv("nsf/treetemp_data/final_15min_gbdb_ub.csv")
+
+final_15min_gbub <- read_csv("nsf/treetemp_data/final_15min_gbub.csv")
+
+final_15min_dbub <- read_csv("nsf/treetemp_data/final_15min_dbub.csv")
 
 final_daynight_singleavg_temps <- read_csv("nsf/treetemp_data/final_daynight_singleavg_temps.csv")
 ```
@@ -64,8 +68,7 @@ stats_monthly_ns_b <- final_15min_ns_b %>%
   #calculating monthly stats
   group_by(month, zone, burn_status) %>%
   summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100
-  ) %>%
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -78,8 +81,7 @@ stats_monthly_ns_ub <- final_15min_ns_ub %>%
   #calculating monthly stats
   group_by(month, zone, burn_status) %>%
   summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100
-  ) %>%
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -108,8 +110,7 @@ stats_monthly_gbdb <- final_15min_gbdb %>%
   #calculating monthly stats
   group_by(month, zone) %>%
   summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100
-  ) %>%
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -124,7 +125,7 @@ stats_monthly_gbub <- final_15min_gbub %>%
   #calculating monthly stats
   group_by(month, zone) %>%
   summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100) %>%
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -139,7 +140,7 @@ stats_monthly_dbub <- final_15min_dbub %>%
   #calculating monthly stats
   group_by(month, zone) %>%
   summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100) %>%
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -154,7 +155,7 @@ stats_monthly_daynight <- final_daynight_singleavg_temps %>%
   #calculating monthly stats
   group_by(month, zone, burn_status) %>%
   summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE))) * 100) %>%
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
