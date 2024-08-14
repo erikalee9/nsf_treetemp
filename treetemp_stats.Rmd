@@ -27,7 +27,6 @@ library(rstatix)
 library(htmlwidgets)
 library(RColorBrewer)
 library(patchwork)
-library(xlsx)
 #packages for exporting csvs as tables
 library(knitr)
 library(kableExtra)
@@ -369,3 +368,5 @@ In summary, these metrics together help you understand the magnitude, relative s
 ## My Understanding of the Data
 
 -   very high coefficient of variation and percent differences mean that there is a lot of variability of temperatures, even on a daily and monthly scale.
+
+\*\*Made edits to test git connection
