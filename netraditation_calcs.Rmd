@@ -749,12 +749,14 @@ trans_ub_wxR_plot <- ggplot(trans_ub_combined_R_data) +
 trans_ub_wxR_plot
 ```
 
-Combining and arranging plots
+Combining, arranging, and saving plots
 
 ```{r}
+#combining
 arranged_plots <- ggarrange(pers_b_wxR_plot,trans_b_wxR_plot, pers_ub_wxR_plot, trans_ub_wxR_plot, ncol = 2, nrow = 2, common.legend = TRUE, legend = "right")
 
-arranged_plots
+#saving ggplot as high quality png
+ggsave("arranged_plots.png", arranged_plots, width = 8, height = 6, dpi = 300)
 ```
 
 As of 2024-08-16, need to figure out weird issues with transitional burned data SWin/out being switched for day/night and transitional unburned data gap in SWin/out
@@ -770,6 +772,7 @@ transb_wx_plot
 ```
 
 \
+HAVEN'T WORKED ON ANYTHING ELSE BELOW THIS POINT AS OF 8/16/24
 
 ```{r}
 
