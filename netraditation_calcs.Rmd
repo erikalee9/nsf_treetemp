@@ -108,6 +108,21 @@ nighttime <- hms("17:30:00")
 ```
 
 ```{r}
+#filtering temp data
+filtered_pers_b_aspects <- pers_b_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time)
+
+filtered_pers_ub_aspects <- pers_ub_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time)
+
+filtered_trans_b_aspects <- trans_b_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time)
+
+filtered_trans_ub_aspects <- trans_ub_aspects %>%
+  filter(datetime >= start_time & datetime <= end_time)
+```
+
+```{r}
 #setting a consistent timeframe for all tree temp data for all burned/unburned zones
 ##has to start at 2024-02-02 due to errors in data at transitional burned site
 
@@ -240,10 +255,6 @@ s_daily_avg_tree_e <- avg_s_all_treetemps %>%
   summarize(tree_LWout_avg_wperm2 = mean(tree_LWout_wperm2, na.rm = TRUE), tree_LWout_avg_MJ = mean(energy_MJ, na.rm = TRUE))
 ```
 
-# Plotting LWout Daily Avg
-
-Deleted these for now, as I don't think I need this analysis?
-
 # Day/Night Plots
 
 ## Max Daynight Plots
@@ -357,34 +368,6 @@ ggsave("dtnt_avg_RLout_plot.png", plot = dtnt_avg_energy_plot, width = 10, heigh
 htmlwidgets::saveWidget(plotly_dtnt_avg_energy, "plotly_dtnt_avg_RLout.html")
 ```
 
-## South-only Max/Avg day/night
-
-```{r}
-#south only dtnt_max energy by site
-s_dtnt_max_e <- s_avg_daily_e_by_site %>%
-  #adding in a day/night column to facet wrap later
-  mutate(phase = case_when(
-    time >= daytime & time <= nighttime ~ "day",
-    time <= daytime | time >= nighttime ~ "night",
-    TRUE ~ NA_character_  # If none of the conditions match, handle accordingly
-  )) %>%
-  group_by(date, phase, zone, burn_status) %>%
-  summarize(daily_max_energy_MJ = max(average_energy_MJ, na.rm = TRUE))
-```
-
-```{r}
-#south only dtnt_avg energy by site
-s_dtnt_avg_e <- s_avg_daily_e_by_site %>%
-  #adding in a day/night column to facet wrap later
-  mutate(phase = case_when(
-    time >= daytime & time <= nighttime ~ "day",
-    time <= daytime | time >= nighttime ~ "night",
-    TRUE ~ NA_character_  # If none of the conditions match, handle accordingly
-  )) %>%
-  group_by(date, phase, zone, burn_status) %>%
-  summarize(daily_avg_energy_MJ = mean(average_energy_MJ, na.rm = TRUE))
-```
-
 # Final Day/Night Plots
 
 NEW PLOTS - from 2024.07.24, with simple dataframe reference
@@ -405,7 +388,7 @@ s_dtnt_avg_e_MJ_plot
 ```
 
 ```{r}
-#MJ plot
+#w per m2 plot
 s_dtnt_avg_e_wperm2_plot <- ggplot(s_daily_avg_tree_e, aes(x = date, y = tree_LWout_avg_wperm2, color = burn_status)) +
   geom_line() +   # Add lines
   labs(title = "South Aspect Daily Avg LWout (W/m2) from trees by day/night",
@@ -495,55 +478,97 @@ filtered_trans_ub_wx <- filtered_trans_ub_wx %>%
 combined_filtered_wx_data <- filtered_pers_b_wx %>%
   full_join(filtered_pers_ub_wx) %>%
   full_join(filtered_trans_b_wx) %>%
-  full_join(filtered_trans_ub_wx) 
+  full_join(filtered_trans_ub_wx) %>%
+  #removing first row of datetime that is 00:00:00 because the tree temp data does not have that datetimestep 
+  slice(-1)
 ```
 
-Tree temp data wrangling to match wx station combined dataframes
+Adding in a date and time column, then a phase column, to try to fix issues in transitional burned SWin/out data
 
 ```{r}
-#rerunning these to parse by datetime, not date and time, then will add in date and time later!
-daily_energy_MJ <- all_treetemps %>%
-  group_by(datetime, zone, burn_status, tree_name, aspect) %>%
-  summarize(daily_energy_J = sum(energy_J, na.rm = TRUE)) %>%
-  ungroup() %>%
-  # Removing charred and uncharred aspects
-  filter(aspect %in% c("north", "south")) %>%
-  # Convert Joules to Megajoules
-  mutate(daily_energy_MJ = daily_energy_J / 1e6) %>%
-  select(-daily_energy_J)
-
-
-average_daily_energy_by_site <- daily_energy_MJ %>%
-  group_by(datetime, zone, burn_status) %>%
-  summarize(average_energy_MJ = mean(daily_energy_MJ, na.rm = TRUE)) %>%
-  ungroup()
+combined_filtered_wx_data_V2 <- combined_filtered_wx_data %>%
+  mutate(
+    # Extract the date part
+    date = date(datetime),
+    # Extract the time part
+    time = format(datetime, "%H:%M:%S"),
+    # Convert time, daytime, and nighttime to POSIXct for comparison
+    time = hms(time),
+    daytime = hms(daytime),
+    nighttime = hms(nighttime)
+  ) %>%
+  mutate(phase = case_when(
+    time >= daytime & time < nighttime ~ "day",
+    time < daytime | time >= nighttime ~ "night",
+    TRUE ~ NA_character_  # Handle cases where none of the conditions match
+  )) %>%
+  select(c(-daytime, -nighttime)) %>%
+  select(datetime, date, time, phase, everything())
 ```
 
 ```{r}
-#new final dataframe to combine with combined, filtered weather station data
-avg_daily_e_bysite <- average_daily_energy_by_site %>%
-  #adding in tree_LWout w/m2 daily data
-  full_join(daily_avg_tree_LWout_wperm2) %>%
-  rename(tree_LWout_avg_MJ = "average_energy_MJ") %>%
-  mutate(date = as_date(datetime),time = format(datetime, "%H:%M:%S")) %>%
-  #filtering so end date is in April, not May
-  filter(datetime >= start_time & datetime <= end_time_2) %>%
-  select(-datetime) %>%
-  select(date, time, zone, burn_status, everything()) 
+#plotting to see if changes made with date and time column fix the issues for transitional burned wx data
+
+trans_b_wx_V2 <- combined_filtered_wx_data_V2 %>%
+  filter(zone == "transitional")
+
+trans_b_wx_plot_V2 <- ggplot(data = trans_b_wx_V2) +
+  geom_line(aes(x = datetime, y = SWin_Avg), color = "red") +
+  geom_line(aes(x = datetime, y = SWout_Avg), color = "blue") + 
+  facet_wrap(~burn_status + phase)
+
+trans_b_wx_plot_V2
+```
+
+Tree temp data wrangling to match wx station combined dataframes - south only tree temp data
+
+```{r}
+#this has gb/db/ub burn status
+s_daily_energy <- avg_s_all_treetemps %>%
+  select(datetime, phase, zone, burn_status, temp, tree_LWout_wperm2, energy_MJ) %>%
+  rename(tree_LWout_MJ = "energy_MJ") %>%
+  mutate(
+    date = as.Date(datetime),                # Extract the date part
+    time = format(datetime, "%H:%M:%S")      # Extract the time part
+  ) %>%
+  select(datetime, date, time, everything())
+```
+
+```{r}
+##USE THIS VERSION!
+#creating a full s_daily_energy dataframe that only has unburned and burned (average of gb and db data) so that the weather station data can be combined
+
+##creating only a burned dataframe to get averages for all temp and R values that are averaging the green burned and dead burned values
+s_daily_energy_burned <- s_daily_energy %>%
+  filter(burn_status %in% c("green burn", "dead burn")) %>%
+  group_by(datetime, date, time, phase, zone) %>%
+  summarise(
+    temp = mean(temp, na.rm = TRUE),
+    tree_LWout_wperm2 = mean(tree_LWout_wperm2, na.rm = TRUE),
+    tree_LWout_MJ = mean(tree_LWout_MJ, na.rm = TRUE)
+  ) %>%
+  #adding back in a burn_status column for burned
+  mutate(burn_status = "burned") %>%
+  select(datetime, date, time, phase, zone, burn_status, everything())
+
+##creating only an unburned dataframe to join with above burned dataframe
+s_daily_energy_unburned <- s_daily_energy %>%
+  filter(burn_status == "unburned")
+```
+
+```{r}
+#combining burned and unburned dataframe for tree temps
+
+s_daily_energy_burned_unburned <- s_daily_energy_burned %>%
+  full_join(s_daily_energy_unburned)
 ```
 
 ```{r}
 #combining wx station R data and tree LWout data
 combined_wx_treeRout_data <- combined_filtered_wx_data %>%
-  full_join(avg_daily_e_bysite) %>%
+  full_join(s_daily_energy_burned_unburned) %>%
   drop_na() %>%
-  #converting the time column so I can use lubridate for phase creation
-  mutate(time = hms(time)) %>%
-  mutate(phase = case_when(
-    time >= daytime & time < nighttime ~ "day",
-    time < daytime | time >= nighttime ~ "night",
-    TRUE ~ NA_character_  # Handle cases where none of the conditions match
-  ))
+  select(datetime, date, time, phase, everything())
 ```
 
 ```{r}
@@ -559,18 +584,27 @@ daily_avg_combined_R_data <- combined_wx_treeRout_data %>%
 ```{r}
 # Define custom colors and line types
 color_values <- c(
-  "SWin_Avg" = "blue",
-  "SWout_Avg" = "red",
-  "LWin_Avg" = "green",
-  "LWout_Avg" = "purple",
-  "tree_LWout_avg_MJ" = "orange", 
-  "tree_LWout_avg_wperm2" = "darkgreen"
+  "SWin_Avg" = "#D95F02",
+  "SWout_Avg" = "#E6AB02",
+  "LWin_Avg" = "#66A61E",
+  "LWout_Avg" = "#A6761D",
+  "tree_LWout_avg_wperm2" = "#7570B3", 
+  "tree_LWout_avg_MJ" = "#E7298A"
 )
 
 # Define line types based on burn_status
 line_types <- c(
   "burned" = "solid",
   "unburned" = "dashed"
+)
+
+#changing labels of values in plots for the legend
+color_labels <- c(
+  "SWin_Avg" = "Shortwave In (Avg)",
+  "SWout_Avg" = "Shortwave Out (Avg)",
+  "LWin_Avg" = "Longwave In (Avg)",
+  "LWout_Avg" = "Longwave Out (Avg)",
+  "tree_LWout_avg_wperm2" = "Tree LW Out (Avg)"  # New label for the specific line
 )
 
 ```
@@ -589,8 +623,8 @@ test_wxR_plot <- ggplot(daily_avg_combined_R_data) +
   geom_line(aes(x = date, y = SWout_Avg, color = "SWout_Avg", linetype = burn_status)) +
   geom_line(aes(x = date, y = LWin_Avg, color = "LWin_Avg", linetype = burn_status)) +
   geom_line(aes(x = date, y = LWout_Avg, color = "LWout_Avg", linetype = burn_status)) +
-  geom_line(aes(x = date, y = tree_LWout_avg_MJ, color = "tree_LWout_avg_MJ", linetype = burn_status)) +
-  facet_wrap(~ zone + phase, scales = "free_y", dir = "v") +  # Facet by zone and phase
+  geom_line(aes(x = date, y = tree_LWout_wperm2, color = "tree_LWout_avg_wperm2", linetype = burn_status)) +
+  facet_wrap(~ zone + phase + burn_status, scales = "free_y", dir = "v") +  # Facet by zone and phase
   labs(
     title = "Average Daily Radiation Components",
     x = "Date",
@@ -606,58 +640,139 @@ test_wxR_plot <- ggplot(daily_avg_combined_R_data) +
 print(test_wxR_plot)
 ```
 
-```{r}
-#V2 - plotting tree_LWout_avg w/m2 not MJ
-test_wxR_plot_V2 <- ggplot(daily_avg_combined_R_data) +
-  geom_line(aes(x = date, y = SWin_Avg, color = "SWin_Avg", linetype = burn_status)) +
-  geom_line(aes(x = date, y = SWout_Avg, color = "SWout_Avg", linetype = burn_status)) +
-  geom_line(aes(x = date, y = LWin_Avg, color = "LWin_Avg", linetype = burn_status)) +
-  geom_line(aes(x = date, y = LWout_Avg, color = "LWout_Avg", linetype = burn_status)) +
-  geom_line(aes(x = date, y = tree_LWout_avg_wperm2, color = "tree_LWout_avg_wperm2", linetype = burn_status)) +
-  facet_wrap(~ zone + phase, scales = "free_y", dir = "v") +  # Facet by zone and phase
-  labs(
-    title = "Average Daily Radiation Components",
-    x = "Date",
-    y = "Radiation components (W/m2)",
-    color = "Variable",
-    linetype = "Burn Status"
-  ) +
-  theme_minimal() +  # Use a minimal theme for a clean look
-  scale_color_manual(values = color_values) +  # Customize color scheme
-  scale_linetype_manual(values = line_types)  # Customize line types
+Plotting day-only SW and LW plots, with a separate tree RLout plot? Using ggarrange to get a better layout
 
-test_wxR_plot_V2
+```{r}
+#package for using ggarrange
+library(ggpubr)
+
+#pers dataframea to plot from
+pers_b_combined_R_data <- daily_avg_combined_R_data %>%
+  filter(burn_status == "burned") %>%
+  filter(zone == "persistent")
+
+pers_ub_combined_R_data <- daily_avg_combined_R_data %>%
+  filter(burn_status == "unburned") %>%
+  filter(zone == "persistent")
+
+#trans dataframea to plot from
+trans_b_combined_R_data <- daily_avg_combined_R_data %>%
+  filter(burn_status == "burned") %>%
+  filter(zone == "transitional")
+
+trans_ub_combined_R_data <- daily_avg_combined_R_data %>%
+  filter(burn_status == "unburned") %>%
+  filter(zone == "transitional")
 ```
 
-Plotting day-only SW and LW plots, with a seperate MJ plot?
+```{r}
+#plotting seperate ggplots to combine with ggarrange
+ 
+##pers_burned
+pers_b_wxR_plot <- ggplot(pers_b_combined_R_data) +
+  geom_line(aes(x = date, y = SWin_Avg, color = "SWin_Avg")) +
+  geom_line(aes(x = date, y = SWout_Avg, color = "SWout_Avg")) +
+  geom_line(aes(x = date, y = LWin_Avg, color = "LWin_Avg")) +
+  geom_line(aes(x = date, y = LWout_Avg, color = "LWout_Avg")) +
+  geom_line(aes(x = date, y = tree_LWout_wperm2, color = "tree_LWout_avg_wperm2")) +
+  facet_wrap(~ phase, scales = "free_y", dir = "v") +  # Facet by zone and phase
+  labs(
+    title = "Persistent Burned",
+    x = "Date",
+    y = "Radiation components (W/m2)",
+    color = "Variable"
+  ) +
+  theme_minimal() +  # Use a minimal theme for a clean look
+  scale_color_manual(values = color_values, labels = color_labels)  # Customize color and labels
 
-Figuring out issues with transitional weather data?
+pers_b_wxR_plot
+
+##pers_burned
+pers_ub_wxR_plot <- ggplot(pers_ub_combined_R_data) +
+  geom_line(aes(x = date, y = SWin_Avg, color = "SWin_Avg")) +
+  geom_line(aes(x = date, y = SWout_Avg, color = "SWout_Avg")) +
+  geom_line(aes(x = date, y = LWin_Avg, color = "LWin_Avg")) +
+  geom_line(aes(x = date, y = LWout_Avg, color = "LWout_Avg")) +
+  geom_line(aes(x = date, y = tree_LWout_wperm2, color = "tree_LWout_avg_wperm2")) +
+  facet_wrap(~ phase, scales = "free_y", dir = "v") +  # Facet by zone and phase
+  labs(
+    title = "Persistent Unburned",
+    x = "Date",
+    y = "Radiation components (W/m2)",
+    color = "Variable"
+  ) +
+  theme_minimal() +  # Use a minimal theme for a clean look
+  scale_color_manual(values = color_values, labels = color_labels)  # Customize color and labels
+
+pers_ub_wxR_plot
+```
+
+\*\* the day and night SWin/out data seems to be switched for the transitional zone in the burned status... not sure why this is? Need to parse this out more!
 
 ```{r}
-#these plots are going by datetime, but if I can just get them to be by phase (day-only), I think there will not be as much of a drop? Or I could do average per daytime values?
-
-pers_burned_wxR <- ggplot(filtered_pers_b_wx) +
-  geom_line(aes(x = datetime, y = SWin_Avg, color = "SWin_Avg")) +
-  geom_line(aes(x = datetime, y = SWout_Avg, color = "SWout_Avg"))+
-  geom_line(aes(x = datetime, y = LWin_Avg, color = "LWin_Avg")) +
-  geom_line(aes(x = datetime, y = LWout_Avg, color = "LWout_Avg")) +
+##trans_burned
+trans_b_wxR_plot <- ggplot(trans_b_combined_R_data) +
+  geom_line(aes(x = date, y = SWin_Avg, color = "SWin_Avg")) +
+  geom_line(aes(x = date, y = SWout_Avg, color = "SWout_Avg")) +
+  geom_line(aes(x = date, y = LWin_Avg, color = "LWin_Avg")) +
+  geom_line(aes(x = date, y = LWout_Avg, color = "LWout_Avg")) +
+  geom_line(aes(x = date, y = tree_LWout_wperm2, color = "tree_LWout_avg_wperm2")) +
+  facet_wrap(~ phase, scales = "free_y", dir = "v") +  # Facet by phase
   labs(
-    title = "Persistent Average Daily Radiation Components",
+    title = "Transitional Burned",
     x = "Date",
-    y = "Radiation Components (W/m2)"
+    y = "Radiation components (W/m2)",
+    color = "Variable"
   ) +
-  theme_minimal()
+  theme_minimal() +  # Use a minimal theme for a clean look
+  scale_color_manual(values = color_values, labels = color_labels)  # Customize color and labels
 
+trans_b_wxR_plot
 
-trans_burned_wxR <- ggplot(filtered_trans_b_wx) +
-  geom_line(aes(x = datetime, y = SWin_Avg, color = "SWin_Avg")) +
-  geom_line(aes(x = datetime, y = SWout_Avg, color = "SWout_Avg"))+
-  geom_line(aes(x = datetime, y = LWin_Avg, color = "LWin_Avg")) +
-  geom_line(aes(x = datetime, y = LWout_Avg, color = "LWout_Avg"))
+##trans_unburned
+trans_ub_wxR_plot <- ggplot(trans_ub_combined_R_data) +
+  geom_line(aes(x = date, y = SWin_Avg, color = "SWin_Avg")) +
+  geom_line(aes(x = date, y = SWout_Avg, color = "SWout_Avg")) +
+  geom_line(aes(x = date, y = LWin_Avg, color = "LWin_Avg")) +
+  geom_line(aes(x = date, y = LWout_Avg, color = "LWout_Avg")) +
+  geom_line(aes(x = date, y = tree_LWout_wperm2, color = "tree_LWout_avg_wperm2")) +
+  facet_wrap(~ phase, scales = "free_y", dir = "v") +  # Facet by zone and phase
+  labs(
+    title = "Transitional Unburned",
+    x = "Date",
+    y = "Radiation components (W/m2)",
+    color = "Variable"
+  ) +
+  theme_minimal() +  # Use a minimal theme for a clean look
+  scale_color_manual(values = color_values, labels = color_labels)  # Customize color and labels
 
-pers_burned_wxR
+trans_ub_wxR_plot
+```
 
-trans_burned_wxR
+Combining and arranging plots
+
+```{r}
+arranged_plots <- ggarrange(pers_b_wxR_plot,trans_b_wxR_plot, pers_ub_wxR_plot, trans_ub_wxR_plot, ncol = 2, nrow = 2, common.legend = TRUE, legend = "right")
+
+arranged_plots
+```
+
+As of 2024-08-16, need to figure out weird issues with transitional burned data SWin/out being switched for day/night and transitional unburned data gap in SWin/out
+
+-   Testing transitional weather dataframes from beginning of datawrangling
+
+```{r}
+transb_wx_plot <- ggplot(data = filtered_trans_b_wx) +
+  geom_line(aes(x = datetime, y = SWin_Avg), color = "red") + 
+  geom_line(aes(x = datetime, y = SWout_Avg), color = "blue")
+
+transb_wx_plot
+```
+
+\
+
+```{r}
+
 ```
 
 # New LWout Dataframes
