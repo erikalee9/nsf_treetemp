@@ -483,6 +483,29 @@ combined_filtered_wx_data <- filtered_pers_b_wx %>%
   slice(-1)
 ```
 
+\*\* Individually adding in date, time and phase column to try to fix day/night SW issue.
+
+```{r}
+filtered_trans_b_wx_V2 <- filtered_trans_b_wx %>%
+  mutate(
+    # Extract the date part
+    date = date(datetime),
+    # Extract the time part
+    time = format(datetime, "%H:%M:%S"),
+    # Convert time, daytime, and nighttime to POSIXct for comparison
+    time = hms(time),
+    daytime = hms(daytime),
+    nighttime = hms(nighttime)
+  ) %>%
+  mutate(phase = case_when(
+    time >= daytime & time < nighttime ~ "day",
+    time < daytime | time >= nighttime ~ "night",
+    TRUE ~ NA_character_  # Handle cases where none of the conditions match
+  )) %>%
+  select(c(-daytime, -nighttime)) %>%
+  select(datetime, date, time, phase, everything())
+```
+
 Adding in a date and time column, then a phase column, to try to fix issues in transitional burned SWin/out data
 
 ```{r}
