@@ -1,0 +1,50 @@
+---
+title: "wx_datawrangling"
+output: html_document
+date: "2024-08-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Set up
+
+```{r}
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(openxlsx)
+library(plotly)
+library(rstatix)
+library(htmlwidgets)
+library(RColorBrewer)
+library(patchwork)
+
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
+
+# Calling in Wx Data 
+
+```{r}
+#trans_burned 15-minute data
+
+transb_wx_15min <- read_excel('nsf/trans_burned/trans_burned_wx_15min.xlsx')
+
+#fix datetime issue and reorder - run this if I've added data to the trans_burned_wx_15min in n-drive
+transb_wx_15min <- transb_wx_15min %>%
+  drop_na(datetime) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+         dt_mst = force_tz(datetime, tz = 'MST'))
+
+  #reordering dataframe
+  select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
+
+#writing the 15min trans_ub weather to the n-drive
+write.xlsx(transb_wx_15min, "nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
+```
