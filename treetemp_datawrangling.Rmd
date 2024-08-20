@@ -39,133 +39,40 @@ Tree temp data
 #calling in tree temp data from n-drive
 ## burned
 pers_b_aspects <- read_excel("nsf/105E_pers_burned/105E_pers_b_aspects.xlsx") %>%
-  mutate(datetime = ymd_hms(datetime))
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST'))
 
 trans_b_aspects <- read_excel("nsf/105E_trans_burned/105E_trans_b_aspects.xlsx") %>%
-  mutate(datetime = ymd_hms(datetime))
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST'))
 
 ##unburned
 pers_ub_aspects <- read_excel("nsf/105E_pers_unburned/105E_pers_ub_aspects.xlsx") %>%
-  mutate(datetime = ymd_hms(datetime))
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST'))
 
 trans_ub_aspects <- read_excel("nsf/105E_trans_unburned/105E_trans_ub_aspects.xlsx") %>%
-  mutate(datetime = ymd_hms(datetime))
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST'))
 ```
 
-Weather Data
+Weather station data:
+
+NOTE - I need to rerun the wx_datawrangling Rmarkdown before calling in these dataframes if I change the range of dates I am looking for!
 
 ```{r}
-#trans_burned 15-minute data
+transb_wx_15min_r <- read_excel('nsf/trans_burned/trans_burned_wx_15min_r.xlsx') %>%
+  #have to force the MST otherwise it recognizes it as UTC
+  mutate(datetime = force_tz(datetime, tz = 'MST'))
 
-transb_wx_15min <- read_excel('nsf/trans_burned/trans_burned_wx_15min.xlsx')
+transub_wx_15min_r <- read_excel('nsf/trans_unburned/trans_unburned_wx_15min_r.xlsx') %>%
+  mutate(datetime = force_tz(datetime, tz = 'MST'))
 
-#fix datetime issue and reorder - run this if I've added data to the trans_burned_wx_15min in n-drive
-transb_wx_15min <- transb_wx_15min %>%
-  drop_na(datetime) %>%
-  mutate(datetime = ymd_hms(datetime, tz = 'MST')) %>%
-  #reordering dataframe
-  select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
+persb_wx_15min_r <- read_excel('nsf/pers_burned/pers_burned_wx_15min_r.xlsx') %>%
+  mutate(datetime = force_tz(datetime, tz = 'MST'))
 
-#writing the 15min trans_ub weather to the n-drive
-write.xlsx(transb_wx_15min, "nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
-```
-
-```{r}
-#manipulating trans unburned weather station data - ONLY run if you add new data to the trans_unburned composite excel sheet
-
-transub_wx_15min <- read_excel("nsf/trans_unburned/trans_ub_wx_composite.xlsx") %>%
-  #convert 5 min timestep to 15 minute timestep
-  # Ensure the timestamp column is in datetime format
-  mutate(TIMESTAMP = ymd_hms(TIMESTAMP)) %>%
-  # Create a new column for 15-minute intervals
-  mutate(interval = floor_date(TIMESTAMP, unit = "15 minutes")) %>%
-  # Group by the 15-minute interval
-  group_by(interval) %>%
-  # Calculate the mean for all other columns
-summarize(across(where(is.numeric), mean, na.rm = TRUE), .groups = 'drop') %>%  # Rename 'interval' to 'datetime' and remove the original 'datetime' column
-  rename(datetime = interval) %>%
-  #renaming columns to match trans/pers burned
-  rename(Batt_volt = BattV_Avg) %>%
-  rename(AirTC_Avg = AirTemp_Avg) %>%
-  rename(RH = RH_Avg) %>%
-  rename(WS_ms_Avg = WindSpeed) %>%
-  rename(SnowDepth_m = SnowDepth_Avg) %>%
-  select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
-  
-#writing the 15min trans_ub weather to the n-drive
-write.xlsx(transub_wx_15min, "nsf/trans_unburned/trans_unburned_wx_15min_r.xlsx")
-```
-
-```{r}
-#calling in weather station data from n-drive
-##persistent zone
-persb_wx_15min <- read_excel("nsf/pers_burned/pers_burned_wx_15min_r.xlsx")
-
-persub_wx_15min <- read_excel("nsf/pers_unburned/pers_unburned_wx_15min_composite.xlsx") %>%
-  mutate(datetime = ymd_hms(TIMESTAMP, tz = 'MST')) %>%
-  select(datetime, everything()) %>%
-  select(-TIMESTAMP)
-
-##transitional
-transb_wx_15min <- read_excel("nsf/trans_burned/trans_burned_wx_15min_r.xlsx") %>%
-  mutate(datetime = ymd_hms(datetime, tz = 'MST'))
-
-transub_wx_15min <- read_excel("nsf/trans_unburned/trans_ub_wx_15min_r.xlsx")
-```
-
-### Renaming weather dataframe columns so they match - ONLY run if needed
-
-```{r}
-#matching the transitional and persistent weather station headers
-transb_wx_15min <- transb_wx_15min %>%
-  rename(AirTC_Avg = AirT_C) %>%
-  rename(RH = RH_percent) %>%
-  rename(WS_ms_Avg = `WS_m/s`) %>%
-  rename(WindDir = WindDir_deg) %>%
-  rename(NR_Avg = Net_Rad_Avg) %>%
-  rename(SWalbedo_Avg = SW_albedo) %>%
-  #reordering dataframe
-  select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything())
-
-write.xlsx(transb_wx_15min, "nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
-
-#reordering persistent weather station data
-##pers burned
-persb_wx_15min <- persb_wx_15min %>%
-  rename(Batt_volt = BattV_Min) %>%
-  #timestamp column is UTC time
-  rename(SnowDepth_m = DBTCDT_Avg) %>%
-  #applying offset to snow depth column for the pers_burned zone
-  mutate(SnowDepth_m = (SnowDepth_m-0.03)) %>%
-  select(datetime,TIMESTAMP, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything())
-
-write.xlsx(persb_wx_15min, "nsf/pers_burned/pers_burned_wx_15min_r.xlsx")
-
-##pers unburned
-persub_wx_15min <- persub_wx_15min %>%
-  rename(Batt_volt = BattV_Min) %>%
-  rename(SnowDepth_m = DBTCDT_Avg) %>%
-  #creating an RH average column to match pers burned and trans burned dataframes
-  mutate(RH = mean(c(RH_Min, RH_Max))) %>%
-  #changing timestamp column from UTC to MST
-  mutate(datetime = with_tz(TIMESTAMP, "America/Denver")) %>%
-  filter(datetime >= ymd_hms("2023-12-07 00:00:00", tz = 'MST')) %>%
-  select(datetime,TIMESTAMP, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything())
-
-##writing edited persistent unburned dataframe to n-drive
-write.xlsx(persub_wx_15min, "nsf/pers_unburned/pers_unburned_wx_15min_r.xlsx")
-```
-
-Writing all manipulated wx dataframes to n-drive - only run if you've changed the weather composite or wx_15min_r documents!
-
-```{r}
-write.xlsx(persb_wx_15min, "nsf/pers_burned/pers_burned_wx_15min_r.xlsx")
-
-write.xlsx(persub_wx_15min, "nsf/pers_unburned/pers_unburned_wx_15min_r.xlsx")
-
-write.xlsx(transb_wx_15min, "nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
-
-write.xlsx(transub_wx_15min, "nsf/trans_unburned/trans_unburned_wx_15min_r.xlsx")
+persub_wx_15min_r <- read_excel('nsf/pers_unburned/pers_unburned_wx_15min_r.xlsx') %>%
+  mutate(datetime = force_tz(datetime, tz = 'MST'))
 ```
 
 ### Setting consistent timeframe
