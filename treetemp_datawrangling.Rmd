@@ -156,6 +156,18 @@ persub_wx_15min <- persub_wx_15min %>%
 write.xlsx(persub_wx_15min, "nsf/pers_unburned/pers_unburned_wx_15min_r.xlsx")
 ```
 
+Writing all manipulated wx dataframes to n-drive - only run if you've changed the weather composite or wx_15min_r documents!
+
+```{r}
+write.xlsx(persb_wx_15min, "nsf/pers_burned/pers_burned_wx_15min_r.xlsx")
+
+write.xlsx(persub_wx_15min, "nsf/pers_unburned/pers_unburned_wx_15min_r.xlsx")
+
+write.xlsx(transb_wx_15min, "nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
+
+write.xlsx(transub_wx_15min, "nsf/trans_unburned/trans_unburned_wx_15min_r.xlsx")
+```
+
 ### Setting consistent timeframe
 
 ```{r}
@@ -189,9 +201,7 @@ filtered_persb_wx_15min <- persb_wx_15min %>%
 
 filtered_persub_wx_15min <- persub_wx_15min %>%
   select(datetime, everything()) %>%
-  filter(datetime >= start_time & datetime <= end_time) %>%
-  #removed UTM column
-  select(-TIMESTAMP)
+  filter(datetime >= start_time & datetime <= end_time)
   
 filtered_transb_wx_15min <- transb_wx_15min %>%
   filter(datetime >= start_time & datetime <= end_time)
