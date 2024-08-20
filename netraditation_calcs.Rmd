@@ -97,7 +97,7 @@ Setting Constants
 ```{r}
 
 #tree temp dataframes
-start_time <- ymd_hms("2024-02-02 00:00:00")
+start_time <- ymd_hms("2024-02-02 00:15:00")
 end_time <- ymd_hms("2024-05-24 00:00:00")
 #2nd end time is for weather staion/ radiation data, as persistent burned weather data only goes to 4-22-2024
 end_time_2 <- ymd_hms("2024-04-21 00:00:00")
@@ -482,6 +482,8 @@ combined_filtered_wx_data <- filtered_pers_b_wx %>%
   #removing first row of datetime that is 00:00:00 because the tree temp data does not have that datetimestep 
   slice(-1)
 ```
+
+\*\* the above data for trans_b is still not working correctly! Why is this?
 
 \*\* Individually adding in date, time and phase column to try to fix day/night SW issue.
 
