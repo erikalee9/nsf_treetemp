@@ -33,6 +33,8 @@ setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 
 ### Calling in data
 
+Tree temp data
+
 ```{r}
 #calling in tree temp data from n-drive
 ## burned
@@ -48,6 +50,24 @@ pers_ub_aspects <- read_excel("nsf/105E_pers_unburned/105E_pers_ub_aspects.xlsx"
 
 trans_ub_aspects <- read_excel("nsf/105E_trans_unburned/105E_trans_ub_aspects.xlsx") %>%
   mutate(datetime = ymd_hms(datetime))
+```
+
+Weather Data
+
+```{r}
+#trans_burned 15-minute data
+
+transb_wx_15min <- read_excel('nsf/trans_burned/trans_burned_wx_15min.xlsx')
+
+#fix datetime issue and reorder - run this if I've added data to the trans_burned_wx_15min in n-drive
+transb_wx_15min <- transb_wx_15min %>%
+  drop_na(datetime) %>%
+  mutate(datetime = ymd_hms(datetime, tz = 'MST')) %>%
+  #reordering dataframe
+  select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
+
+#writing the 15min trans_ub weather to the n-drive
+write.xlsx(transb_wx_15min, "nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
 ```
 
 ```{r}
@@ -77,38 +97,23 @@ write.xlsx(transub_wx_15min, "nsf/trans_unburned/trans_unburned_wx_15min_r.xlsx"
 ```
 
 ```{r}
-#manipulating trans burned weather station data - ONLY run if you add new data to the trans_unburned composite excel sheet
-
-transb_wx_15min <- read_excel("nsf/trans_burned/trans_burned_wx_15min.xlsx") %>%
-  group_by(datetime) %>%
-  # Calculate the mean for all other columns
-summarize(across(where(is.numeric), mean, na.rm = TRUE), .groups = 'drop') %>%
-  #renaming columns to match trans/pers burned
-  rename(AirTC_Avg = AirT_C) %>%
-  rename(RH = RH_percent) %>%
-  rename(WS_ms_Avg = "WS_m/s") %>%
-  rename(WindDir = "WindDir_deg") %>%
-  rename(SWalbedo_Avg = SW_albedo) %>%
-  select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything())
-  
-#writing the 15min trans_ub weather to the n-drive
-write.xlsx(transb_wx_15min, "nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
-```
-
-```{r}
 #calling in weather station data from n-drive
 ##persistent zone
 persb_wx_15min <- read_excel("nsf/pers_burned/pers_burned_wx_15min_r.xlsx")
 
-persub_wx_15min <- read_excel("nsf/pers_unburned/pers_unburned_wx_15min_composite.xlsx")
+persub_wx_15min <- read_excel("nsf/pers_unburned/pers_unburned_wx_15min_composite.xlsx") %>%
+  mutate(datetime = ymd_hms(TIMESTAMP, tz = 'MST')) %>%
+  select(datetime, everything()) %>%
+  select(-TIMESTAMP)
 
 ##transitional
-transb_wx_15min <- read_excel("nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
+transb_wx_15min <- read_excel("nsf/trans_burned/trans_burned_wx_15min_r.xlsx") %>%
+  mutate(datetime = ymd_hms(datetime, tz = 'MST'))
 
 transub_wx_15min <- read_excel("nsf/trans_unburned/trans_ub_wx_15min_r.xlsx")
 ```
 
-### Renaming weather dataframe columns so they match
+### Renaming weather dataframe columns so they match - ONLY run if needed
 
 ```{r}
 #matching the transitional and persistent weather station headers
@@ -120,7 +125,7 @@ transb_wx_15min <- transb_wx_15min %>%
   rename(NR_Avg = Net_Rad_Avg) %>%
   rename(SWalbedo_Avg = SW_albedo) %>%
   #reordering dataframe
-  select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything() )
+  select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything())
 
 write.xlsx(transb_wx_15min, "nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
 
@@ -183,6 +188,7 @@ filtered_persb_wx_15min <- persb_wx_15min %>%
   select(-TIMESTAMP)
 
 filtered_persub_wx_15min <- persub_wx_15min %>%
+  select(datetime, everything()) %>%
   filter(datetime >= start_time & datetime <= end_time) %>%
   #removed UTM column
   select(-TIMESTAMP)
