@@ -29,7 +29,7 @@ library(patchwork)
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
 
-# Calling in Wx Data 
+# Calling in Wx Data
 
 ```{r}
 #trans_burned 15-minute data
