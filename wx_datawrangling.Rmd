@@ -125,3 +125,48 @@ persub_wx_15min_r <- persub_wx_15min_r %>%
 
 write.xlsx(persub_wx_15min_r, "nsf/pers_unburned/pers_unburned_wx_15min_r.xlsx")
 ```
+
+```{r}
+#persistent_burned - hourly data
+
+persb_wx_hourly <- read_csv("nsf/pers_burned/pers_burned_wx_hourly_composite.csv")
+
+#making sure the datetime column is set to MST and the correct format
+persb_wx_hourly_r <- persb_wx_hourly %>%
+  mutate(datetime = as.POSIXct(TIMESTAMP, format=("%Y-%m-%d %H:%M:%S"), tz="MST")) %>%
+  select(datetime, everything()) %>%
+  rename(TIMESTAMP_UTC = TIMESTAMP)
+
+#renaming the columns to match other weather station data and creating a correct snow depth column
+persb_wx_hourly_r <- persb_wx_hourly_r %>%
+  rename(Batt_volt = BattV_Min) %>%
+  #timestamp column is UTC time
+  rename(SnowDepth_m = DBTCDT_Avg) %>%
+  #applying offset to snow depth column for the pers_burned zone
+  mutate(SnowDepth_m = (SnowDepth_m-0.03)) %>%
+  select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything())
+
+write_csv(persb_wx_hourly_r, "nsf/pers_burned/pers_burned_wx_hourly_r.csv")
+```
+
+```{r}
+#persistent_unburned - hourly data
+
+persub_wx_hourly <- read_csv("nsf/pers_unburned/pers_unburned_wx_hourly_composite.csv")
+
+#making sure the datetime column is set to MST and the correct format
+persub_wx_hourly_r <- persub_wx_hourly %>%
+  mutate(datetime = as.POSIXct(TIMESTAMP, format=("%Y-%m-%d %H:%M:%S"), tz="MST")) %>%
+  select(datetime, everything()) %>%
+  rename(TIMESTAMP_UTC = TIMESTAMP)
+
+#renaming the columns to match other weather station data and creating a correct snow depth column
+persub_wx_hourly_r <- persub_wx_hourly_r %>%
+  rename(Batt_volt = BattV_Min) %>%
+  #timestamp column is UTC time
+  rename(SnowDepth_m = DBTCDT_Avg) %>%
+#did not apply an offset for the snow depth column for the unburned site
+  select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything())
+
+write_csv(persub_wx_hourly_r, "nsf/pers_unburned/pers_unburned_wx_hourly_r.csv")
+```
