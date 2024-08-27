@@ -50,6 +50,8 @@ transb_wx_15min_r <- transb_wx_15min_r %>%
 
 #writing the 15min trans_b weather to the n-drive
 write.xlsx(transb_wx_15min_r, "nsf/trans_burned/trans_burned_wx_15min_r.xlsx")
+
+write_csv(transb_wx_15min_r, "nsf/trans_burned/trans_burned_wx_15min_r.csv")
 ```
 
 ```{r}
@@ -80,6 +82,8 @@ summarize(across(where(is.numeric), mean, na.rm = TRUE), .groups = 'drop') %>%  
 
 #writing the 15min trans_ub weather to the n-drive
 write.xlsx(transub_wx_15min_r, "nsf/trans_unburned/trans_unburned_wx_15min_r.xlsx")
+
+write_csv(transub_wx_15min_r, "nsf/trans_unburned/trans_unburned_wx_15min_r.csv")
 ```
 
 ```{r}
@@ -103,6 +107,8 @@ persb_wx_15min_r <- persb_wx_15min_r %>%
   select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything())
 
 write.xlsx(persb_wx_15min_r, "nsf/pers_burned/pers_burned_wx_15min_r.xlsx")
+
+write_csv(persb_wx_15min_r, "nsf/pers_burned/pers_burned_wx_15min_r.csv")
 ```
 
 ```{r}
@@ -124,6 +130,8 @@ persub_wx_15min_r <- persub_wx_15min_r %>%
   select(datetime, RECORD, Batt_volt, SnowDepth_m, AirTC_Avg, WS_ms_Avg, WindDir, RH, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg, everything())
 
 write.xlsx(persub_wx_15min_r, "nsf/pers_unburned/pers_unburned_wx_15min_r.xlsx")
+
+write_csv(persub_wx_15min_r, "nsf/pers_unburned/pers_unburned_wx_15min_r.csv")
 ```
 
 ```{r}
