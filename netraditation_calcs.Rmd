@@ -112,6 +112,7 @@ Setting Constants
 ```{r}
 #tree temp dataframes
 start_time <- ymd_hms("2024-02-02 00:00:00", tz = "America/Denver")
+
 end_time <- ymd_hms("2024-05-25 00:00:00", tz = "America/Denver")
 
 #setting a day and night time 
@@ -667,11 +668,12 @@ daynight_avg_combined_R_data <- combined_wx_treeRout_data %>%
 color_values <- c(
   "SWin_Avg" = "#D95F02",
   "SWout_Avg" = "#E6AB02",
-  "LWin_Avg" = "#66A61E",
-  "LWout_Avg" = "#A6761D",
+  "LWout_Avg" = "#66A61E",
+  "LWin_Avg" = "#2e5e39",
   "tree_LWout_avg_wperm2" = "#7570B3", 
   "tree_LWout_avg_MJ" = "#E7298A"
 )
+
 
 # Define line types
 line_types <- c(
@@ -709,10 +711,10 @@ unburned_day_s_avg_values <- day_final_combined_wx_treeLWout_data %>%
 
 ## burned 
 burned_day_s_avg_plot <- ggplot(data = burned_day_s_avg_values) + 
-  geom_line(aes(x = date, y = SWin_Avg, color = "SWin_Avg", linetype = "Weather Station")) +
-  geom_line(aes(x = date, y = SWout_Avg, color = "SWout_Avg", linetype = "Weather Station")) +
-  geom_line(aes(x = date, y = LWin_Avg, color = "LWin_Avg", linetype = "Weather Station")) +
-  geom_line(aes(x = date, y = LWout_Avg, color = "LWout_Avg", linetype = "Weather Station")) +
+  geom_line(aes(x = date, y = SWin_Avg, color = "SWin_Avg", linetype = "Weather Station"), size = 0.6, alpha = 0.9) +
+  geom_line(aes(x = date, y = SWout_Avg, color = "SWout_Avg", linetype = "Weather Station"), size = 0.6, alpha = 0.8) +
+  geom_line(aes(x = date, y = LWin_Avg, color = "LWin_Avg", linetype = "Weather Station"), size = 0.7, alpha = 0.9) +
+  geom_line(aes(x = date, y = LWout_Avg, color = "LWout_Avg", linetype = "Weather Station"), size = 0.7) +
   geom_line(aes(x = date, y = tree_LWout_wperm2, color = "tree_LWout_avg_wperm2", linetype = "Tree Temperature Sensors")) +
   facet_wrap(~ zone + burn_status, scales = "free_y", dir = "h") +  # Facet by zone and phase
   labs(
@@ -730,10 +732,10 @@ burned_day_s_avg_plot
 
 ## unburned
 unburned_day_s_avg_plot <- ggplot(data = unburned_day_s_avg_values) + 
-  geom_line(aes(x = date, y = SWin_Avg, color = "SWin_Avg", linetype = "Weather Station")) +
-  geom_line(aes(x = date, y = SWout_Avg, color = "SWout_Avg", linetype = "Weather Station")) +
-  geom_line(aes(x = date, y = LWin_Avg, color = "LWin_Avg", linetype = "Weather Station")) +
-  geom_line(aes(x = date, y = LWout_Avg, color = "LWout_Avg", linetype = "Weather Station")) +
+ geom_line(aes(x = date, y = SWin_Avg, color = "SWin_Avg", linetype = "Weather Station"), size = 0.6, alpha = 0.9) +
+  geom_line(aes(x = date, y = SWout_Avg, color = "SWout_Avg", linetype = "Weather Station"), size = 0.6, alpha = 0.8) +
+  geom_line(aes(x = date, y = LWin_Avg, color = "LWin_Avg", linetype = "Weather Station"), size = 0.7, alpha = 0.9) +
+  geom_line(aes(x = date, y = LWout_Avg, color = "LWout_Avg", linetype = "Weather Station"), size = 0.7) +
   geom_line(aes(x = date, y = tree_LWout_wperm2, color = "tree_LWout_avg_wperm2", linetype = "Tree Temperature Sensors")) +
   facet_wrap(~ zone + burn_status, scales = "free_y", dir = "h") +  # Facet by zone and phase
   labs(
@@ -883,6 +885,219 @@ arranged_plots
 
 #saving ggplot as high quality png
 ggsave("arranged_plots.png", arranged_plots, width = 8, height = 6, dpi = 300)
+```
+
+# Day Night Tree Temp Aspect Plots
+
+```{r}
+#creating dataframes for only north and south aspects, with averaged day and night temps
+
+filtered_all_treetemps <- all_treetemps %>%
+   mutate(
+    # Extract the date part
+    date = as.Date(datetime),
+    # Extract the time part
+    time = format(datetime, "%H:%M:%S")
+  ) %>%
+  # Convert time to hms object for comparison
+  mutate(
+    time_hms = hms::as_hms(time)
+  ) %>%
+  mutate(
+    phase = case_when(
+      time_hms >= hms::as_hms("08:00:00") & time_hms < hms::as_hms("17:00:00") ~ "day",
+      time_hms < hms::as_hms("08:00:00") | time_hms >= hms::as_hms("17:00:00") ~ "night",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  select(datetime, date, time, phase, everything())
+
+#daytime temps
+filtered_day_treetemps <- filtered_all_treetemps %>%
+  #filtering out charred/uncharred temps
+  filter(aspect %in% c("north", "south")) %>%
+  select(-sensor_id) %>%
+  group_by(date, zone, burn_status, phase, aspect) %>%
+  summarize(across(everything(), mean, na.rm = TRUE)) %>%
+  select(date, phase, zone, burn_status, aspect, temp) %>%
+  filter(phase == "day") %>%
+  rename(avg_treetemp = temp)
+
+#nighttime temps
+filtered_night_treetemps <- filtered_all_treetemps %>%
+  #filtering out charred/uncharred temps
+  filter(aspect %in% c("north", "south")) %>%
+  select(-sensor_id) %>%
+  group_by(date, zone, burn_status, phase, aspect) %>%
+  summarize(across(everything(), mean, na.rm = TRUE)) %>%
+  select(date, phase, zone, burn_status, aspect, temp) %>%
+  filter(phase == "night") %>%
+  rename(avg_treetemp = temp)
+```
+
+```{r}
+#creating a linetype
+aspect <-c("north" = "dashed", "south" = "solid")
+```
+
+Option 1 for plotting
+
+```{r}
+#plotting aspect averages by day/night and north/south
+day_treetemp_plots <- ggplot(data = filtered_day_treetemps) + 
+  geom_line(aes(x = date, y = avg_treetemp, color = burn_status, linetype = aspect)) +
+  labs(
+    title = "Daytime Avg Tree Temps",
+   x = "Date",
+   y = "Temperature (C)",
+   color = "Burn Status", 
+   linetype = "Aspect"
+  ) +
+  theme_bw() +
+  facet_wrap(~ zone, dir = "h") +
+  scale_color_manual(values = three_custom_colors) +
+  scale_linetype_manual(values = aspect)
+
+day_treetemp_plots
+```
+
+```{r}
+night_treetemp_plots <- ggplot(data = filtered_night_treetemps) + 
+  geom_line(aes(x = date, y = avg_treetemp, color = burn_status, linetype = aspect)) +
+  labs(
+    title = "Nighttime Avg Tree Temps",
+   x = "Date",
+   y = "Temperature (C)",
+   color = "Burn Status", 
+   linetype = "Aspect"
+  ) +
+  theme_bw() +
+  facet_wrap(~ zone, dir = "h") +
+  scale_color_manual(values = three_custom_colors) +
+  scale_linetype_manual(values = aspect)
+
+night_treetemp_plots
+```
+
+```{r}
+#alligning the day and night plots
+
+comb_aspect_treetemps <- ggarrange(day_treetemp_plots, night_treetemp_plots, ncol = 1, nrow = 2, common.legend = TRUE, legend = "right")
+
+comb_aspect_treetemps
+```
+
+```{r}
+#saving combined plot
+#saving ggplot as high quality png
+ggsave("comb_aspect_treetemps.png", comb_aspect_treetemps, width = 8, height = 6, dpi = 300)
+```
+
+Option 2 for plotting - more simple day/night comparison so it does not repeat the gb/db/ub plots?
+
+```{r}
+#manipulating dataframe first
+##filtered burned day
+filtered_burned_treetemps <- filtered_all_treetemps %>%
+  #filtering out charred/uncharred temps
+  filter(aspect %in% c("north", "south")) %>%
+  select(-sensor_id) %>%
+  #creating a dataframe with only burned temps, then getting their average
+  filter(burn_status %in% c("green burn", "dead burn")) %>%
+  group_by(date, zone, phase, aspect) %>%
+  summarize(avg_treetemp = mean(temp, na.rm = TRUE), .groups = 'drop') %>%
+  mutate(burn_status = "burned") %>%
+  select(date, phase, zone, burn_status, aspect, avg_treetemp)
+
+filtered_burned_day_treetemps <- filtered_burned_treetemps %>%
+  filter(phase == "day")
+
+filter_burned_night_treetemps <- filtered_burned_treetemps %>%
+  filter(phase == "night")
+
+
+##filtered unburned 
+filtered_unburned_treetemps <- filtered_all_treetemps %>%
+  #filtering out charred/uncharred temps
+  filter(aspect %in% c("north", "south")) %>%
+  select(-sensor_id) %>%
+  #creating a dataframe with only burned temps, then getting their average
+  filter(burn_status == "unburned") %>%
+  group_by(date, zone, phase, aspect) %>%
+  summarize(avg_treetemp = mean(temp, na.rm = TRUE), .groups = 'drop') %>%
+  mutate(burn_status = "unburned") %>%
+  select(date, phase, zone, burn_status, aspect, avg_treetemp)
+
+filtered_unburned_day_treetemps <- filtered_unburned_treetemps %>%
+  filter(phase == "day")
+
+filtered_unburned_night_treetemps <- filtered_unburned_treetemps %>%
+  filter(phase == "night")
+```
+
+```{r}
+#combining plots so I can plot as day/nigth and do a simple facet wrap
+
+combined_day_b_ub_treetemp_data <- filtered_burned_day_treetemps %>%
+  full_join(filtered_unburned_day_treetemps)
+
+combined_night_b_ub_treetemp_data <-
+  filtered_burned_night_treetemps %>%
+  full_join(filtered_unburned_night_treetemps)
+```
+
+Plotting Option 2
+
+```{r}
+#daytime plot
+day_treetemp_plots_V2 <- ggplot(data = combined_day_b_ub_treetemp_data) + 
+  geom_line(aes(x = date, y = avg_treetemp, color = burn_status, linetype = aspect), alpha = 0.8) +
+  labs(
+    title = "Daytime Avg Tree Temps",
+   x = "Date",
+   y = "Temperature (C)",
+   color = "Burn Status", 
+   linetype = "Aspect"
+  ) +
+  theme_bw() +
+  facet_wrap(~ zone, dir = "h") +
+  scale_color_manual(values = two_custom_colors) +
+  scale_linetype_manual(values = aspect)
+
+day_treetemp_plots_V2
+```
+
+```{r}
+#nighttime plot
+night_treetemp_plots_V2 <- ggplot(data = combined_night_b_ub_treetemp_data) + 
+  geom_line(aes(x = date, y = avg_treetemp, color = burn_status, linetype = aspect), alpha = 0.8) +
+  labs(
+    title = "Nighttime Avg Tree Temps",
+   x = "Date",
+   y = "Temperature (C)",
+   color = "Burn Status", 
+   linetype = "Aspect"
+  ) +
+  theme_bw() +
+  facet_wrap(~ zone, dir = "h") +
+  scale_color_manual(values = two_custom_colors) +
+  scale_linetype_manual(values = aspect)
+
+night_treetemp_plots_V2
+```
+
+```{r}
+#alligning the day and night plots
+
+comb_aspect_treetemps_V2 <- ggarrange(day_treetemp_plots_V2, night_treetemp_plots_V2, ncol = 1, nrow = 2, common.legend = TRUE, legend = "right")
+
+comb_aspect_treetemps_V2
+```
+
+```{r}
+#saving combined plot
+#saving ggplot as high quality png
+ggsave("comb_aspect_treetemps_V2.png", comb_aspect_treetemps_V2, width = 8, height = 6, dpi = 300)
 ```
 
 HAVEN'T WORKED ON ANYTHING ELSE BELOW THIS POINT AS OF 8/20/24
