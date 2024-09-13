@@ -1,0 +1,100 @@
+---
+title: "radiation_plot_calcs"
+output: html_document
+date: "2024-09-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(openxlsx)
+library(plotly)
+library(rstatix)
+library(htmlwidgets)
+library(RColorBrewer)
+library(patchwork)
+library(hms)
+library(ggpubr)
+#package for scientific notation of numbers
+library(scales)
+
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
+
+## Calling in Data
+
+```{r}
+transb_energytree_table <- read_csv("nsf/drone_imagery/trans_b_energytree_table.csv") %>%
+  mutate(zone = "transitional") %>%
+  rename(burn_status = burn_statu) %>%
+  #adding a tree_id column
+  mutate(tree_id = row_number()) %>%
+  #selecting columns I want
+  select(tree_id, zone, burn_status, lat, long)
+
+transb_wx_15min <- read_csv("nsf/trans_burned/trans_burned_wx_15min_r.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST'))
+
+#tree sensor temps
+avg_dt_transb_treeLW <- read_csv("nsf/105E_trans_burned/day_avg_filtered_treeLWout_data.csv") %>%
+  #filtering out only the burned data & transitional zone
+  filter(burn_status == "burned", zone == "transitional")
+```
+
+## Filtering Data
+
+```{r}
+filtered_transb_rad_wx <- transb_wx_15min %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00") & datetime <= as.POSIXct("2024-05-25 00:00:00")) %>%
+   # Adding in date, time, and phase columns
+  mutate(
+    date = as.Date(datetime),
+    time = format(datetime, "%H:%M:%S"),
+    time_hms = hms::as_hms(time),  # Convert to hms object for phase calculation
+    phase = case_when(
+      time_hms >= hms::as_hms("08:00:00") & time_hms < hms::as_hms("17:00:00") ~ "day",
+      time_hms < hms::as_hms("08:00:00") | time_hms >= hms::as_hms("17:00:00") ~ "night",
+      TRUE ~ NA_character_)) %>%
+      select(datetime, date, time, phase, SnowDepth_m, AirTC_Avg, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg)
+```
+
+## Data Wrangling
+
+Creating a daily average dataframe, then converting to MJ/day
+
+```{r}
+avg_dt_transb_rad_wx <- filtered_transb_rad_wx %>%
+  group_by(date, phase) %>%
+  summarize(across(everything(), mean, na.rm = TRUE)) %>%
+  select(-c(datetime, time)) %>%
+  mutate(SWin_MJd_Avg = SWin_Avg * 0.0864, SWout_MJd_Avg = SWout_Avg * 0.0864, LWin_MJd_Avg = LWin_Avg * 0.0864, LWout_MJd_Avg = LWout_Avg * 0.0864, SWnet_MJd_Avg = SWnet_Avg * 0.0864, LWnet_MJd_Avg = LWnet_Avg * 0.0864, NR_MJd_Avg = NR_Avg * 0.0864) %>%
+    #adding in zone and burn status columns
+  mutate(zone = "transitional", burn_status = "burned") %>%
+  #reordering so the like values are next to each other
+  select(date, phase, zone, burn_status, SnowDepth_m, AirTC_Avg, SWin_Avg, SWin_MJd_Avg, SWout_Avg, SWout_MJd_Avg, SWnet_Avg, SWnet_MJd_Avg, SWalbedo_Avg, LWin_Avg, LWin_MJd_Avg, LWout_Avg, LWout_MJd_Avg, LWnet_Avg, LWnet_MJd_Avg, NR_Avg, NR_MJd_Avg) %>%
+  #setting decimal number
+   mutate(across(SnowDepth_m:last_col(), ~ round(., 4))) %>%
+  #filtering out only daytime values
+  filter(phase == "day")
+```
+
+Combining data into one dataframe
+
+```{r}
+transb_comb_radtree_data <- avg_dt_transb_rad_wx %>%
+  full_join(avg_dt_transb_treeLW) %>%
+  #renaming tree temp column
+  rename(treetemp_C = temp) %>%
+  #renaming columns so they make more sense
+  rename(SWin_wperm2 = SWin_Avg, SWing_MJd = SWin_MJd_Avg, SWout_wperm2 = SWout_Avg, SWout_MJd = SWout_MJd_Avg, SWnet_wperm2 = SWnet_Avg, SWnet_MJd = SWnet_MJd_Avg, LWin_wperm2 = LWin_Avg, LWin_MJd = LWin_MJd_Avg, LWout_wperm2 = LWout_Avg, LWout_MJd = LWout_MJd_Avg, LWnet_wperm2 = LWnet_Avg, LWnet_MJd = LWnet_MJd_Avg, NR_wperm2 = NR_Avg, NR_MJd = NR_MJd_Avg)
+```
