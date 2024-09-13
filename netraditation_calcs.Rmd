@@ -635,6 +635,11 @@ day_avg_filtered_tree_LWout_data <- day_s_daily_avg_tree_LWout %>%
 ```
 
 ```{r}
+#exporting tree_LWout dataframe to save as csv in r
+write_csv(day_avg_filtered_tree_LWout_data, "nsf/105E_trans_burned/day_avg_filtered_treeLWout_data.csv")
+```
+
+```{r}
 #combining day-only average wx and tree LWout data
 ##Use this for the radiation and LWout plots!
 day_final_combined_wx_treeLWout_data <- day_combined_filtered_wx_data %>%
