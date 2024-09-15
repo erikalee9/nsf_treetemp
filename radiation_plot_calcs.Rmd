@@ -70,9 +70,31 @@ filtered_transb_rad_wx <- transb_wx_15min %>%
 
 ## Data Wrangling
 
+Creating a daily average wx station dataframe, then converting to MJ/day
+
+```{r}
+#redoing calculations for radiation conversions from W/m2 to MJ/day
+avg_dt_transb_rad_wx <- filtered_transb_rad_wx %>%
+  group_by(date, phase) %>%
+  summarize(across(everything(), mean, na.rm = TRUE)) %>%
+  select(-c(datetime, time)) %>%
+  group_by(date, phase) %>%
+  # Convert mean radiation to MJ/m²/day
+  mutate(SWin_MJd = SWin_Avg * 86400 / 1e6, SWout_MJd = SWout_Avg * 86400 / 1e6, LWin_MJd = LWin_Avg * 86400 / 1e6, LWout_MJd = LWout_Avg * 86400 / 1e6, SWnet_MJd = SWnet_Avg * 86400 / 1e6, LWnet_MJd = LWnet_Avg * 86400 / 1e6, NR_MJd = NR_Avg * 86400 / 1e6) %>%
+  rename(SWin_wperm2 = SWin_Avg, SWout_wperm2 = SWout_Avg, SWnet_wperm2 = SWnet_Avg, LWin_wperm2 = LWin_Avg, LWout_wperm2 = LWout_Avg, LWnet_wperm2 = LWnet_Avg, NR_wperm2 = NR_Avg) %>%
+  mutate(zone = "transitional", burn_status = "burned") %>%
+  #filtering out only daytime values
+  filter(phase == "day") %>%
+  #reordering so the like values are next to each other
+  select(date, phase, zone, burn_status, SnowDepth_m, AirTC_Avg, SWin_wperm2, SWin_MJd, SWout_wperm2, SWout_MJd, SWnet_wperm2, SWnet_MJd, SWalbedo_Avg, LWin_wperm2, LWin_MJd, LWout_wperm2, LWout_MJd, LWnet_wperm2, LWnet_MJd, NR_wperm2, NR_MJd) %>%
+  #setting decimal number
+   mutate(across(SnowDepth_m:last_col(), ~ round(., 4)))
+```
+
 Creating a daily average dataframe, then converting to MJ/day
 
 ```{r}
+#I think these conversions are wrong! Use above dataframe, don't run this
 avg_dt_transb_rad_wx <- filtered_transb_rad_wx %>%
   group_by(date, phase) %>%
   summarize(across(everything(), mean, na.rm = TRUE)) %>%
@@ -94,7 +116,103 @@ Combining data into one dataframe
 transb_comb_radtree_data <- avg_dt_transb_rad_wx %>%
   full_join(avg_dt_transb_treeLW) %>%
   #renaming tree temp column
-  rename(treetemp_C = temp) %>%
-  #renaming columns so they make more sense
-  rename(SWin_wperm2 = SWin_Avg, SWing_MJd = SWin_MJd_Avg, SWout_wperm2 = SWout_Avg, SWout_MJd = SWout_MJd_Avg, SWnet_wperm2 = SWnet_Avg, SWnet_MJd = SWnet_MJd_Avg, LWin_wperm2 = LWin_Avg, LWin_MJd = LWin_MJd_Avg, LWout_wperm2 = LWout_Avg, LWout_MJd = LWout_MJd_Avg, LWnet_wperm2 = LWnet_Avg, LWnet_MJd = LWnet_MJd_Avg, NR_wperm2 = NR_Avg, NR_MJd = NR_MJd_Avg)
+  rename(treetemp_C = temp)
 ```
+
+## Plotting
+
+```{r}
+color_values_MJd <- c(
+  "SWin_MJd" = "#D95F02",
+  "SWout_MJd" = "#E6AB02",
+  "LWout_MJd" = "#66A61E",
+  "LWin_MJd" = "#2e5e39",
+  "tree_LWout_MJd" = "#7570B3")
+
+color_values_wperm2 <- c(
+  "SWin_wperm2" = "#D95F02",
+  "SWout_wperm2" = "#E6AB02",
+  "LWout_wperm2" = "#66A61E",
+  "LWin_wperm2" = "#2e5e39",
+  "tree_LWout_wperm2" = "#7570B3")
+
+
+
+# Define line types
+line_types <- c(
+  "Weather Station" = "solid",
+  "Tree Temperature Sensors" = "dashed"
+)
+
+#changing labels of values in plots for the legend
+color_labels <- c(
+  "SWin_Avg" = "Shortwave In (Avg)",
+  "SWout_Avg" = "Shortwave Out (Avg)",
+  "LWin_Avg" = "Longwave In (Avg)",
+  "LWout_Avg" = "Longwave Out (Avg)",
+  "tree_LWout_avg_wperm2" = "Tree LW Out (Avg)"  # New label for the specific line
+)
+```
+
+```{r}
+#MJ/day plot
+combined_day_rad_wx_plot_MJd <- ggplot(data = transb_comb_radtree_data) + 
+  geom_line(aes(x = date, y = SWin_MJd, color = "SWin_MJd", linetype = "Weather Station"), linewidth = 0.6, alpha = 0.9) +
+  geom_line(aes(x = date, y = SWout_MJd, color = "SWout_MJd", linetype = "Weather Station"), linewidth = 0.6, alpha = 0.8) +
+  geom_line(aes(x = date, y = LWin_MJd, color = "LWin_MJd", linetype = "Weather Station"), linewidth = 0.7, alpha = 0.9) +
+  geom_line(aes(x = date, y = LWout_MJd, color = "LWout_MJd", linetype = "Weather Station"), linewidth = 0.7) +
+  geom_line(aes(x = date, y = tree_LWout_MJ, color = "tree_LWout_MJ", linetype = "Tree Temperature Sensors")) +
+  facet_wrap(~ zone + burn_status, scales = "free_y", dir = "h") +  # Facet by zone and phase
+  labs(
+    #title = "Transitional Unburned",
+    x = "Date",
+    y = "Radiation components (MJ/day)",
+    color = "Variable", 
+    linetype = "Data Source"
+    ) +
+  theme_bw() +  # Use a minimal theme for a clean look
+  scale_color_manual(values = color_values_MJd, labels = color_labels) + 
+  scale_linetype_manual(values = line_types)
+
+combined_day_rad_wx_plot_MJd
+```
+
+```{r}
+#W/m2 plot
+combined_day_rad_wx_plot_Wperm2 <- ggplot(data = transb_comb_radtree_data) + 
+  geom_line(aes(x = date, y = SWin_wperm2, color = "SWin_wperm2", linetype = "Weather Station"), linewidth = 0.6, alpha = 0.9) +
+  geom_line(aes(x = date, y = SWout_wperm2, color = "SWout_wperm2", linetype = "Weather Station"), linewidth = 0.6, alpha = 0.8) +
+  geom_line(aes(x = date, y = LWin_wperm2, color = "LWin_wperm2", linetype = "Weather Station"), linewidth = 0.7, alpha = 0.9) +
+  geom_line(aes(x = date, y = LWout_wperm2, color = "LWout_wperm2", linetype = "Weather Station"), linewidth = 0.7) +
+  geom_line(aes(x = date, y = tree_LWout_wperm2, color = "tree_LWout_wperm2", linetype = "Tree Temperature Sensors")) +
+  facet_wrap(~ zone + burn_status, scales = "free_y", dir = "h") +  # Facet by zone and phase
+  labs(
+    #title = "Transitional Unburned",
+    x = "Date",
+    y = "Radiation components (W/m2)",
+    color = "Variable", 
+    linetype = "Data Source"
+    ) +
+  theme_bw() +  # Use a minimal theme for a clean look
+  scale_color_manual(values = color_values_wperm2, labels = color_labels) + 
+  scale_linetype_manual(values = line_types)
+
+combined_day_rad_wx_plot_Wperm2
+```
+
+\*\*there is something wrong with the way I am converting the tree_LWout to MJ/day, as the
+
+Plotting net SW and LW to see if this matched wyatts data?
+
+```{r}
+netrad_plot <- ggplot(data = transb_comb_radtree_data) +
+  geom_col(aes(x = date, y = SWnet_wperm2, fill = "SWnet_wperm2"), position = "stack") +
+  geom_col(aes(x = date, y = LWnet_wperm2, fill = "LWnet_wperm2"), position = "stack") +
+   labs(x = "Date", y = "Net Radiation (W/m²)", fill = "Radiation Type") +
+  scale_fill_manual(values = c("SWnet_wperm2" = "orange", "LWnet_wperm2" = "blue")) +  # Custom colors
+  theme_bw()
+
+netrad_plot
+```
+
+\*creating a bar plot for radiation and a
