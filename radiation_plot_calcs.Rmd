@@ -36,7 +36,7 @@ setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```{r}
 transb_energytree_table <- read_csv("nsf/drone_imagery/trans_b_energytree_table.csv") %>%
   mutate(zone = "transitional") %>%
-  rename(burn_status = burn_statu) %>%
+  rename(burn_status = burn_status) %>%
   #adding a tree_id column
   mutate(tree_id = row_number()) %>%
   #selecting columns I want
@@ -46,9 +46,14 @@ transb_wx_15min <- read_csv("nsf/trans_burned/trans_burned_wx_15min_r.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST'))
 
 #tree sensor temps
-avg_dt_transb_treeLW <- read_csv("nsf/105E_trans_burned/day_avg_filtered_treeLWout_data.csv") %>%
-  #filtering out only the burned data & transitional zone
-  filter(burn_status == "burned", zone == "transitional")
+avg_dt_transb_treeLW <- read_csv("nsf/105E_trans_burned/day_avg_filtered_treeLWout_data_gbdbub.csv") %>%
+  #filtering out only the burned data, daytime data, & transitional zone
+  filter(zone == "transitional", phase == "day") %>%
+  filter(burn_status != "unburned") %>%
+  #renaming MJ/day column to match weather data
+  rename(tree_LWout_MJd = tree_LWout_MJperd) %>%
+  #removing double ID first column that appeared for some reason?
+  select(-1)
 ```
 
 ## Filtering Data
@@ -73,14 +78,15 @@ filtered_transb_rad_wx <- transb_wx_15min %>%
 Creating a daily average wx station dataframe, then converting to MJ/day
 
 ```{r}
-#redoing calculations for radiation conversions from W/m2 to MJ/day
-avg_dt_transb_rad_wx <- filtered_transb_rad_wx %>%
+#calculations for radiation conversions from W/m2 to MJ/day
+## create a daily average dataframe
+avg_dt_transb_rad_wx<- filtered_transb_rad_wx %>%
   group_by(date, phase) %>%
   summarize(across(everything(), mean, na.rm = TRUE)) %>%
   select(-c(datetime, time)) %>%
   group_by(date, phase) %>%
-  # Convert mean radiation to MJ/m²/day
-  mutate(SWin_MJd = SWin_Avg * 86400 / 1e6, SWout_MJd = SWout_Avg * 86400 / 1e6, LWin_MJd = LWin_Avg * 86400 / 1e6, LWout_MJd = LWout_Avg * 86400 / 1e6, SWnet_MJd = SWnet_Avg * 86400 / 1e6, LWnet_MJd = LWnet_Avg * 86400 / 1e6, NR_MJd = NR_Avg * 86400 / 1e6) %>%
+  # Convert mean radiation to MJ/day - assuming constent for m2 value
+  mutate(SWin_MJd = (SWin_Avg/ 1e6) * 86400, SWout_MJd = (SWout_Avg/ 1e6) * 86400, LWin_MJd = (LWin_Avg/ 1e6) * 86400, LWout_MJd = (LWout_Avg/ 1e6) * 86400, SWnet_MJd = (SWnet_Avg / 1e6) * 86400, LWnet_MJd = (LWnet_Avg/ 1e6) * 86400, NR_MJd = (NR_Avg / 1e6) * 86400) %>%
   rename(SWin_wperm2 = SWin_Avg, SWout_wperm2 = SWout_Avg, SWnet_wperm2 = SWnet_Avg, LWin_wperm2 = LWin_Avg, LWout_wperm2 = LWout_Avg, LWnet_wperm2 = LWnet_Avg, NR_wperm2 = NR_Avg) %>%
   mutate(zone = "transitional", burn_status = "burned") %>%
   #filtering out only daytime values
@@ -91,32 +97,11 @@ avg_dt_transb_rad_wx <- filtered_transb_rad_wx %>%
    mutate(across(SnowDepth_m:last_col(), ~ round(., 4)))
 ```
 
-Creating a daily average dataframe, then converting to MJ/day
-
-```{r}
-#I think these conversions are wrong! Use above dataframe, don't run this
-avg_dt_transb_rad_wx <- filtered_transb_rad_wx %>%
-  group_by(date, phase) %>%
-  summarize(across(everything(), mean, na.rm = TRUE)) %>%
-  select(-c(datetime, time)) %>%
-  mutate(SWin_MJd_Avg = SWin_Avg * 0.0864, SWout_MJd_Avg = SWout_Avg * 0.0864, LWin_MJd_Avg = LWin_Avg * 0.0864, LWout_MJd_Avg = LWout_Avg * 0.0864, SWnet_MJd_Avg = SWnet_Avg * 0.0864, LWnet_MJd_Avg = LWnet_Avg * 0.0864, NR_MJd_Avg = NR_Avg * 0.0864) %>%
-    #adding in zone and burn status columns
-  mutate(zone = "transitional", burn_status = "burned") %>%
-  #reordering so the like values are next to each other
-  select(date, phase, zone, burn_status, SnowDepth_m, AirTC_Avg, SWin_Avg, SWin_MJd_Avg, SWout_Avg, SWout_MJd_Avg, SWnet_Avg, SWnet_MJd_Avg, SWalbedo_Avg, LWin_Avg, LWin_MJd_Avg, LWout_Avg, LWout_MJd_Avg, LWnet_Avg, LWnet_MJd_Avg, NR_Avg, NR_MJd_Avg) %>%
-  #setting decimal number
-   mutate(across(SnowDepth_m:last_col(), ~ round(., 4))) %>%
-  #filtering out only daytime values
-  filter(phase == "day")
-```
-
 Combining data into one dataframe
 
 ```{r}
 transb_comb_radtree_data <- avg_dt_transb_rad_wx %>%
-  full_join(avg_dt_transb_treeLW) %>%
-  #renaming tree temp column
-  rename(treetemp_C = temp)
+  full_join(avg_dt_transb_treeLW)
 ```
 
 ## Plotting
