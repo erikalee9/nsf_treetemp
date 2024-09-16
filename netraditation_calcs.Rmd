@@ -201,9 +201,6 @@ circumference <- 0.40
 #constant for m2 
 m2 = welldepth*circumference
 
-# Define the time interval (15 minutes in seconds)
-time_interval_seconds <- 15 * 60
-
 # Calculate incoming longwave radiation and add to dataframe
 all_treetemps <- all_treetemps %>%
   #add a date column for calculations later
@@ -216,8 +213,9 @@ all_treetemps <- all_treetemps %>%
   #calculating watz (W)
   #W is = to J/s
   mutate(W = tree_RL_out*m2) %>%
-  # Convert instantaneous power (W) to energy (J) for each 15-minute interval
-  mutate(energy_J = W * time_interval_seconds) %>%
+  # Convert instantaneous power (W) to energy (J/day)
+  mutate(treeLWout_Jperd = W * 86400) %>%
+  mutate(treeLWout_MJperd = treeLWout_J / 1e6) %>%
   #adding in a time column for day/night parsing later
   mutate(time = format(datetime, "%H:%M:%S")) %>%
   select(datetime, date, time, everything())
@@ -230,13 +228,13 @@ Southern temp tree average - averaging all the gb/db/ub trees instead of analyzi
 avg_s_all_treetemps <- all_treetemps %>%
   filter(aspect == "south") %>%
   group_by(datetime, zone, burn_status) %>%
-  # Calculate the mean of all relevant columns by group
+  # Calculate the mean of all south aspect temps by burn_status
   summarize(
     temp = mean(temp, na.rm = TRUE), 
     temp_k = mean(temp_k, na.rm = TRUE), 
     tree_LWout_wperm2 = mean(tree_RL_out, na.rm = TRUE), 
     W = mean(W, na.rm = TRUE), 
-    energy_J = mean(energy_J, na.rm = TRUE)
+    treeLWout_Jperd = mean(treeLWout_Jperd, na.rm = TRUE), treeLWout_MJperd = mean(treeLWout_MJperd, na.rm = TRUE)
   ) %>%
   ungroup() %>%
   # Adding in date, time, and phase columns
@@ -248,19 +246,23 @@ avg_s_all_treetemps <- all_treetemps %>%
       time_hms >= hms::as_hms("08:00:00") & time_hms < hms::as_hms("17:00:00") ~ "day",
       time_hms < hms::as_hms("08:00:00") | time_hms >= hms::as_hms("17:00:00") ~ "night",
       TRUE ~ NA_character_
-    ),
-    energy_MJ = energy_J / 1e6  # Conversion to MJ
-  ) %>%
+    )) %>%
   select(datetime, date, time, phase, everything())  # Final selection
 ```
 
 ```{r}
 #creating a daily energy dataframe for the trees LWout values (w/m2 and MJ) - to be used later with the weather station radiation components and plotting!
 s_daily_avg_tree_e <- avg_s_all_treetemps %>%
-  select(datetime, date, time, phase, zone, burn_status, tree_LWout_wperm2, energy_MJ) %>%
+  select(datetime, date, time, phase, zone, burn_status, tree_LWout_wperm2, treeLWout_Jperd, treeLWout_MJperd) %>%
   #grouping to get daily average
   group_by(date, phase, burn_status, zone) %>%
-  summarize(tree_LWout_avg_wperm2 = mean(tree_LWout_wperm2, na.rm = TRUE), tree_LWout_avg_MJ = mean(energy_MJ, na.rm = TRUE))
+  summarize(tree_LWout_wperm2 = mean(tree_LWout_wperm2, na.rm = TRUE),
+            tree_LWout_Jperd = mean(treeLWout_Jperd, na.rm = TRUE), tree_LWout_MJperd = mean(treeLWout_MJperd, na.rm = TRUE))
+```
+
+```{r}
+#exporting above dataframe for use in radiation plot comparisons - this dataframe has gb/db/ub values. 
+write.csv(s_daily_avg_tree_e, "nsf/105E_trans_burned/day_avg_filtered_treeLWout_data_gbdbub.csv")
 ```
 
 # Final Day/Night Plots
@@ -580,8 +582,8 @@ Tree temp data wrangling to match wx station combined dataframes - south only tr
 ```{r}
 #this has gb/db/ub burn status
 s_daily_energy <- avg_s_all_treetemps %>%
-  select(datetime, phase, zone, burn_status, temp, tree_LWout_wperm2, energy_MJ) %>%
-  rename(tree_LWout_MJ = "energy_MJ") %>%
+  rename(tree_LWout_MJperd = treeLWout_MJperd) %>%
+  select(datetime, phase, zone, burn_status, temp, tree_LWout_wperm2, tree_LWout_MJperd) %>%
   mutate(
     date = as.Date(datetime),                # Extract the date part
     time = format(datetime, "%H:%M:%S")      # Extract the time part
@@ -600,7 +602,7 @@ s_daily_energy_burned <- s_daily_energy %>%
   summarise(
     temp = mean(temp, na.rm = TRUE),
     tree_LWout_wperm2 = mean(tree_LWout_wperm2, na.rm = TRUE),
-    tree_LWout_MJ = mean(tree_LWout_MJ, na.rm = TRUE)
+    tree_LWout_MJperd = mean(tree_LWout_MJperd, na.rm = TRUE)
   ) %>%
   #adding back in a burn_status column for burned
   mutate(burn_status = "burned") %>%
@@ -636,7 +638,7 @@ day_avg_filtered_tree_LWout_data <- day_s_daily_avg_tree_LWout %>%
 
 ```{r}
 #exporting tree_LWout dataframe to save as csv in r
-write_csv(day_avg_filtered_tree_LWout_data, "nsf/105E_trans_burned/day_avg_filtered_treeLWout_data.csv")
+write_csv(day_avg_filtered_tree_LWout_data, "nsf/105E_trans_burned/day_avg_filtered_treeLWout_data_bub.csv")
 ```
 
 ```{r}
