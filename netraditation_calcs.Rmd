@@ -633,7 +633,8 @@ day_s_daily_avg_tree_LWout <- s_daily_energy_burned_unburned %>%
 day_avg_filtered_tree_LWout_data <- day_s_daily_avg_tree_LWout %>%
   group_by(date, zone, burn_status, phase) %>%
   summarize(across(everything(), mean, na.rm = TRUE)) %>%
-  select(-1)
+  select(-1) %>%
+  select(-time)
 ```
 
 ```{r}
