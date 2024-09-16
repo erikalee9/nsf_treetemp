@@ -31,6 +31,23 @@ library(scales)
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
 
+```{r}
+#to display the colors
+display.brewer.pal(n = 8, name = "Dark2")
+
+#to get the hex number of the colors
+brewer.pal(n = 8, name = "Dark2")
+```
+
+```{r}
+#setting a color-blind friendly custom palette for gb/db/ubn- using RColorBrewer
+##blue is unburned, orange is dead burned, green is green burned
+three_custom_colors <- c("#D95F02","#1B7837", adjustcolor("#2166AC", alpha = 0.7))
+
+## orange is burned, blue is unburned
+two_custom_colors <- c("#D95F02", adjustcolor("#2166AC", alpha = 0.7))
+```
+
 ## Calling in Data
 
 ```{r}
@@ -45,13 +62,42 @@ transb_energytree_table <- read_csv("nsf/drone_imagery/trans_b_energytree_table.
 transb_wx_15min <- read_csv("nsf/trans_burned/trans_burned_wx_15min_r.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST'))
 
-#tree sensor temps
-avg_dt_transb_treeLW <- read_csv("nsf/105E_trans_burned/day_avg_filtered_treeLWout_data_gbdbub.csv") %>%
-  #filtering out only the burned data, daytime data, & transitional zone
-  filter(zone == "transitional", phase == "day") %>%
-  filter(burn_status != "unburned") %>%
-  #renaming MJ/day column to match weather data
-  rename(tree_LWout_MJd = tree_LWout_MJperd) %>%
+#seperating by burned/unburned
+##burned
+avg_dt_transb_treeLW_burned <- read_csv("nsf/105E_trans_burned/day_avg_filtered_treeLWout_data_bub.csv") %>%
+  filter(zone == "transitional", phase == "day", burn_status == "burned") %>%
+  rename(b_tree_LWout_MJd = tree_LWout_MJperd, b_treetemp_C = temp, b_tree_LWout_wperm2 = tree_LWout_wperm2)
+
+##unburned
+avg_dt_transb_treeLW_unburned <- read_csv("nsf/105E_trans_burned/day_avg_filtered_treeLWout_data_bub.csv") %>%
+  filter(zone == "transitional", phase == "day", burn_status == "unburned") %>%
+  rename(ub_tree_LWout_MJd = tree_LWout_MJperd, ub_treetemp_C = temp, ub_tree_LWout_wperm2 = tree_LWout_wperm2)
+
+
+#seperating by tree burn status - gb/db/ub - this dataframe includes all burn status types
+avg_dt_transb_treeLW_allstatuses <- read_csv("nsf/105E_trans_burned/day_avg_filtered_treeLWout_data_gbdbub.csv")
+
+##green burned dataframe
+avg_dt_transb_treeLW_gb <- avg_dt_transb_treeLW_allstatuses %>%
+  #filtering out only the correct burned status, daytime data, & transitional zone
+  filter(zone == "transitional", phase == "day", burn_status == "green burn") %>%
+  rename(gb_tree_LWout_MJd = tree_LWout_MJperd, gb_treetemp_C = temp_C, gb_tree_LWout_wperm2 = tree_LWout_wperm2, gb_tree_LWout_Jperd = tree_LWout_Jperd) %>%
+  #removing double ID first column that appeared for some reason?
+  select(-1)
+
+##dead burned dataframe
+avg_dt_transb_treeLW_db <- avg_dt_transb_treeLW_allstatuses %>%
+  #filtering out only the correct burned status, daytime data, & transitional zone
+  filter(zone == "transitional", phase == "day", burn_status == "dead burn") %>%
+  rename(db_tree_LWout_MJd = tree_LWout_MJperd, db_treetemp_C = temp_C, db_tree_LWout_wperm2 = tree_LWout_wperm2, db_tree_LWout_Jperd = tree_LWout_Jperd) %>%
+  #removing double ID first column that appeared for some reason?
+  select(-1)
+
+##unburned dataframe
+avg_dt_transb_treeLW_ub <- avg_dt_transb_treeLW_allstatuses %>%
+  #filtering out only the correct burned status, daytime data, & transitional zone
+  filter(zone == "transitional", phase == "day", burn_status == "unburned") %>%
+  rename(ub_tree_LWout_MJd = tree_LWout_MJperd, ub_treetemp_C = temp_C, ub_tree_LWout_wperm2 = tree_LWout_wperm2, ub_tree_LWout_Jperd = tree_LWout_Jperd) %>%
   #removing double ID first column that appeared for some reason?
   select(-1)
 ```
@@ -97,11 +143,54 @@ avg_dt_transb_rad_wx<- filtered_transb_rad_wx %>%
    mutate(across(SnowDepth_m:last_col(), ~ round(., 4)))
 ```
 
-Combining data into one dataframe
+Combining data into one dataframe by burn_status
 
 ```{r}
-transb_comb_radtree_data <- avg_dt_transb_rad_wx %>%
-  full_join(avg_dt_transb_treeLW)
+##* I think I want to use this one, not the gb/db/ub, since there is such a small difference between the gb & db LWout values from trees
+#by burned/unburned status
+transb_comb_radtree <- avg_dt_transb_rad_wx %>%
+  mutate(burn_status = "burned") %>%
+  full_join(avg_dt_transb_treeLW_burned) %>%
+  #recalculating NetRad, as I am not sure the calculations here are correct that are pulled from the weather station
+  mutate(NR_MJd_wxs = (SWin_MJd - SWout_MJd) + (LWin_MJd - LWout_MJd))
+#answer is slightly different than weather-station calculated RN, use this value instead!
+```
+
+```{r}
+#by gb/db/ub status
+transb_comb_radtree_gb <- avg_dt_transb_rad_wx %>%
+  mutate(burn_status = "green burn") %>%
+  full_join(avg_dt_transb_treeLW_gb)
+
+transb_comb_radtree_db <- avg_dt_transb_rad_wx %>%
+  mutate(burn_status = "dead burn") %>%
+  full_join(avg_dt_transb_treeLW_db)
+
+#won't have data to work with for unburned plots comparison as I don't have drone imagery for this area yet
+transb_comb_radtree_ub <- avg_dt_transb_rad_wx %>%
+  mutate(burn_status = "unburned") %>%
+  full_join(avg_dt_transb_treeLW_ub)
+```
+
+Creating a dataframe to add in net tree LWout including all trees in plot area
+
+```{r}
+#there are 219 total burned trees in the transitional burned plot area
+
+```
+
+## Calcs - adding in all trees to LWout data
+
+```{r}
+#dataframes seperates by burn_status
+
+gb_transb_energytree_table <- transb_energytree_table %>%
+  filter(burn_status == "gb")
+#155 gb trees
+
+db_transb_energy_treetabl <- transb_energytree_table %>%
+  filter(burn_status == "db")
+#64 db trees
 ```
 
 ## Plotting
@@ -112,16 +201,17 @@ color_values_MJd <- c(
   "SWout_MJd" = "#E6AB02",
   "LWout_MJd" = "#66A61E",
   "LWin_MJd" = "#2e5e39",
-  "tree_LWout_MJd" = "#7570B3")
+  "gb_tree_LWout_MJd" = "#7570B3",
+  "db_tree_LWout_MJd" = "#2166AC")
+# will need to include an unburned color later on if I include unburned data in these plot comparisons!
 
 color_values_wperm2 <- c(
   "SWin_wperm2" = "#D95F02",
   "SWout_wperm2" = "#E6AB02",
   "LWout_wperm2" = "#66A61E",
   "LWin_wperm2" = "#2e5e39",
-  "tree_LWout_wperm2" = "#7570B3")
-
-
+  "gb_tree_LWout_MJd" = "#7570B3",
+  "db_tree_LWout_MJd" = "#2166AC")
 
 # Define line types
 line_types <- c(
@@ -141,12 +231,12 @@ color_labels <- c(
 
 ```{r}
 #MJ/day plot
-combined_day_rad_wx_plot_MJd <- ggplot(data = transb_comb_radtree_data) + 
+gb_combined_day_rad_wx_plot_MJd <- ggplot(data = transb_comb_radtree_gb) + 
   geom_line(aes(x = date, y = SWin_MJd, color = "SWin_MJd", linetype = "Weather Station"), linewidth = 0.6, alpha = 0.9) +
   geom_line(aes(x = date, y = SWout_MJd, color = "SWout_MJd", linetype = "Weather Station"), linewidth = 0.6, alpha = 0.8) +
   geom_line(aes(x = date, y = LWin_MJd, color = "LWin_MJd", linetype = "Weather Station"), linewidth = 0.7, alpha = 0.9) +
   geom_line(aes(x = date, y = LWout_MJd, color = "LWout_MJd", linetype = "Weather Station"), linewidth = 0.7) +
-  geom_line(aes(x = date, y = tree_LWout_MJ, color = "tree_LWout_MJ", linetype = "Tree Temperature Sensors")) +
+  geom_line(aes(x = date, y = gb_tree_LWout_MJd, color = "gb_tree_LWout_MJd", linetype = "Tree Temperature Sensors")) +
   facet_wrap(~ zone + burn_status, scales = "free_y", dir = "h") +  # Facet by zone and phase
   labs(
     #title = "Transitional Unburned",
@@ -159,17 +249,17 @@ combined_day_rad_wx_plot_MJd <- ggplot(data = transb_comb_radtree_data) +
   scale_color_manual(values = color_values_MJd, labels = color_labels) + 
   scale_linetype_manual(values = line_types)
 
-combined_day_rad_wx_plot_MJd
+gb_combined_day_rad_wx_plot_MJd
 ```
 
 ```{r}
 #W/m2 plot
-combined_day_rad_wx_plot_Wperm2 <- ggplot(data = transb_comb_radtree_data) + 
+gb_combined_day_rad_wx_plot_Wperm2 <- ggplot(data = transb_comb_radtree_gb) + 
   geom_line(aes(x = date, y = SWin_wperm2, color = "SWin_wperm2", linetype = "Weather Station"), linewidth = 0.6, alpha = 0.9) +
   geom_line(aes(x = date, y = SWout_wperm2, color = "SWout_wperm2", linetype = "Weather Station"), linewidth = 0.6, alpha = 0.8) +
   geom_line(aes(x = date, y = LWin_wperm2, color = "LWin_wperm2", linetype = "Weather Station"), linewidth = 0.7, alpha = 0.9) +
   geom_line(aes(x = date, y = LWout_wperm2, color = "LWout_wperm2", linetype = "Weather Station"), linewidth = 0.7) +
-  geom_line(aes(x = date, y = tree_LWout_wperm2, color = "tree_LWout_wperm2", linetype = "Tree Temperature Sensors")) +
+  geom_line(aes(x = date, y = gb_tree_LWout_wperm2, color = "gb_tree_LWout_wperm2", linetype = "Tree Temperature Sensors")) +
   facet_wrap(~ zone + burn_status, scales = "free_y", dir = "h") +  # Facet by zone and phase
   labs(
     #title = "Transitional Unburned",
@@ -179,13 +269,56 @@ combined_day_rad_wx_plot_Wperm2 <- ggplot(data = transb_comb_radtree_data) +
     linetype = "Data Source"
     ) +
   theme_bw() +  # Use a minimal theme for a clean look
-  scale_color_manual(values = color_values_wperm2, labels = color_labels) + 
+  scale_color_manual(values = color_values_wperm2, labels = color_labels) +
   scale_linetype_manual(values = line_types)
 
 combined_day_rad_wx_plot_Wperm2
 ```
 
-\*\*there is something wrong with the way I am converting the tree_LWout to MJ/day, as the
+\*\* interpretation of difference of MJperday and Wperm2 plots - the Wperm2 plot is showing second-timeframe data, not daily data, which means that the tree temps will be more equal in value to what the weather station is showing. The MJperday plot is showing a daily value for all the variables - once I add all the individual tree values together, perhaps the line for tree_LWout will increase a bit above zero?
+
+Net Radiation Plots - by burn_status
+
+-   the following graph is not really helpful yet, since I have not included all the tree_LWout values in the total net radiation value, that's why the tree_LWout values are plotted as higher than net rad from weather station
+
+-   Need to finish calculations, then this plot can be used!
+
+```{r}
+#green burn net radiaiton from WX station and tree RLout
+gb_netrad_plot <- ggplot() + 
+  geom_col(data = transb_comb_radtree_gb, aes(x = date, y = NR_MJd, fill = "Net Radiation"), position = "stack") +  # Add fill aesthetic to legend
+  geom_line(data = transb_comb_radtree_gb, aes(x = date, y = gb_tree_LWout_MJd, color = "Green burned LWout")) +
+  geom_line(data = transb_comb_radtree_db, aes(x = date, y = db_tree_LWout_MJd, color = "Dead burned LWout")) +
+  facet_wrap(~zone) +
+  labs(
+    x = "Date",
+    y = "Radiation Component (MJ/day)") +
+    scale_fill_manual(name = "Weather Station Data", values = "#2166AC") +
+  scale_color_manual(
+    name = "Tree Temp Sensor Data", 
+    values = c("Green burned LWout" = "#1B7837",
+               "Dead burned LWout" = "#D95F02")) +
+  theme_bw()
+
+gb_netrad_plot
+```
+
+```{r}
+## only need this plot if I am seperating the net radiation plots by burned status, but the above plot now has the GB and DB data on it
+#dead burn net radiaiton from WX station and tree RLout
+db_netrad_plot <- ggplot(data = transb_comb_radtree_db) + 
+  geom_col(aes(x = date, y = NR_MJd, fill = "Net Radiation (MJ/d)"), position = "stack") +  # Add fill aesthetic to legend
+  geom_line(aes(x = date, y = db_tree_LWout_MJd, color = "Dead burned LWout (MJ/d)")) +
+  facet_wrap(~zone + burn_status) +
+  labs(
+    x = "Date",
+    y = "Radiation Component (MJ/day)") +
+    scale_fill_manual(name = "Weather Station Data", values = "#2166AC") +                         # Custom fill color
+  scale_color_manual(name = "Tree Temp Sensor Data", values = "#D95F02") +
+  theme_bw()
+
+db_netrad_plot
+```
 
 Plotting net SW and LW to see if this matched wyatts data?
 
@@ -201,3 +334,14 @@ netrad_plot
 ```
 
 \*creating a bar plot for radiation and a
+
+Looking at Tree LWout Burn Status Differences
+
+```{r}
+tree_LWout_data <- ggplot() +
+  geom_line(data = avg_dt_transb_treeLW_gb, aes(x = date, y = tree_LWout_MJd), color = "green") +
+    geom_line(data = avg_dt_transb_treeLW_db, aes(x = date, y = tree_LWout_MJd), color = "red") +
+    geom_line(data = avg_dt_transb_treeLW_ub, aes(x = date, y = tree_LWout_MJd), color = "blue")
+
+tree_LWout_data
+```
