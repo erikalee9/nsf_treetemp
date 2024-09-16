@@ -253,10 +253,10 @@ avg_s_all_treetemps <- all_treetemps %>%
 ```{r}
 #creating a daily energy dataframe for the trees LWout values (w/m2 and MJ) - to be used later with the weather station radiation components and plotting!
 s_daily_avg_tree_e <- avg_s_all_treetemps %>%
-  select(datetime, date, time, phase, zone, burn_status, tree_LWout_wperm2, treeLWout_Jperd, treeLWout_MJperd) %>%
+  select(datetime, date, time, phase, zone, burn_status, temp, tree_LWout_wperm2, treeLWout_Jperd, treeLWout_MJperd) %>%
   #grouping to get daily average
   group_by(date, phase, burn_status, zone) %>%
-  summarize(tree_LWout_wperm2 = mean(tree_LWout_wperm2, na.rm = TRUE),
+  summarize(temp_C = mean(temp, na.rm = TRUE), tree_LWout_wperm2 = mean(tree_LWout_wperm2, na.rm = TRUE),
             tree_LWout_Jperd = mean(treeLWout_Jperd, na.rm = TRUE), tree_LWout_MJperd = mean(treeLWout_MJperd, na.rm = TRUE))
 ```
 
@@ -633,7 +633,7 @@ day_s_daily_avg_tree_LWout <- s_daily_energy_burned_unburned %>%
 day_avg_filtered_tree_LWout_data <- day_s_daily_avg_tree_LWout %>%
   group_by(date, zone, burn_status, phase) %>%
   summarize(across(everything(), mean, na.rm = TRUE)) %>%
-  select(-c(datetime, time))
+  select(-1)
 ```
 
 ```{r}
