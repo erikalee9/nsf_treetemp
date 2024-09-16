@@ -215,7 +215,7 @@ all_treetemps <- all_treetemps %>%
   mutate(W = tree_RL_out*m2) %>%
   # Convert instantaneous power (W) to energy (J/day)
   mutate(treeLWout_Jperd = W * 86400) %>%
-  mutate(treeLWout_MJperd = treeLWout_J / 1e6) %>%
+  mutate(treeLWout_MJperd = treeLWout_Jperd / 1e6) %>%
   #adding in a time column for day/night parsing later
   mutate(time = format(datetime, "%H:%M:%S")) %>%
   select(datetime, date, time, everything())
