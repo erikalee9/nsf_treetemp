@@ -218,11 +218,23 @@ Creating a dataframe to add in net tree LWout including all trees in plot area
 ```{r}
 #there are 219 total burned trees in the transitional burned plot area
 transb_comb_treeLWout <- avg_dt_transb_treeLW_burned %>%
+  #adding in snow camera depths and treewell development
+  inner_join(filtered_transb_snowcamera_data) %>%
   select(-c(datetime, zone, burn_status)) %>%
   crossing(transb_energytree_table) %>%
-  select(date, phase, zone, burn_status, tree_id, everything()) %>%
   select(-c(lat, long)) %>%
-  mutate(min_circ_m = min_circ_m, max_circ_m = max_circ_m, mean_circ_m = mean_circ_m)
+  mutate(min_circ_m = min_circ_m, max_circ_m = max_circ_m, mean_circ_m = mean_circ_m) %>%
+  select(date, phase, zone, burn_status, tree_id, b_treetemp_C, b_tree_LWout_wperm2, b_tree_LWout_MJd, min_circ_m, max_circ_m, mean_circ_m, everything()) %>%
+  mutate(min_area_m2 = min_circ_m * snowcam_max_depth_m, max_area_m2 = max_circ_m * snowcam_max_depth_m, mean_area_m2 = mean_circ_m * snowcam_max_depth_m)
+
+##next step here would be to multiply by LWout of tree (W/m2) value to get Watz impacted by tree... Before I do this I need to look at how I converted the LWout MJ/d for the tree data first and make sure I am not repeating steps? Look at workflow... may just be able to take temp and convert using equation given by stephanie and used in old calcs ONCE the values are converted to get rid of area?
+```
+
+```{r}
+#starting a new dataframe to continue the work above
+new_transb_comb_treeLWout <- transb_comb_treeLWout %>%
+  #next step is to create a NEW tree_LWout_MJd that is multiplied by the area and olf MJ/day values in the dataframe.
+  mutate()
 ```
 
 ## Calcs - adding in all trees to LWout data
