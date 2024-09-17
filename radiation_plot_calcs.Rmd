@@ -59,6 +59,9 @@ transb_energytree_table <- read_csv("nsf/drone_imagery/trans_b_energytree_table.
   #selecting columns I want
   select(tree_id, zone, burn_status, lat, long)
 
+#this is the csv that has tree diameters for albedo plots on it, use this to choose an average circumference
+albedoplots_treechar_alldata <- read_csv("nsf/albedo/albedoplots_treechar_alldata.csv")
+
 transb_wx_15min <- read_csv("nsf/trans_burned/trans_burned_wx_15min_r.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST'))
 
@@ -152,7 +155,8 @@ transb_comb_radtree <- avg_dt_transb_rad_wx %>%
   mutate(burn_status = "burned") %>%
   full_join(avg_dt_transb_treeLW_burned) %>%
   #recalculating NetRad, as I am not sure the calculations here are correct that are pulled from the weather station
-  mutate(NR_MJd_wxs = (SWin_MJd - SWout_MJd) + (LWin_MJd - LWout_MJd))
+  mutate(NR_MJd_wxs = (SWin_MJd - SWout_MJd) + (LWin_MJd - LWout_MJd)) %>%
+  select(-datetime)
 #answer is slightly different than weather-station calculated RN, use this value instead!
 ```
 
@@ -172,11 +176,40 @@ transb_comb_radtree_ub <- avg_dt_transb_rad_wx %>%
   full_join(avg_dt_transb_treeLW_ub)
 ```
 
+```{r}
+#getting tree circumfirence max and min for all transitional albedo plots - this will help me ID what average circumference to use
+transb_treecircm_data <- albedoplots_treechar_alldata %>%
+  #filtering for only transitional burned zone plots
+  filter(PlotID %in% c("TLHM", "TLLM")) %>%
+  select(PlotID, TreeNum, Species, DBH_cm, PreFire_Status) %>%
+  mutate(DBH_m = DBH_cm / 100,
+         circ_m = DBH_m * pi) %>%
+  summarize(DBH_m_min = min(DBH_m),
+    DBH_m_max = max(DBH_m),
+    DBH_m_mean = mean(DBH_m),
+    circ_m_min = min(circ_m),
+    circ_m_max = max(circ_m),
+    circ_m_mean = mean(circ_m)
+  )
+```
+
+```{r}
+#setting values based on the min, max and mean circumference of the albedo plots - these will be used in later calculations
+min_circ_m <- 0.1979
+max_circ_m <- 0.6158
+mean_circ_m <- 0.4042
+```
+
 Creating a dataframe to add in net tree LWout including all trees in plot area
 
 ```{r}
 #there are 219 total burned trees in the transitional burned plot area
-
+transb_comb_treeLWout <- avg_dt_transb_treeLW_burned %>%
+  select(-c(datetime, zone, burn_status)) %>%
+  crossing(transb_energytree_table) %>%
+  select(date, phase, zone, burn_status, tree_id, everything()) %>%
+  select(-c(lat, long)) %>%
+  mutate(min_circ_m = min_circ_m, max_circ_m = max_circ_m, mean_circ_m = mean_circ_m)
 ```
 
 ## Calcs - adding in all trees to LWout data
