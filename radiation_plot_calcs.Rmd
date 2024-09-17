@@ -62,6 +62,11 @@ transb_energytree_table <- read_csv("nsf/drone_imagery/trans_b_energytree_table.
 #this is the csv that has tree diameters for albedo plots on it, use this to choose an average circumference
 albedoplots_treechar_alldata <- read_csv("nsf/albedo/albedoplots_treechar_alldata.csv")
 
+#this is the csv that has camera snow depths and if tree wells appeared or not from 105E_transb_snowcamera
+transb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transb_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "maximum_depth(cm)") %>%
+  mutate(date = as.Date(date))
+
 transb_wx_15min <- read_csv("nsf/trans_burned/trans_burned_wx_15min_r.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST'))
 
@@ -120,6 +125,14 @@ filtered_transb_rad_wx <- transb_wx_15min %>%
       time_hms < hms::as_hms("08:00:00") | time_hms >= hms::as_hms("17:00:00") ~ "night",
       TRUE ~ NA_character_)) %>%
       select(datetime, date, time, phase, SnowDepth_m, AirTC_Avg, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg)
+```
+
+```{r}
+#filtering snow depth camera data
+filtered_transb_snowcamera_data <- transb_snowcamera_data %>%
+  filter(date >= as.POSIXct("2024-02-02") & date <= as.POSIXct("2024-05-24")) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
+  select(date, snowcam_max_depth_cm, snowcam_max_depth_m, conditions, treewell_developed)
 ```
 
 ## Data Wrangling
