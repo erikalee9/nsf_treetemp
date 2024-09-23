@@ -48,6 +48,8 @@ three_custom_colors <- c("#D95F02","#1B7837", adjustcolor("#2166AC", alpha = 0.7
 two_custom_colors <- c("#D95F02", adjustcolor("#2166AC", alpha = 0.7))
 ```
 
+# Transitional Data
+
 ## Calling in Data
 
 ```{r}
@@ -151,6 +153,45 @@ avg_dt_transb_rad_wx<- filtered_transb_rad_wx %>%
    mutate(across(SnowDepth_m:last_col(), ~ round(., 4)))
 ```
 
+```{r}
+#filtering snow depth camera data
+##transitional
+filtered_transb_snowcamera_data <- transb_snowcamera_data %>%
+  filter(date >= as.POSIXct("2024-02-02") & date <= as.POSIXct("2024-05-24")) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
+  select(date, snowcam_max_depth_cm, snowcam_max_depth_m, conditions, treewell_developed) %>%
+  mutate(treewell_developed = case_when(
+    treewell_developed == "no snow" ~ "no",
+    treewell_developed == "maybe" ~ "yes",
+    TRUE ~ treewell_developed  # Keeps everything else the same
+  ))
+
+#creating a dataframe to use for plots that only has the days that treewells developed.
+transb_treewell_dates <- filtered_transb_snowcamera_data %>%
+  filter(treewell_developed == "yes") %>%
+  #adding tree_LWout_data to the dataframe so that I can plot with the same y-axis
+  inner_join(results_transb_comb_treeLWout) %>%
+  select(date, treewell_developed, total_max_tree_LWout_MJd, total_min_tree_LWout_MJd, total_mean_tree_LWout_MJd)
+
+##persistent
+filtered_persb_snowcamera_data <- persb_snowcamera_data %>%
+  filter(date >= as.POSIXct("2024-02-02") & date <= as.POSIXct("2024-05-24")) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
+  select(date, snowcam_max_depth_cm, snowcam_max_depth_m, conditions, treewell_developed) %>%
+  mutate(treewell_developed = case_when(
+    treewell_developed == "no snow" ~ "no",
+    treewell_developed == "maybe" ~ "yes",
+    TRUE ~ treewell_developed  # Keeps everything else the same
+  ))
+
+#creating a dataframe to use for plots that only has the days that treewells developed.
+persb_treewell_dates <- filtered_persb_snowcamera_data %>%
+  filter(treewell_developed == "yes") %>%
+  #adding tree_LWout_data to the dataframe so that I can plot with the same y-axis
+  inner_join(results_persb_comb_treeLWout) %>%
+  select(date, treewell_developed, total_max_tree_LWout_MJd, total_min_tree_LWout_MJd, total_mean_tree_LWout_MJd)
+```
+
 Combining data into one dataframe by burn_status
 
 ```{r}
@@ -183,9 +224,26 @@ transb_comb_radtree_ub <- avg_dt_transb_rad_wx %>%
 
 ```{r}
 #getting tree circumfirence max and min for all transitional albedo plots - this will help me ID what average circumference to use
+
+##transitional
 transb_treecircm_data <- albedoplots_treechar_alldata %>%
   #filtering for only transitional burned zone plots
   filter(PlotID %in% c("TLHM", "TLLM")) %>%
+  select(PlotID, TreeNum, Species, DBH_cm, PreFire_Status) %>%
+  mutate(DBH_m = DBH_cm / 100,
+         circ_m = DBH_m * pi) %>%
+  summarize(DBH_m_min = min(DBH_m),
+    DBH_m_max = max(DBH_m),
+    DBH_m_mean = mean(DBH_m),
+    circ_m_min = min(circ_m),
+    circ_m_max = max(circ_m),
+    circ_m_mean = mean(circ_m)
+  )
+
+##persistent
+persb_treecircm_data <- albedoplots_treechar_alldata %>%
+  #filtering for only transitional burned zone plots
+  filter(PlotID %in% c("PLHM", "PLLM")) %>%
   select(PlotID, TreeNum, Species, DBH_cm, PreFire_Status) %>%
   mutate(DBH_m = DBH_cm / 100,
          circ_m = DBH_m * pi) %>%
@@ -200,11 +258,18 @@ transb_treecircm_data <- albedoplots_treechar_alldata %>%
 
 ```{r}
 #setting values based on the min, max and mean circumference of the albedo plots - these will be used in later calculations
-min_circ_m <- 0.1979
-max_circ_m <- 0.6158
-mean_circ_m <- 0.4042
+##transitional
+t_min_circ_m <- 0.1979
+t_max_circ_m <- 0.6158
+t_mean_circ_m <- 0.4042
+
+##persistent
+p_min_circ_m <- 0.18845
+p_max_circ_m <- 0.8954
+p_mean_circ_m <- 0.4576
 
 #setting constant for total plot area
+##the same for both zones
 total_plot_area_m2 = 35*35
 ```
 
@@ -218,7 +283,18 @@ transb_comb_treeLWout <- avg_dt_transb_treeLW_burned %>%
   select(-c(datetime, zone, burn_status)) %>%
   crossing(transb_energytree_table) %>%
   select(-c(lat, long)) %>%
-  mutate(min_circ_m = min_circ_m, max_circ_m = max_circ_m, mean_circ_m = mean_circ_m) %>%
+  mutate(min_circ_m = t_min_circ_m, max_circ_m = t_max_circ_m, mean_circ_m = t_mean_circ_m) %>%
+  select(date, phase, zone, burn_status, tree_id, b_treetemp_C, b_tree_LWout_wperm2, b_tree_LWout_MJd, min_circ_m, max_circ_m, mean_circ_m, everything()) %>%
+  mutate(min_area_m2 = min_circ_m * snowcam_max_depth_m, max_area_m2 = max_circ_m * snowcam_max_depth_m, mean_area_m2 = mean_circ_m * snowcam_max_depth_m)
+
+#persistent
+persb_comb_treeLWout <- avg_dt_persb_treeLW_burned %>%
+  #adding in snow camera depths and treewell development
+  inner_join(filtered_persb_snowcamera_data) %>%
+  select(-c(datetime, zone, burn_status)) %>%
+  crossing(transb_energytree_table) %>%
+  select(-c(lat, long)) %>%
+  mutate(min_circ_m = p_min_circ_m, max_circ_m = p_max_circ_m, mean_circ_m = p_mean_circ_m) %>%
   select(date, phase, zone, burn_status, tree_id, b_treetemp_C, b_tree_LWout_wperm2, b_tree_LWout_MJd, min_circ_m, max_circ_m, mean_circ_m, everything()) %>%
   mutate(min_area_m2 = min_circ_m * snowcam_max_depth_m, max_area_m2 = max_circ_m * snowcam_max_depth_m, mean_area_m2 = mean_circ_m * snowcam_max_depth_m)
 ```
@@ -244,7 +320,7 @@ results_transb_comb_treeLWout <- new_transb_comb_treeLWout %>%
 ```{r}
 #calculating weather station total area based on tree-impacted area 
 #mean dataframe
-mean_dt_transb_radtree_comb <- avg_dt_transb_rad_wx %>%
+mean_dt_transb_radtree_comb<- avg_dt_transb_rad_wx %>%
   inner_join(results_transb_comb_treeLWout) %>%
   #creating a net radiation weather station parameter
   mutate(NR_MJd = SWin_MJd - SWout_MJd + LWin_MJd - LWout_MJd) %>%
@@ -255,7 +331,7 @@ mean_dt_transb_radtree_comb <- avg_dt_transb_rad_wx %>%
   #calculating the net outgoing rad for the weather station data and removing the m2 unit by multiplying by the area that this weather station data is applied to
   mutate(mean_wx_NRin_MJd = (SWin_MJd + LWin_MJd) * total_mean_wx_area_m2, mean_wx_NRout_MJd = (SWout_MJd + LWout_MJd) * total_mean_wx_area_m2, mean_wx_netSW_MJd = (SWin_MJd - SWout_MJd) * total_mean_wx_area_m2, mean_wx_netLW_MJd = (LWin_MJd - LWout_MJd) * total_mean_wx_area_m2) %>%
   #calcuating the total net mean radiation for LWout (tree + weather station data, and SW)
-  mutate(total_mean_netLW_MJd = mean_wx_netLW_MJd + total_mean_tree_LWout_MJd, total_mean_net_rad = ((SWin_MJd * total_mean_wx_area_m2)-(SWout_MJd * total_mean_wx_area_m2)) + ((LWin_MJd*total_mean_wx_area_m2)-((LWout_MJd*total_mean_wx_area_m2)-total_mean_tree_LWout_MJd)))
+  mutate(total_mean_netLW_MJd = mean_wx_netLW_MJd + total_mean_tree_LWout_MJd, total_mean_net_rad = ((SWin_MJd * total_mean_wx_area_m2)-(SWout_MJd * total_mean_wx_area_m2)) + ((LWin_MJd*total_mean_wx_area_m2)-(LWout_MJd*total_mean_wx_area_m2)) + total_mean_tree_LWout_MJd)
   
 mean_dt_transb_radtree_comb <- mean_dt_transb_radtree_comb %>%
   rename(wx_NR_MJdm2 = NR_MJd)
@@ -283,7 +359,7 @@ Equations used above for NetSW, NetLW, NetIncoming and NetOutgoing:
 
 -   NetOutgoing = SWout + LWout + LWout_tree
 
--   TotalNetRad = (SWin -SWout) + (LWin - LWout - LWout_tree)
+-   TotalNetRad = (SWin -SWout) + (LWin - LWout) + LWout_tree)
 
 \*\* The above fraction values make me thing that I did the calculations wrong. As for month 4 it says that the treeLWout is 248 % of the monthly net LW... this is definitely wrong!
 
@@ -303,7 +379,7 @@ min_dt_transb_radtree_comb <- avg_dt_transb_rad_wx %>%
   #calculating the net outgoing rad for the weather station data and removing the m2 unit by multiplying by the area that this weather station data is applied to
   mutate(min_wx_NRin_MJd = (SWin_MJd + LWin_MJd) * total_min_wx_area_m2, min_wx_NRout_MJd = (SWout_MJd + LWout_MJd) * total_min_wx_area_m2, min_wx_netSW_MJd = (SWin_MJd - SWout_MJd) * total_min_wx_area_m2, min_wx_netLW_MJd = (LWin_MJd - LWout_MJd) * total_min_wx_area_m2) %>%
   #calcuating the total net mean radiation for LWout (tree + weather station data, and SW)
-  mutate(total_min_netLW_MJd = min_wx_netLW_MJd + total_min_tree_LWout_MJd, total_min_net_rad = ((SWin_MJd * total_min_wx_area_m2)-(SWout_MJd * total_min_wx_area_m2)) + ((LWin_MJd*total_min_wx_area_m2)-((LWout_MJd*total_min_wx_area_m2)-total_min_tree_LWout_MJd)))
+  mutate(total_min_netLW_MJd = min_wx_netLW_MJd + total_min_tree_LWout_MJd, total_min_net_rad = ((SWin_MJd * total_min_wx_area_m2)-(SWout_MJd * total_min_wx_area_m2)) + ((LWin_MJd*total_min_wx_area_m2)-((LWout_MJd*total_min_wx_area_m2))+total_min_tree_LWout_MJd))
   
 min_dt_transb_radtree_comb <- min_dt_transb_radtree_comb %>%
   rename(wx_NR_MJdm2 = NR_MJd)
@@ -320,32 +396,10 @@ max_dt_transb_radtree_comb <- avg_dt_transb_rad_wx %>%
   #calculating the net outgoing rad for the weather station data and removing the m2 unit by multiplying by the area that this weather station data is applied to
   mutate(max_wx_NRin_MJd = (SWin_MJd + LWin_MJd) * total_max_wx_area_m2, max_wx_NRout_MJd = (SWout_MJd + LWout_MJd) * total_max_wx_area_m2, max_wx_netSW_MJd = (SWin_MJd - SWout_MJd) * total_max_wx_area_m2, max_wx_netLW_MJd = (LWin_MJd - LWout_MJd) * total_max_wx_area_m2) %>%
   #calcuating the total net mean radiation for LWout (tree + weather station data, and SW)
-  mutate(total_max_netLW_MJd = max_wx_netLW_MJd + total_max_tree_LWout_MJd, total_max_net_rad = ((SWin_MJd * total_max_wx_area_m2)-(SWout_MJd * total_max_wx_area_m2)) + ((LWin_MJd*total_max_wx_area_m2)-((LWout_MJd*total_max_wx_area_m2)-total_max_tree_LWout_MJd)))
+  mutate(total_max_netLW_MJd = max_wx_netLW_MJd + total_max_tree_LWout_MJd, total_max_net_rad = ((SWin_MJd * total_max_wx_area_m2)-(SWout_MJd * total_max_wx_area_m2)) + ((LWin_MJd*total_max_wx_area_m2)-((LWout_MJd*total_max_wx_area_m2))+total_max_tree_LWout_MJd))
   
 max_dt_transb_radtree_comb <- max_dt_transb_radtree_comb %>%
   rename(wx_NR_MJdm2 = NR_MJd)
-```
-
-Treewell Development Data Wrangling
-
-```{r}
-#filtering snow depth camera data
-filtered_transb_snowcamera_data <- transb_snowcamera_data %>%
-  filter(date >= as.POSIXct("2024-02-02") & date <= as.POSIXct("2024-05-24")) %>%
-  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
-  select(date, snowcam_max_depth_cm, snowcam_max_depth_m, conditions, treewell_developed) %>%
-  mutate(treewell_developed = case_when(
-    treewell_developed == "no snow" ~ "no",
-    treewell_developed == "maybe" ~ "yes",
-    TRUE ~ treewell_developed  # Keeps everything else the same
-  ))
-
-#creating a dataframe to use for plots that only has the days that treewells developed.
-transb_treewell_dates <- filtered_transb_snowcamera_data %>%
-  filter(treewell_developed == "yes") %>%
-  #adding tree_LWout_data to the dataframe so that I can plot with the same y-axis
-  inner_join(results_transb_comb_treeLWout) %>%
-  select(date, treewell_developed, total_max_tree_LWout_MJd, total_min_tree_LWout_MJd, total_mean_tree_LWout_MJd)
 ```
 
 ## Calcs - adding in all trees to LWout data
@@ -987,4 +1041,122 @@ combined_max_NR_plots <- ggarrange(max_NetSW_plot, max_NetLW_plot, max_NetRad_pl
 combined_max_NR_plots
 ```
 
-\*\* next steps - need to pull in persistent data and do the same data wrangling for that data, then plot.
+\*\* next steps - need to pull in persistent data and do the same data wrangling for that data, then plot
+
+# Persistent Data
+
+## Calling in Data
+
+```{r}
+persb_energytree_table <- read_csv("nsf/drone_imagery/pers_b_energy_tree_table.csv") %>%
+  mutate(zone = "persistent") %>%
+  rename(burn_status = burn_statu) %>%
+  #adding a tree_id column
+  mutate(tree_id = row_number()) %>%
+  #selecting columns I want
+  select(tree_id, zone, burn_status, lat, long)
+
+#this is the csv that has tree diameters for albedo plots on it, use this to choose an average circumference
+albedoplots_treechar_alldata <- read_csv("nsf/albedo/albedoplots_treechar_alldata.csv")
+
+#this is the csv that has camera snow depths and if tree wells appeared or not from 105E_transb_snowcamera
+persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_east_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "max_depth_cm") %>%
+  mutate(date = as.Date(date))
+
+persb_wx_hourly <- read_csv("nsf/pers_burned/pers_burned_wx_hourly_r.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST'))
+```
+
+```{r}
+
+#seperating by burned/unburned
+##burned
+avg_dt_persb_treeLW_burned <- read_csv("nsf/105E_trans_burned/day_avg_filtered_treeLWout_data_bub.csv") %>%
+  filter(zone == "persistent", phase == "day", burn_status == "burned") %>%
+  rename(b_tree_LWout_MJd = tree_LWout_MJperd, b_treetemp_C = temp, b_tree_LWout_wperm2 = tree_LWout_wperm2)
+
+##unburned
+avg_dt_persb_treeLW_unburned <- read_csv("nsf/105E_trans_burned/day_avg_filtered_treeLWout_data_bub.csv") %>%
+  filter(zone == "persistent", phase == "day", burn_status == "unburned") %>%
+  rename(ub_tree_LWout_MJd = tree_LWout_MJperd, ub_treetemp_C = temp, ub_tree_LWout_wperm2 = tree_LWout_wperm2)
+
+#seperating by tree burn status - gb/db/ub - this dataframe includes all burn status types
+avg_dt_transb_treeLW_allstatuses <- read_csv("nsf/105E_trans_burned/day_avg_filtered_treeLWout_data_gbdbub.csv")
+
+##green burned dataframe
+avg_dt_persb_treeLW_gb <- avg_dt_transb_treeLW_allstatuses %>%
+  #filtering out only the correct burned status, daytime data, & transitional zone
+  filter(zone == "persistent", phase == "day", burn_status == "green burn") %>%
+  rename(gb_tree_LWout_MJd = tree_LWout_MJperd, gb_treetemp_C = temp_C, gb_tree_LWout_wperm2 = tree_LWout_wperm2, gb_tree_LWout_Jperd = tree_LWout_Jperd) %>%
+  #removing double ID first column that appeared for some reason?
+  select(-1)
+
+##dead burned dataframe
+avg_dt_persb_treeLW_db <- avg_dt_transb_treeLW_allstatuses %>%
+  #filtering out only the correct burned status, daytime data, & transitional zone
+  filter(zone == "persistent", phase == "day", burn_status == "dead burn") %>%
+  rename(db_tree_LWout_MJd = tree_LWout_MJperd, db_treetemp_C = temp_C, db_tree_LWout_wperm2 = tree_LWout_wperm2, db_tree_LWout_Jperd = tree_LWout_Jperd) %>%
+  #removing double ID first column that appeared for some reason?
+  select(-1)
+
+##unburned dataframe
+avg_dt_persb_treeLW_ub <- avg_dt_transb_treeLW_allstatuses %>%
+  #filtering out only the correct burned status, daytime data, & transitional zone
+  filter(zone == "persistent", phase == "day", burn_status == "unburned") %>%
+  rename(ub_tree_LWout_MJd = tree_LWout_MJperd, ub_treetemp_C = temp_C, ub_tree_LWout_wperm2 = tree_LWout_wperm2, ub_tree_LWout_Jperd = tree_LWout_Jperd) %>%
+  #removing double ID first column that appeared for some reason?
+  select(-1)
+```
+
+Filtering Wx Persistent Data
+
+```{r}
+filtered_persb_rad_wx <- persb_wx_hourly %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00") & datetime <= as.POSIXct("2024-05-25 00:00:00")) %>%
+   # Adding in date, time, and phase columns
+  mutate(
+    date = as.Date(datetime),
+    time = format(datetime, "%H:%M:%S"),
+    time_hms = hms::as_hms(time),  # Convert to hms object for phase calculation
+    phase = case_when(
+      time_hms >= hms::as_hms("08:00:00") & time_hms < hms::as_hms("17:00:00") ~ "day",
+      time_hms < hms::as_hms("08:00:00") | time_hms >= hms::as_hms("17:00:00") ~ "night",
+      TRUE ~ NA_character_)) %>%
+      select(datetime, date, time, phase, SnowDepth_m, AirTC_Avg, SWin_Avg, SWout_Avg, SWalbedo_Avg, LWin_Avg, LWout_Avg, SWnet_Avg, LWnet_Avg, NR_Avg)
+```
+
+Data Wrangling
+
+```{r}
+#calculations for radiation conversions from W/m2 to MJ/day
+## create a daily average dataframe
+avg_dt_persb_rad_wx<- filtered_persb_rad_wx %>%
+  group_by(date, phase) %>%
+  summarize(across(everything(), mean, na.rm = TRUE)) %>%
+  select(-c(datetime, time)) %>%
+  group_by(date, phase) %>%
+  # Convert mean radiation to MJ/day - assuming constent for m2 value
+  mutate(SWin_MJd = (SWin_Avg/ 1e6) * 86400, SWout_MJd = (SWout_Avg/ 1e6) * 86400, LWin_MJd = (LWin_Avg/ 1e6) * 86400, LWout_MJd = (LWout_Avg/ 1e6) * 86400, SWnet_MJd = (SWnet_Avg / 1e6) * 86400, LWnet_MJd = (LWnet_Avg/ 1e6) * 86400, NR_MJd = (NR_Avg / 1e6) * 86400) %>%
+  rename(SWin_wperm2 = SWin_Avg, SWout_wperm2 = SWout_Avg, SWnet_wperm2 = SWnet_Avg, LWin_wperm2 = LWin_Avg, LWout_wperm2 = LWout_Avg, LWnet_wperm2 = LWnet_Avg, NR_wperm2 = NR_Avg) %>%
+  mutate(zone = "persistent", burn_status = "burned") %>%
+  #filtering out only daytime values
+  filter(phase == "day") %>%
+  #reordering so the like values are next to each other
+  select(date, phase, zone, burn_status, SnowDepth_m, AirTC_Avg, SWin_wperm2, SWin_MJd, SWout_wperm2, SWout_MJd, SWnet_wperm2, SWnet_MJd, SWalbedo_Avg, LWin_wperm2, LWin_MJd, LWout_wperm2, LWout_MJd, LWnet_wperm2, LWnet_MJd, NR_wperm2, NR_MJd) %>%
+  #setting decimal number
+   mutate(across(SnowDepth_m:last_col(), ~ round(., 4)))
+```
+
+```{r}
+##* I think I want to use this one, not the gb/db/ub, since there is such a small difference between the gb & db LWout values from trees
+#by burned/unburned status
+persb_comb_radtree <- avg_dt_persb_rad_wx %>%
+  mutate(burn_status = "burned") %>%
+  full_join(avg_dt_persb_treeLW_burned) %>%
+  #recalculating NetRad, as I am not sure the calculations here are correct that are pulled from the weather station
+  mutate(NR_MJd_wxs = (SWin_MJd - SWout_MJd) + (LWin_MJd - LWout_MJd)) %>%
+  select(-datetime)
+#answer is slightly different than weather-station calculated RN, use this value instead!
+
+```
