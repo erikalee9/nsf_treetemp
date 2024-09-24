@@ -173,7 +173,7 @@ transb_treewell_dates <- filtered_transb_snowcamera_data %>%
   filter(treewell_developed == "yes") %>%
   #adding tree_LWout_data to the dataframe so that I can plot with the same y-axis
   inner_join(results_transb_comb_treeLWout) %>%
-  select(date, treewell_developed, total_max_tree_LWout_MJd, total_min_tree_LWout_MJd, total_mean_tree_LWout_MJd)
+  select(date, snowcam_max_depth_m, conditions, treewell_developed, total_max_tree_LWout_MJd, total_min_tree_LWout_MJd, total_mean_tree_LWout_MJd)
 
 ##persistent
 filtered_persb_snowcamera_data <- persb_snowcamera_data %>%
@@ -328,6 +328,12 @@ mutate(total_mean_netLW_wtree_MJd = mean_wx_netLW_MJd + total_mean_tree_LWout_MJ
   
 mean_dt_transb_radtree_comb <- mean_dt_transb_radtree_comb %>%
   rename(wx_NR_MJdm2 = NR_MJd)
+
+#creating a new dataframe with snow depths and treewell development, as well as tree_LWout so that I can put points on snowdepths instead of total treeLWout line in plots
+filtered_transb_treewell_data <- filtered_transb_snowcamera_data %>%
+  inner_join(mean_dt_transb_radtree_comb) %>%
+  select(date, phase, zone, burn_status, conditions, snowcam_max_depth_cm, snowcam_max_depth_m, treewell_developed, total_mean_tree_LWout_MJd) %>%
+  filter(treewell_developed == "yes")
 ```
 
 ```{r}
@@ -673,10 +679,14 @@ t_mean_NetLW_wtree_plot <- ggplot() +
   # Column plot for Net Longwave Radiation of total plot area
   geom_col(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_netLW_wtree_MJd), fill = "#1B7837", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
-  geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
-  
+  geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout (MJ/d)")) +
+   # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m * depth_factor, 
+             color = "Daily max snow depth (m)"), linewidth = 0.6) + 
   # Point plot for treewell development dates
-  geom_point(data = transb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
+  geom_point(data = filtered_transb_treewell_data, aes(x = date, y = snowcam_max_depth_m * depth_factor, 
+             shape = "Dates that treewells developed"), 
+             color = "darkgoldenrod3", fill = "darkgoldenrod3", size = 1.5) + 
   facet_wrap(~zone + burn_status) +
   labs(
     title = "Mean Values with treeLW out",
@@ -685,13 +695,13 @@ t_mean_NetLW_wtree_plot <- ggplot() +
   ) +
   # Customizing colors and shapes
   scale_color_manual(name = "Radiation Data", 
-                     values = c("Total burned trees LWout" = "#D95F02"),
-                     labels = c("Total burned trees LWout")) +
-  #scale_fill_manual(name = "Radiation Data", 
-                     #values = c("Net Longwave Radiation of total plot area" = "#1B7837"),
-                    # labels = c("Net Longwave Radiation of total plot area")) +
-  scale_shape_manual(name = "Treewell Data", 
-                     values = c("Dates that treewells developed" = 21)) +
+                     values = c("Total burned trees LWout (MJ/d)" = "#D95F02","Daily max snow depth (m)" = "grey30")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
   theme_bw()
 
 
@@ -703,12 +713,16 @@ t_mean_NetLW_wtree_plot
 ##netLW with tree LWout included
 t_mean_NetLW_wotree_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_netLW_wotree_MJd), fill = "#1B7837", position = "stack", alpha = 0.8) +
+  geom_col(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_netLW_wotree_MJd), fill = "#1B7837", position = "stack", alpha = 0.7) +
   # Line plot for Total burned trees LWout
-  geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
-  
-  # Point plot for treewell development dates
-  geom_point(data = transb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
+  geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout (MJ/d)")) +
+  # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m * depth_factor, 
+             color = "Daily max snow depth (m)"), linewidth = 0.6) + 
+ # Point plot for treewell development dates
+  geom_point(data = filtered_transb_treewell_data, aes(x = date, y = snowcam_max_depth_m * depth_factor, 
+             shape = "Dates that treewells developed"), 
+             color = "darkgoldenrod3", fill = "darkgoldenrod3", size = 1.5) + 
   facet_wrap(~zone + burn_status) +
   labs(
     title = "Mean Values w/o treeLW out",
@@ -717,15 +731,14 @@ t_mean_NetLW_wotree_plot <- ggplot() +
   ) +
   # Customizing colors and shapes
   scale_color_manual(name = "Radiation Data", 
-                     values = c("Total burned trees LWout" = "#D95F02"),
-                     labels = c("Total burned trees LWout")) +
-  #scale_fill_manual(name = "Radiation Data", 
-                     #values = c("Net Longwave Radiation of total plot area" = "#1B7837"),
-                    # labels = c("Net Longwave Radiation of total plot area")) +
-  scale_shape_manual(name = "Treewell Data", 
-                     values = c("Dates that treewells developed" = 21)) +
+                     values = c("Total burned trees LWout (MJ/d)" = "#D95F02", "Daily max snow depth (m)" = "grey30")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
   theme_bw()
-
 
 t_mean_NetLW_wotree_plot
 ```
@@ -739,28 +752,40 @@ t_mean_NetLW_comb
 
 ```{r}
 #mean net SW plot
+library(ggplot2)
+library(scales)
+
+# Adjust the secondary variable (e.g., multiply by a factor to fit the primary scale)
+# Here I'm assuming snowcam_max_depth_m needs to be multiplied to fit the primary scale
+# You may need to adjust this factor based on your data's actual range.
+depth_factor <- 7500  # Example factor; adjust as necessary
+
 t_mean_NetSW_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_transb_radtree_comb, aes(x = date, y = mean_wx_netSW_MJd), fill = "#2166AC", position = "stack", alpha = 0.8) +
+  geom_col(data = mean_dt_transb_radtree_comb, aes(x = date, y = mean_wx_netSW_MJd), 
+           fill = "#2166AC", position = "stack", alpha = 0.7) +
   # Line plot for Total burned trees LWout
-  geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
+  geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout (MJ/d)"), linewidth = 0.6) +
+  # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m * depth_factor, 
+             color = "Daily max snow depth (m)"), linewidth = 0.6) + 
   # Point plot for treewell development dates
-  geom_point(data = transb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
+  geom_point(data = filtered_transb_treewell_data, aes(x = date, y = snowcam_max_depth_m * depth_factor, 
+             shape = "Dates that treewells developed"), 
+             color = "darkgoldenrod3", fill = "darkgoldenrod3", size = 1.5) + 
   facet_wrap(~zone + burn_status) +
   labs(
-    #title = "Mean Values",
     x = "Date",
     y = "Net SW Rad (MJ/day)"
   ) +
   # Customizing colors and shapes
-  scale_color_manual(name = "Radiation Data", 
-                     values = c("Total burned trees LWout" = "#D95F02"),
-                     labels = c("Total burned trees LWout")) +
-  #scale_fill_manual(name = "Radiation Data", 
-                     #values = c("Net Shortwave Radiation of total plot area" = "#2166AC"),
-                     #labels = c("Net Shortwave Radiation of total plot area")) +
-  scale_shape_manual(name = "Treewell Data", 
-                     values = c("Dates that treewells developed" = 21)) +
+  scale_color_manual(values = c("Total burned trees LWout (MJ/d)" = "#D95F02", "Daily max snow depth (m)" = "grey30")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
   theme_bw()
 
 t_mean_NetSW_plot
@@ -771,9 +796,14 @@ t_mean_NetRad_wtree_plot <- ggplot() +
   # Column plot for Net Longwave Radiation of total plot area
   geom_col(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_net_rad_wtree_MJd), fill = "#666666", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
-  geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
+  geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout (MJ/d)")) +
+  # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m * depth_factor, 
+             color = "Daily max snow depth (m)"), linewidth = 0.6) + 
   # Point plot for treewell development dates
-  geom_point(data = transb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
+  geom_point(data = filtered_transb_treewell_data, aes(x = date, y = snowcam_max_depth_m * depth_factor, 
+             shape = "Dates that treewells developed"), 
+             color = "darkgoldenrod3", fill = "darkgoldenrod3", size = 1.5) + 
   facet_wrap(~zone + burn_status) +
   labs(
     title = "Mean Data Values with Tree LWout",
@@ -782,13 +812,13 @@ t_mean_NetRad_wtree_plot <- ggplot() +
   ) +
   # Customizing colors and shapes
   scale_color_manual(name = "Radiation Data", 
-                     values = c("Total burned trees LWout" = "#D95F02"),
-                     labels = c("Total burned trees LWout")) +
-  #scale_fill_manual(name = "Radiation Data", 
-                     #values = c("Total Net Radiation of plot area" = "#666666"),
-                     #labels = c("Total Net Radiation of plot area")) +
-  scale_shape_manual(name = "Treewell Data", 
-                     values = c("Dates that treewells developed" = 21)) +
+                     values = c("Total burned trees LWout (MJ/d)" = "#D95F02", "Daily max snow depth (m)" = "grey30")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
   theme_bw()
 
 t_mean_NetRad_wtree_plot
@@ -800,9 +830,14 @@ t_mean_NetRad_wotree_plot <- ggplot() +
   # Column plot for Net Longwave Radiation of total plot area
   geom_col(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_net_rad_wotree), fill = "#666666", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
-  geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
+  geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout (MJ/d)")) +
+  # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m * depth_factor, 
+             color = "Daily max snow depth (m)"), linewidth = 0.6) + 
   # Point plot for treewell development dates
-  geom_point(data = transb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
+  geom_point(data = filtered_transb_treewell_data, aes(x = date, y = snowcam_max_depth_m * depth_factor, 
+             shape = "Dates that treewells developed"), 
+             color = "darkgoldenrod3", fill = "darkgoldenrod3", size = 1.5) + 
   facet_wrap(~zone + burn_status) +
   labs(
     title = "Mean Data Values w/o Tree LWout",
@@ -811,13 +846,13 @@ t_mean_NetRad_wotree_plot <- ggplot() +
   ) +
   # Customizing colors and shapes
   scale_color_manual(name = "Radiation Data", 
-                     values = c("Total burned trees LWout" = "#D95F02"),
-                     labels = c("Total burned trees LWout")) +
-  #scale_fill_manual(name = "Radiation Data", 
-                     #values = c("Total Net Radiation of plot area" = "#666666"),
-                     #labels = c("Total Net Radiation of plot area")) +
-  scale_shape_manual(name = "Treewell Data", 
-                     values = c("Dates that treewells developed" = 21)) +
+                     values = c("Total burned trees LWout (MJ/d)" = "#D95F02", "Daily max snow depth (m)" = "grey30")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
   theme_bw()
 
 t_mean_NetRad_wotree_plot
@@ -1245,7 +1280,7 @@ persb_treewell_dates <- filtered_persb_snowcamera_data %>%
   filter(treewell_developed == "yes") %>%
   #adding tree_LWout_data to the dataframe so that I can plot with the same y-axis
   inner_join(results_persb_comb_treeLWout) %>%
-  select(date, treewell_developed, total_max_tree_LWout_MJd, total_min_tree_LWout_MJd, total_mean_tree_LWout_MJd)
+  select(date, snowcam_max_depth_m, conditions, treewell_developed, total_max_tree_LWout_MJd, total_min_tree_LWout_MJd, total_mean_tree_LWout_MJd)
 ```
 
 Calculating the mean dataframes
@@ -1272,7 +1307,20 @@ mean_dt_persb_radtree_comb <- mean_dt_persb_radtree_comb %>%
   rename(wx_NR_MJdm2 = NR_MJd)
 ```
 
+```{r}
+#creating a new dataframe with snow depths and treewell development, as well as tree_LWout so that I can put points on snowdepths instead of total treeLWout line in plots
+filtered_persb_treewell_data <- filtered_persb_snowcamera_data %>%
+  inner_join(mean_dt_persb_radtree_comb) %>%
+  select(date, phase, zone, burn_status, conditions, snowcam_max_depth_cm, snowcam_max_depth_m, treewell_developed, total_mean_tree_LWout_MJd) %>%
+  filter(treewell_developed == "yes")
+```
+
 ## Plotting Mean Data
+
+```{r}
+#setting persistent depth factor to assign a secondary y-axis for snow depths - this factor needs to be different for the persistent and transitional snow zones because they have different snow depths
+p_depth_factor <- 6000
+```
 
 ```{r}
 #mean NetLW- persisent - with treeLWout included in net LW bars
@@ -1280,10 +1328,14 @@ p_mean_NetLW_wtree_plot <- ggplot() +
   # Column plot for Net Longwave Radiation of total plot area
   geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_netLW_wtree_MJd), fill = "#1B7837", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
-  geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
-  
+  geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout (MJ/d)")) +
+   # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m * p_depth_factor, 
+             color = "Daily max snow depth (m)"), linewidth = 0.6) + 
   # Point plot for treewell development dates
-  geom_point(data = persb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
+  geom_point(data = filtered_persb_treewell_data, aes(x = date, y = snowcam_max_depth_m * p_depth_factor, 
+             shape = "Dates that treewells developed"), 
+             color = "darkgoldenrod3", fill = "darkgoldenrod3", size = 1.5) + 
   facet_wrap(~zone + burn_status) +
   labs(
     title = "Mean Values with tree LWout",
@@ -1292,13 +1344,13 @@ p_mean_NetLW_wtree_plot <- ggplot() +
   ) +
   # Customizing colors and shapes
   scale_color_manual(name = "Radiation Data", 
-                     values = c("Total burned trees LWout" = "#D95F02"),
-                     labels = c("Total burned trees LWout")) +
-  #scale_fill_manual(name = "Radiation Data", 
-                     #values = c("Net Longwave Radiation of total plot area" = "#1B7837"),
-                    # labels = c("Net Longwave Radiation of total plot area")) +
-  scale_shape_manual(name = "Treewell Data", 
-                     values = c("Dates that treewells developed" = 21)) +
+                     values = c("Total burned trees LWout (MJ/d)" = "#D95F02", "Daily max snow depth (m)" = "grey30")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
   theme_bw()
 
 
@@ -1311,9 +1363,14 @@ p_mean_NetLW_wotree_plot <- ggplot() +
   # Column plot for Net Longwave Radiation of total plot area
   geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_netLW_wotree_MJd), fill = "#1B7837", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
-  geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
+  geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout (MJ/d)")) +
+   # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m * p_depth_factor, 
+             color = "Daily max snow depth (m)"), linewidth = 0.6) + 
   # Point plot for treewell development dates
-  geom_point(data = persb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
+  geom_point(data = filtered_persb_treewell_data, aes(x = date, y = snowcam_max_depth_m * p_depth_factor, 
+             shape = "Dates that treewells developed"), 
+             color = "darkgoldenrod3", fill = "darkgoldenrod3", size = 1.5) + 
   facet_wrap(~zone + burn_status) +
   labs(
     title = "Mean Values w/o tree LWout",
@@ -1322,13 +1379,13 @@ p_mean_NetLW_wotree_plot <- ggplot() +
   ) +
   # Customizing colors and shapes
   scale_color_manual(name = "Radiation Data", 
-                     values = c("Total burned trees LWout" = "#D95F02"),
-                     labels = c("Total burned trees LWout")) +
-  #scale_fill_manual(name = "Radiation Data", 
-                     #values = c("Net Longwave Radiation of total plot area" = "#1B7837"),
-                    # labels = c("Net Longwave Radiation of total plot area")) +
-  scale_shape_manual(name = "Treewell Data", 
-                     values = c("Dates that treewells developed" = 21)) +
+                     values = c("Total burned trees LWout (MJ/d)" = "#D95F02", "Daily max snow depth (m)" = "grey30")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
   theme_bw()
 
 
@@ -1348,9 +1405,14 @@ p_mean_NetSW_plot <- ggplot() +
   # Column plot for Net Longwave Radiation of total plot area
   geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = mean_wx_netSW_MJd), fill = "#2166AC", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
-  geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
+  geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout (MJ/d)")) +
+   # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m * p_depth_factor, 
+             color = "Daily max snow depth (m)"), linewidth = 0.6) + 
   # Point plot for treewell development dates
-  geom_point(data = persb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
+  geom_point(data = filtered_persb_treewell_data, aes(x = date, y = snowcam_max_depth_m * p_depth_factor, 
+             shape = "Dates that treewells developed"), 
+             color = "darkgoldenrod3", fill = "darkgoldenrod3", size = 1.5) + 
   facet_wrap(~zone + burn_status) +
   labs(
     #title = "Mean Values",
@@ -1359,13 +1421,13 @@ p_mean_NetSW_plot <- ggplot() +
   ) +
   # Customizing colors and shapes
   scale_color_manual(name = "Radiation Data", 
-                     values = c("Total burned trees LWout" = "#D95F02"),
-                     labels = c("Total burned trees LWout")) +
-  #scale_fill_manual(name = "Radiation Data", 
-                     #values = c("Net Shortwave Radiation of total plot area" = "#2166AC"),
-                     #labels = c("Net Shortwave Radiation of total plot area")) +
-  scale_shape_manual(name = "Treewell Data", 
-                     values = c("Dates that treewells developed" = 21)) +
+                     values = c("Total burned trees LWout (MJ/d)" = "#D95F02", "Daily max snow depth (m)" = "grey30")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
   theme_bw()
 
 p_mean_NetSW_plot
@@ -1377,9 +1439,14 @@ p_mean_NetRad_wtree_plot <- ggplot() +
   # Column plot for Net Longwave Radiation of total plot area
   geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_net_rad_wtree_MJd), fill = "#666666", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
-  geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
+  geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout (MJ/d)")) +
+   # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m * p_depth_factor, 
+             color = "Daily max snow depth (m)"), linewidth = 0.6) + 
   # Point plot for treewell development dates
-  geom_point(data = persb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
+  geom_point(data = filtered_persb_treewell_data, aes(x = date, y = snowcam_max_depth_m * p_depth_factor, 
+             shape = "Dates that treewells developed"), 
+             color = "darkgoldenrod3", fill = "darkgoldenrod3", size = 1.5) + 
   facet_wrap(~zone + burn_status) +
   labs(
     title = "Mean Data Values with Tree LWout",
@@ -1388,13 +1455,13 @@ p_mean_NetRad_wtree_plot <- ggplot() +
   ) +
   # Customizing colors and shapes
   scale_color_manual(name = "Radiation Data", 
-                     values = c("Total burned trees LWout" = "#D95F02"),
-                     labels = c("Total burned trees LWout")) +
-  #scale_fill_manual(name = "Radiation Data", 
-                     #values = c("Total Net Radiation of plot area" = "#666666"),
-                     #labels = c("Total Net Radiation of plot area")) +
-  scale_shape_manual(name = "Treewell Data", 
-                     values = c("Dates that treewells developed" = 21)) +
+                     values = c("Total burned trees LWout (MJ/d)" = "#D95F02", "Daily max snow depth (m)" = "grey30")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
   theme_bw()
 
 p_mean_NetRad_wtree_plot
@@ -1406,9 +1473,14 @@ p_mean_NetRad_wotree_plot <- ggplot() +
   # Column plot for Net Longwave Radiation of total plot area
   geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_net_rad_wotree_MJd), fill = "#666666", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
-  geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
+  geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout (MJ/d)")) +
+   # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m * p_depth_factor, 
+             color = "Daily max snow depth (m)"), linewidth = 0.6) + 
   # Point plot for treewell development dates
-  geom_point(data = persb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
+  geom_point(data = filtered_persb_treewell_data, aes(x = date, y = snowcam_max_depth_m * p_depth_factor, 
+             shape = "Dates that treewells developed"), 
+             color = "darkgoldenrod3", fill = "darkgoldenrod3", size = 1.5) + 
   facet_wrap(~zone + burn_status) +
   labs(
     title = "Mean Data Values without Tree LWout",
@@ -1417,13 +1489,13 @@ p_mean_NetRad_wotree_plot <- ggplot() +
   ) +
   # Customizing colors and shapes
   scale_color_manual(name = "Radiation Data", 
-                     values = c("Total burned trees LWout" = "#D95F02"),
-                     labels = c("Total burned trees LWout")) +
-  #scale_fill_manual(name = "Radiation Data", 
-                     #values = c("Total Net Radiation of plot area" = "#666666"),
-                     #labels = c("Total Net Radiation of plot area")) +
-  scale_shape_manual(name = "Treewell Data", 
-                     values = c("Dates that treewells developed" = 21)) +
+                     values = c("Total burned trees LWout (MJ/d)" = "#D95F02", "Daily max snow depth (m)" = "grey30")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
   theme_bw()
 
 p_mean_NetRad_wotree_plot
@@ -1451,14 +1523,75 @@ These datasets are using the daily mean values for the radiation components and 
 
 ```{r}
 #transitional data wrangling
-trans_mean_NR_accum_data <- mean_dt_transb_radtree_comb %>%
-  arrange(date) %>%
-  mutate(accu_netSW_MJd = accumulate(mean_wx_netSW_MJd, "+"))
+## have to use base r for some reason, as tidyverse syntax wasn't working
+mean_dt_transb_radtree_comb$accu_treeLWout_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_tree_LWout_MJd, accumulate = TRUE)
+
+mean_dt_transb_radtree_comb$accu_netSW_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$mean_wx_netSW_MJd, accumulate = TRUE)
+
+mean_dt_transb_radtree_comb$accu_netLW_wtree_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_netLW_wtree_MJd, accumulate = TRUE)
+
+mean_dt_transb_radtree_comb$accu_netLW_wotree_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_netLW_wotree_MJd, accumulate = TRUE)
+
+mean_dt_transb_radtree_comb$accu_netRad_wtree_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_net_rad_wtree_MJd, accumulate = TRUE)
+
+mean_dt_transb_radtree_comb$accu_netRad_wotree_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_net_rad_wotree, accumulate = TRUE)
 ```
 
 ```{r}
-#transitional data wrangling
-pers_mean_NR_accum_data <- mean_dt_persb_radtree_comb %>%
-  arrange(date) %>%
-  mutate(accu_netSW_MJd = accumulate(mean_wx_netSW_MJd, "+"))
+# persistent
+mean_dt_persb_radtree_comb$accu_treeLWout_MJd <- Reduce(`+`, mean_dt_persb_radtree_comb$total_mean_tree_LWout_MJd, accumulate = TRUE)
+
+mean_dt_persb_radtree_comb$accu_netSW_MJd <- Reduce(`+`, mean_dt_persb_radtree_comb$mean_wx_netSW_MJd, accumulate = TRUE)
+
+mean_dt_persb_radtree_comb$accu_netLW_wtree_MJd <- Reduce(`+`, mean_dt_persb_radtree_comb$total_mean_netLW_wtree_MJd, accumulate = TRUE)
+
+mean_dt_persb_radtree_comb$accu_netLW_wotree_MJd <- Reduce(`+`, mean_dt_persb_radtree_comb$total_mean_netLW_wotree_MJd, accumulate = TRUE)
+
+mean_dt_persb_radtree_comb$accu_netRad_wtree_MJd <- Reduce(`+`, mean_dt_persb_radtree_comb$total_mean_net_rad_wtree_MJd, accumulate = TRUE)
+
+mean_dt_persb_radtree_comb$accu_netRad_wotree_MJd <- Reduce(`+`, mean_dt_persb_radtree_comb$total_mean_net_rad_wotree_MJd, accumulate = TRUE)
+```
+
+```{r}
+#making an accumulation dataframe with both snow zones on it, so I can simply facet wrap by that for the plots
+
+accum_mean_data_bothzones <- rbind(mean_dt_transb_radtree_comb, mean_dt_persb_radtree_comb) %>%
+  select(date, phase, zone, burn_status, accu_netSW_MJd, accu_netLW_wtree_MJd, accu_netLW_wotree_MJd, accu_netRad_wtree_MJd, accu_netRad_wotree_MJd, accu_treeLWout_MJd)
+```
+
+Accumulation Plotting
+
+```{r}
+library(ggplot2)
+library(scales)  # Load scales package for number formatting
+
+mean_NR_acc_plot <- ggplot(data = accum_mean_data_bothzones) +
+  geom_line(aes(x = date, y = accu_treeLWout_MJd, color = "Tree LWout", linetype = "Tree LWout"), linewidth = 0.7) +
+  geom_line(aes(x = date, y = accu_netLW_wotree_MJd, color = "Net LW", linetype = "Net LW"), linewidth = 0.7) +
+  geom_line(aes(x = date, y = accu_netSW_MJd, color = "Net SW", linetype = "Net SW"), linewidth = 0.7) + 
+  geom_line(aes(x = date, y = accu_netRad_wotree_MJd, color = "Net Radiation", linetype = "Net Radiation"), linewidth = 0.6) +
+  facet_wrap(~zone + burn_status) +
+  labs(
+    title = "Accumulation Mean Data Values",
+    x = "Date",
+    y = "Radiation Component (MJ)",
+    color = "Radiation Data",  # Legend title for color
+    linetype = "Radiation Data"  # Legend title for linetype
+  ) +
+  scale_color_manual(
+    values = c("Tree LWout" = "#D95F02", 
+               "Net LW" = "#1B7837", 
+               "Net SW" = "#2166AC", 
+               "Net Radiation" = "#666666")
+  ) +
+  scale_linetype_manual(
+    values = c("Tree LWout" = "solid", 
+               "Net LW" = "solid", 
+               "Net SW" = "solid", 
+               "Net Radiation" = "dashed")) +
+  scale_y_continuous(labels = label_number(accuracy = 1)) + 
+  theme_bw()
+
+print(mean_NR_acc_plot)
+
 ```
