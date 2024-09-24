@@ -27,6 +27,8 @@ library(hms)
 library(ggpubr)
 #package for scientific notation of numbers
 library(scales)
+#package for accumulation sums 
+library(purrr)
 
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
@@ -320,7 +322,7 @@ mean_dt_transb_radtree_comb<- avg_dt_transb_rad_wx %>%
   #calculating the net outgoing rad for the weather station data and removing the m2 unit by multiplying by the area that this weather station data is applied to
   mutate(mean_wx_NRin_MJd = (SWin_MJd + LWin_MJd) * total_mean_wx_area_m2, mean_wx_NRout_MJd = (SWout_MJd + LWout_MJd) * total_mean_wx_area_m2, mean_wx_netSW_MJd = (SWin_MJd - SWout_MJd) * total_mean_wx_area_m2, mean_wx_netLW_MJd = (LWin_MJd - LWout_MJd) * total_mean_wx_area_m2) %>%
   #calcuating the total net mean radiation for LWout (tree + weather station data, and SW)
-  mutate(total_mean_netLW_MJd = mean_wx_netLW_MJd + total_mean_tree_LWout_MJd, total_mean_net_rad = ((SWin_MJd * total_mean_wx_area_m2)-(SWout_MJd * total_mean_wx_area_m2)) + ((LWin_MJd*total_mean_wx_area_m2)-(LWout_MJd*total_mean_wx_area_m2)) + total_mean_tree_LWout_MJd) %>%
+mutate(total_mean_netLW_wtree_MJd = mean_wx_netLW_MJd + total_mean_tree_LWout_MJd, total_mean_netLW_wotree_MJd = mean_wx_netLW_MJd, total_mean_net_rad_wtree_MJd = ((SWin_MJd * total_mean_wx_area_m2)-(SWout_MJd * total_mean_wx_area_m2)) + ((LWin_MJd*total_mean_wx_area_m2)-(LWout_MJd*total_mean_wx_area_m2)) + total_mean_tree_LWout_MJd) %>%
   #making a new NetRad column without the addition of the treeLWout, to compare
   mutate(total_mean_net_rad_wotree = ((SWin_MJd * total_mean_wx_area_m2)-(SWout_MJd * total_mean_wx_area_m2)) + ((LWin_MJd*total_mean_wx_area_m2)-(LWout_MJd*total_mean_wx_area_m2)))
   
@@ -666,10 +668,10 @@ Newest Plots - as of EOD 2024.09.18
 
 ```{r}
 #using individual dataframes for mean, min and max values
-
-t_mean_NetLW_plot <- ggplot() + 
+##netLW with tree LWout included
+t_mean_NetLW_wtree_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_netLW_MJd), fill = "#1B7837", position = "stack", alpha = 0.8) +
+  geom_col(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_netLW_wtree_MJd), fill = "#1B7837", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
   geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
   
@@ -677,7 +679,7 @@ t_mean_NetLW_plot <- ggplot() +
   geom_point(data = transb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
   facet_wrap(~zone + burn_status) +
   labs(
-    #title = "Mean Values",
+    title = "Mean Values with treeLW out",
     x = "Date",
     y = "Net LW Rad (MJ/day)"
   ) +
@@ -693,7 +695,46 @@ t_mean_NetLW_plot <- ggplot() +
   theme_bw()
 
 
-mean_NetLW_plot
+t_mean_NetLW_wtree_plot
+```
+
+```{r}
+#using individual dataframes for mean, min and max values
+##netLW with tree LWout included
+t_mean_NetLW_wotree_plot <- ggplot() + 
+  # Column plot for Net Longwave Radiation of total plot area
+  geom_col(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_netLW_wotree_MJd), fill = "#1B7837", position = "stack", alpha = 0.8) +
+  # Line plot for Total burned trees LWout
+  geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
+  
+  # Point plot for treewell development dates
+  geom_point(data = transb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
+  facet_wrap(~zone + burn_status) +
+  labs(
+    title = "Mean Values w/o treeLW out",
+    x = "Date",
+    y = "Net LW Rad (MJ/day)"
+  ) +
+  # Customizing colors and shapes
+  scale_color_manual(name = "Radiation Data", 
+                     values = c("Total burned trees LWout" = "#D95F02"),
+                     labels = c("Total burned trees LWout")) +
+  #scale_fill_manual(name = "Radiation Data", 
+                     #values = c("Net Longwave Radiation of total plot area" = "#1B7837"),
+                    # labels = c("Net Longwave Radiation of total plot area")) +
+  scale_shape_manual(name = "Treewell Data", 
+                     values = c("Dates that treewells developed" = 21)) +
+  theme_bw()
+
+
+t_mean_NetLW_wotree_plot
+```
+
+```{r}
+#combining NetLW dataframes w/ and w/o treeLWout included in bars
+t_mean_NetLW_comb <- ggarrange(t_mean_NetLW_wtree_plot, t_mean_NetLW_wotree_plot, nrow = 1, ncol = 2, common.legend = TRUE, legend = "right")
+
+t_mean_NetLW_comb
 ```
 
 ```{r}
@@ -726,16 +767,16 @@ t_mean_NetSW_plot
 ```
 
 ```{r}
-t_mean_NetRad_plot <- ggplot() + 
+t_mean_NetRad_wtree_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_net_rad), fill = "#666666", position = "stack", alpha = 0.8) +
+  geom_col(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_net_rad_wtree_MJd), fill = "#666666", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
   geom_line(data = mean_dt_transb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
   # Point plot for treewell development dates
   geom_point(data = transb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
   facet_wrap(~zone + burn_status) +
   labs(
-    title = "Mean Data Values including TreeLWout",
+    title = "Mean Data Values with Tree LWout",
     x = "Date",
     y = "Total Net Radiation (MJ/day)"
   ) +
@@ -750,7 +791,7 @@ t_mean_NetRad_plot <- ggplot() +
                      values = c("Dates that treewells developed" = 21)) +
   theme_bw()
 
-t_mean_NetRad_plot
+t_mean_NetRad_wtree_plot
 ```
 
 ```{r}
@@ -764,7 +805,7 @@ t_mean_NetRad_wotree_plot <- ggplot() +
   geom_point(data = transb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
   facet_wrap(~zone + burn_status) +
   labs(
-    title = "Mean Data Values w/o tree LWout",
+    title = "Mean Data Values w/o Tree LWout",
     x = "Date",
     y = "Total Net Radiation (MJ/day)"
   ) +
@@ -783,12 +824,19 @@ t_mean_NetRad_wotree_plot
 ```
 
 ```{r}
+#combining total NetRad plots - with and without treeLWout included in bars
+t_mean_NetRad_comb <- ggarrange(t_mean_NetRad_wtree_plot, t_mean_NetRad_wotree_plot, nrow = 1, ncol = 2, common.legend = TRUE, legend = "right")
+
+t_mean_NetRad_comb
+```
+
+```{r}
 #combining and saving NetSW, NetLW and NetRad plots
-combined_mean_NR_plots <- ggarrange(t_mean_NetSW_plot, t_mean_NetLW_plot, t_mean_NetRad_plot, nrow = 3, ncol = 1, common.legend = TRUE, legend = "right") %>%
+t_combined_mean_NR_plots <- ggarrange(t_mean_NetSW_plot, t_mean_NetLW_wotree_plot, t_mean_NetRad_wotree_plot, nrow = 3, ncol = 1, common.legend = TRUE, legend = "right") %>%
   annotate_figure(combined_NR_plots, top = text_grob("Mean Data Values", 
                color = "black", size = 14))
 
-combined_mean_NR_plots
+t_combined_mean_NR_plots
 ```
 
 I don't think I'll need the following plots, but not sure yet
@@ -1216,21 +1264,21 @@ mean_dt_persb_radtree_comb<- avg_dt_persb_rad_wx %>%
   #calculating the net outgoing rad for the weather station data and removing the m2 unit by multiplying by the area that this weather station data is applied to
   mutate(mean_wx_NRin_MJd = (SWin_MJd + LWin_MJd) * total_mean_wx_area_m2, mean_wx_NRout_MJd = (SWout_MJd + LWout_MJd) * total_mean_wx_area_m2, mean_wx_netSW_MJd = (SWin_MJd - SWout_MJd) * total_mean_wx_area_m2, mean_wx_netLW_MJd = (LWin_MJd - LWout_MJd) * total_mean_wx_area_m2) %>%
   #calcuating the total net mean radiation for LWout (tree + weather station data, and SW)
-  mutate(total_mean_netLW_MJd = mean_wx_netLW_MJd + total_mean_tree_LWout_MJd, total_mean_net_rad = ((SWin_MJd * total_mean_wx_area_m2)-(SWout_MJd * total_mean_wx_area_m2)) + ((LWin_MJd*total_mean_wx_area_m2)-(LWout_MJd*total_mean_wx_area_m2)) + total_mean_tree_LWout_MJd) %>%
+  mutate(total_mean_netLW_wtree_MJd = mean_wx_netLW_MJd + total_mean_tree_LWout_MJd, total_mean_netLW_wotree_MJd = mean_wx_netLW_MJd, total_mean_net_rad_wtree_MJd = ((SWin_MJd * total_mean_wx_area_m2)-(SWout_MJd * total_mean_wx_area_m2)) + ((LWin_MJd*total_mean_wx_area_m2)-(LWout_MJd*total_mean_wx_area_m2)) + total_mean_tree_LWout_MJd) %>%
   #making a new NetRad column without the addition of the treeLWout, to compare
-  mutate(total_mean_net_rad_wotree = ((SWin_MJd * total_mean_wx_area_m2)-(SWout_MJd * total_mean_wx_area_m2)) + ((LWin_MJd*total_mean_wx_area_m2)-(LWout_MJd*total_mean_wx_area_m2)))
+  mutate(total_mean_net_rad_wotree_MJd = ((SWin_MJd * total_mean_wx_area_m2)-(SWout_MJd * total_mean_wx_area_m2)) + ((LWin_MJd*total_mean_wx_area_m2)-(LWout_MJd*total_mean_wx_area_m2)))
   
 mean_dt_persb_radtree_comb <- mean_dt_persb_radtree_comb %>%
   rename(wx_NR_MJdm2 = NR_MJd)
 ```
 
-Plotting Mean Data
+## Plotting Mean Data
 
 ```{r}
-#mean NetLW- persisent
-p_mean_NetLW_plot <- ggplot() + 
+#mean NetLW- persisent - with treeLWout included in net LW bars
+p_mean_NetLW_wtree_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_netLW_MJd), fill = "#1B7837", position = "stack", alpha = 0.8) +
+  geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_netLW_wtree_MJd), fill = "#1B7837", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
   geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
   
@@ -1238,7 +1286,7 @@ p_mean_NetLW_plot <- ggplot() +
   geom_point(data = persb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
   facet_wrap(~zone + burn_status) +
   labs(
-    #title = "Mean Values",
+    title = "Mean Values with tree LWout",
     x = "Date",
     y = "Net LW Rad (MJ/day)"
   ) +
@@ -1254,7 +1302,44 @@ p_mean_NetLW_plot <- ggplot() +
   theme_bw()
 
 
-p_mean_NetLW_plot
+p_mean_NetLW_wtree_plot
+```
+
+```{r}
+#mean NetLW- persisent - without treeLWout included in net LW bars
+p_mean_NetLW_wotree_plot <- ggplot() + 
+  # Column plot for Net Longwave Radiation of total plot area
+  geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_netLW_wotree_MJd), fill = "#1B7837", position = "stack", alpha = 0.8) +
+  # Line plot for Total burned trees LWout
+  geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
+  # Point plot for treewell development dates
+  geom_point(data = persb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
+  facet_wrap(~zone + burn_status) +
+  labs(
+    title = "Mean Values w/o tree LWout",
+    x = "Date",
+    y = "Net LW Rad (MJ/day)"
+  ) +
+  # Customizing colors and shapes
+  scale_color_manual(name = "Radiation Data", 
+                     values = c("Total burned trees LWout" = "#D95F02"),
+                     labels = c("Total burned trees LWout")) +
+  #scale_fill_manual(name = "Radiation Data", 
+                     #values = c("Net Longwave Radiation of total plot area" = "#1B7837"),
+                    # labels = c("Net Longwave Radiation of total plot area")) +
+  scale_shape_manual(name = "Treewell Data", 
+                     values = c("Dates that treewells developed" = 21)) +
+  theme_bw()
+
+
+p_mean_NetLW_wotree_plot
+```
+
+```{r}
+#combining NetLW dataframes w/ and w/o treeLWout included in bars
+p_mean_NetLW_comb <- ggarrange(p_mean_NetLW_wtree_plot, p_mean_NetLW_wotree_plot, nrow = 1, ncol = 2, common.legend = TRUE, legend = "right")
+
+p_mean_NetLW_comb
 ```
 
 ```{r}
@@ -1288,16 +1373,16 @@ p_mean_NetSW_plot
 
 ```{r}
 #this is the total net rad without the treeLWout variable included in the value
-p_mean_NetRad_plot <- ggplot() + 
+p_mean_NetRad_wtree_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_net_rad), fill = "#666666", position = "stack", alpha = 0.8) +
+  geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_net_rad_wtree_MJd), fill = "#666666", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
   geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
   # Point plot for treewell development dates
   geom_point(data = persb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
   facet_wrap(~zone + burn_status) +
   labs(
-    #title = "Mean Data Values",
+    title = "Mean Data Values with Tree LWout",
     x = "Date",
     y = "Total Net Radiation (MJ/day)"
   ) +
@@ -1312,21 +1397,21 @@ p_mean_NetRad_plot <- ggplot() +
                      values = c("Dates that treewells developed" = 21)) +
   theme_bw()
 
-p_mean_NetRad_plot
+p_mean_NetRad_wtree_plot
 ```
 
 ```{r}
 #this is the total net rad without the treeLWout variable included in the value
 p_mean_NetRad_wotree_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_net_rad_wotree), fill = "#666666", position = "stack", alpha = 0.8) +
+  geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_net_rad_wotree_MJd), fill = "#666666", position = "stack", alpha = 0.8) +
   # Line plot for Total burned trees LWout
   geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout")) +
   # Point plot for treewell development dates
   geom_point(data = persb_treewell_dates, aes(x = date, y = total_mean_tree_LWout_MJd, shape = "Dates that treewells developed"), fill = "black", size = 1) + 
   facet_wrap(~zone + burn_status) +
   labs(
-    #title = "Mean Data Values",
+    title = "Mean Data Values without Tree LWout",
     x = "Date",
     y = "Total Net Radiation (MJ/day)"
   ) +
@@ -1342,4 +1427,38 @@ p_mean_NetRad_wotree_plot <- ggplot() +
   theme_bw()
 
 p_mean_NetRad_wotree_plot
+```
+
+```{r}
+#combining total NetRad plots - with and without treeLWout included in bars
+p_mean_NetRad_comb <- ggarrange(p_mean_NetRad_wtree_plot, p_mean_NetRad_wotree_plot, nrow = 1, ncol = 2, common.legend = TRUE, legend = "right")
+```
+
+```{r}
+#combining and saving NetSW, NetLW and NetRad plots
+p_combined_mean_NR_plots <- ggarrange(p_mean_NetSW_plot, p_mean_NetLW_wotree_plot, p_mean_NetRad_wotree_plot, nrow = 3, ncol = 1, common.legend = TRUE, legend = "right") %>%
+  annotate_figure(combined_NR_plots, top = text_grob("Mean Data Values", 
+               color = "black", size = 14))
+
+p_combined_mean_NR_plots
+```
+
+# Accumulation Datasets
+
+These datasets are using the daily mean values for the radiation components and accumulating them by day to get an accumulation dataset that can be plotted to see if the patterns make sense
+
+## Data Wrangling
+
+```{r}
+#transitional data wrangling
+trans_mean_NR_accum_data <- mean_dt_transb_radtree_comb %>%
+  arrange(date) %>%
+  mutate(accu_netSW_MJd = accumulate(mean_wx_netSW_MJd, "+"))
+```
+
+```{r}
+#transitional data wrangling
+pers_mean_NR_accum_data <- mean_dt_persb_radtree_comb %>%
+  arrange(date) %>%
+  mutate(accu_netSW_MJd = accumulate(mean_wx_netSW_MJd, "+"))
 ```
