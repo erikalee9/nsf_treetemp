@@ -45,10 +45,10 @@ brewer.pal(n = 8, name = "Dark2")
 ```{r}
 #setting a color-blind friendly custom palette for gb/db/ubn- using RColorBrewer
 ##blue is unburned, orange is dead burned, green is green burned
-three_custom_colors <- c("#D95F02","#1B7837", adjustcolor("#2166AC", alpha = 0.7))
+three_custom_colors <- c("#D95F02","#2166AC", adjustcolor("#1B7837", alpha = 0.8))
 
 ## orange is burned, blue is unburned
-two_custom_colors <- c("#D95F02", adjustcolor("#2166AC", alpha = 0.7))
+two_custom_colors <- c("#D95F02", adjustcolor("#1B7837", alpha = 0.8))
 ```
 
 ```{r}
@@ -155,7 +155,7 @@ filtered_pers_b_aspects <- filtered_pers_b_aspects %>%
 
 filtered_pers_ub_aspects <- filtered_pers_ub_aspects %>%
   mutate(burn_status = case_when(
-    startsWith(tree_name, "ub") ~ "unburned",
+    startsWith(tree_name, "ub") ~ "live",
     TRUE ~ NA_character_  # Optional: handle other cases if needed
   )) %>%
   #adding a zone column
@@ -172,7 +172,7 @@ filtered_trans_b_aspects <- filtered_trans_b_aspects %>%
 
 filtered_trans_ub_aspects <- filtered_trans_ub_aspects %>%
   mutate(burn_status = case_when(
-    startsWith(tree_name, "ub") ~ "unburned",
+    startsWith(tree_name, "ub") ~ "live",
     TRUE ~ NA_character_  # Optional: handle other cases if needed
   )) %>%
   mutate(zone = "transitional")
@@ -258,6 +258,10 @@ s_daily_avg_tree_e <- avg_s_all_treetemps %>%
   group_by(date, phase, burn_status, zone) %>%
   summarize(temp_C = mean(temp, na.rm = TRUE), tree_LWout_wperm2 = mean(tree_LWout_wperm2, na.rm = TRUE),
             tree_LWout_Jperd = mean(treeLWout_Jperd, na.rm = TRUE), tree_LWout_MJperd = mean(treeLWout_MJperd, na.rm = TRUE))
+
+#daytime only dataframe - to use in V2 plots below
+s_dt_daily_avg_tree_e <- s_daily_avg_tree_e %>%
+  filter(phase == "day")
 ```
 
 ```{r}
@@ -268,10 +272,11 @@ write.csv(s_daily_avg_tree_e, "nsf/105E_trans_burned/day_avg_filtered_treeLWout_
 # Final Day/Night Plots
 
 -   \*\* Important plots, using these in thesis!
+-   V2 versions of below plot are only doing the daytime phase
 
 ```{r}
 #MJ plot
-s_dtnt_avg_e_MJ_plot <- ggplot(s_daily_avg_tree_e, aes(x = date, y = tree_LWout_avg_MJ, color = burn_status)) +
+s_dtnt_avg_e_MJ_plot <- ggplot(s_daily_avg_tree_e, aes(x = date, y = tree_LWout_MJperd, color = burn_status), linewidth = 0.8) +
   geom_line() +   # Add lines
   labs(title = "South Aspect 24-hour Avg LWout (MJ) from Trees",
        x = "Date",
@@ -286,7 +291,7 @@ s_dtnt_avg_e_MJ_plot
 
 ```{r}
 #w per m2 plot
-s_dtnt_avg_e_wperm2_plot <- ggplot(s_daily_avg_tree_e, aes(x = date, y = tree_LWout_avg_wperm2, color = burn_status)) +
+s_dtnt_avg_e_wperm2_plot <- ggplot(s_daily_avg_tree_e, aes(x = date, y = tree_LWout_wperm2, color = burn_status), linewidth = 0.8) +
   geom_line() +   # Add lines
   labs(title = "South Aspect 24-hour Avg LWout (W/m2) from Trees",
        x = "Date",
@@ -304,6 +309,55 @@ s_dtnt_avg_e_wperm2_plot
 ggsave(filename = "s_dtnt_avg_e_MJ_plot.png", plot = s_dtnt_avg_e_MJ_plot, width = 10, height = 8, dpi = 300)
 
 ggsave(filename = "s_dtnt_avg_e_wperm2_plot.png", plot = s_dtnt_avg_e_wperm2_plot, width = 10, height = 8, dpi = 300)
+```
+
+```{r}
+s_dt_avg_e_wperm2_V2 <- ggplot(s_dt_daily_avg_tree_e) +
+  # Map both color and linetype by burn_status
+  geom_line(aes(x = date, y = tree_LWout_wperm2, color = burn_status, linetype = burn_status), linewidth = 0.8) +  
+  
+  labs(#title = "South Aspect 24-hour Avg LWout (W/m2) from Trees",
+       x = "Date",
+       y = "Daily Avg Tree LWout (W/m2)",
+       color = "Burn Status") +
+  theme_bw() +
+  facet_wrap(~ zone + phase, dir = "h") +
+  
+  # Customizing color and linetype by burn_status
+  scale_color_manual(values = c("dead burn" = "#D95F02", "green burn" = "#2166AC", "live" = "#1B7837")) +
+  scale_linetype_manual(values = c("dead burn" = "solid", "green burn" = "solid", "live" = "dashed")) +
+
+  # Remove the title of the color legend
+  guides(color = guide_legend(title = NULL), 
+         linetype = guide_legend(title = NULL))  # Remove the title for linetype as well
+
+s_dt_avg_e_wperm2_V2
+```
+
+```{r}
+s_dt_avg_e_MJd_V2 <- ggplot(s_dt_daily_avg_tree_e) +
+  # Map both color and linetype by burn_status
+  geom_line(aes(x = date, y = tree_LWout_MJperd, color = burn_status, linetype = burn_status), linewidth = 0.8) +  
+  
+  labs(#title = "South Aspect 24-hour Avg LWout (MJ/d) from Trees",
+       x = "Date",
+       y = "Daily Avg Tree LWout (MJ/d)",
+       color = "Burn Status") +
+  theme_bw() +
+  facet_wrap(~ zone + phase, dir = "h") +
+  
+  # Customizing color and linetype by burn_status
+  scale_color_manual(values = c("dead burn" = "#D95F02", "green burn" = "#2166AC", "live" = "#1B7837")) +
+  scale_linetype_manual(values = c("dead burn" = "solid", "green burn" = "solid", "live" = "dashed")) +
+
+  # Remove the title of the color legend
+  guides(color = guide_legend(title = NULL), 
+         linetype = guide_legend(title = NULL))  # Remove the title for linetype as well
+
+s_dt_avg_e_MJd_V2
+```
+
+```         
 ```
 
 # Tree RL + Weather Station Data
@@ -573,8 +627,8 @@ day_combined_filtered_wx_data <- day_avg_persb_hourly_wx %>%
 ##** use this to join with the tree LWout dataframe!
 day_avg_filtered_wx_data <- day_combined_filtered_wx_data %>%
   group_by(date, zone, burn_status, phase) %>%
-  summarize(across(everything(), mean, na.rm = TRUE)) %>%
-  select(-c(datetime, time, time_hms))
+  summarize(across(everything(), mean, na.rm = TRUE))
+  #select(-c(datetime, time, time_hms))
 ```
 
 Tree temp data wrangling to match wx station combined dataframes - south only tree temp data
@@ -711,7 +765,7 @@ burned_day_s_avg_values <- day_final_combined_wx_treeLWout_data %>%
   filter(burn_status == "burned")
 
 unburned_day_s_avg_values <- day_final_combined_wx_treeLWout_data %>%
-  filter(burn_status == "unburned")
+  filter(burn_status == "live")
 ```
 
 ```{r}
@@ -1030,10 +1084,10 @@ filtered_unburned_treetemps <- filtered_all_treetemps %>%
   filter(aspect %in% c("north", "south")) %>%
   select(-sensor_id) %>%
   #creating a dataframe with only burned temps, then getting their average
-  filter(burn_status == "unburned") %>%
+  filter(burn_status == "live") %>%
   group_by(date, zone, phase, aspect) %>%
   summarize(avg_treetemp = mean(temp, na.rm = TRUE), .groups = 'drop') %>%
-  mutate(burn_status = "unburned") %>%
+  mutate(burn_status = "live") %>%
   select(date, phase, zone, burn_status, aspect, avg_treetemp)
 
 filtered_unburned_day_treetemps <- filtered_unburned_treetemps %>%
@@ -1049,12 +1103,59 @@ filtered_unburned_night_treetemps <- filtered_unburned_treetemps %>%
 combined_day_b_ub_treetemp_data <- filtered_burned_day_treetemps %>%
   full_join(filtered_unburned_day_treetemps)
 
+
 combined_night_b_ub_treetemp_data <-
   filtered_burned_night_treetemps %>%
   full_join(filtered_unburned_night_treetemps)
 ```
 
+```{r}
+#creating aspect dependent dataframes to make more clear legends on V3 plots below
+n_filtered_burned_day_tt <- filtered_burned_treetemps %>%
+  filter(aspect == "north")
+
+s_filtered_burned_day_tt <- filtered_burned_treetemps %>%
+  filter(aspect == "south")
+
+n_filtered_unburned_day_tt <- filtered_unburned_treetemps %>%
+  filter(aspect == "north")
+
+s_filtered_unburned_day_tt <- filtered_unburned_treetemps %>%
+  filter(aspect == "south")
+```
+
 Plotting Option 2
+
+```{r}
+#USE THIS PLOT ONLY! V3
+{r}
+daynight_treetemp_plots_V3 <- ggplot() + 
+  geom_line(data = n_filtered_burned_day_tt, 
+            aes(x = date, y = avg_treetemp, color = "North, burned", linetype = "dashed")) +
+  geom_line(data = s_filtered_burned_day_tt, 
+            aes(x = date, y = avg_treetemp, color = "South, burned", linetype = "solid"), alpha = 0.8, linewidth = 0.7) + 
+  geom_line(data = n_filtered_unburned_day_tt, 
+            aes(x = date, y = avg_treetemp, color = "North, live", linetype = "dashed")) +
+  geom_line(data = s_filtered_unburned_day_tt, 
+            aes(x = date, y = avg_treetemp, color = "South, live", linetype = "solid"), alpha = 0.8, linewidth = 0.7) +
+  labs(
+    x = "Date",
+    y = "Temperature (C)"
+  ) +
+  theme_bw() +
+  facet_wrap(~ zone + phase, dir = "v") +
+  
+  # Customizing the color and linetype legend
+  scale_color_manual(name = NULL,  # Remove header for color legend
+                     values = c("North, burned" = "#D95F02", "South, burned" = "#D95F02", 
+                                "North, live" = "#1B7837", "South, live" = "#1B7837")) +
+  scale_linetype_manual(values = c("dashed" = "dashed", "solid" = "solid"), 
+                        guide = "none") +  # Remove linetype legend
+  guides(color = guide_legend(override.aes = list(linetype = c("dashed", "dashed", "solid", "solid")), 
+                              title = NULL))  # Remove color legend header
+
+daynight_treetemp_plots_V3
+```
 
 ```{r}
 #daytime plot
@@ -1107,8 +1208,6 @@ comb_aspect_treetemps_V2
 #saving ggplot as high quality png
 ggsave("comb_aspect_treetemps_V2.png", comb_aspect_treetemps_V2, width = 8, height = 6, dpi = 300)
 ```
-
-HAVEN'T WORKED ON ANYTHING ELSE BELOW THIS POINT AS OF 8/20/24
 
 # New LWout Dataframes
 
