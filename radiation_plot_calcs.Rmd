@@ -1536,7 +1536,7 @@ mean_dt_transb_radtree_comb$accu_netLW_wotree_MJd <- Reduce(`+`, mean_dt_transb_
 
 mean_dt_transb_radtree_comb$accu_netRad_wtree_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_net_rad_wtree_MJd, accumulate = TRUE)
 
-mean_dt_transb_radtree_comb$accu_netRad_wotree_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_net_rad_wotree, accumulate = TRUE)
+mean_dt_transb_radtree_comb$accu_netRad_wotree_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_net_rad_wotree, accumulate = TRUE)x
 ```
 
 ```{r}
@@ -1568,7 +1568,7 @@ accu_transb_treewell_dates <- transb_snowcamera_data %>%
   rename(burn_status = mortality, treewell_developement = treewell_developed) %>%
   select(date, zone, burn_status, snowcam_max_depth_cm, conditions, treewell_developement)
 
-accu_transb_treewell_dates <- persb_snowcamera_data %>%
+accu_persb_treewell_dates <- persb_snowcamera_data %>%
   filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-24")) %>%
   select(date, zone, burn_status, snowcam_max_depth_cm, conditions, treewell_developement)
   
@@ -1594,10 +1594,10 @@ library(scales)  # Load scales package for number formatting
 
 #plot with out net Rad including treeLWout data
 mean_NR_acc_plot <- ggplot(data = accum_mean_data_bothzones) +
-  geom_line(aes(x = date, y = accu_treeLWout_MJd, color = "Tree LWout", linetype = "Tree LWout"), linewidth = 0.7) +
-  geom_line(aes(x = date, y = accu_netLW_wotree_MJd, color = "Net LW", linetype = "Net LW"), linewidth = 0.7) +
-  geom_line(aes(x = date, y = accu_netSW_MJd, color = "Net SW", linetype = "Net SW"), linewidth = 0.7) + 
-  geom_line(aes(x = date, y = accu_netRad_wotree_MJd, color = "Total Net Radiation", linetype = "Total Net Radiation"), linewidth = 0.7) +
+  geom_line(aes(x = date, y = accu_treeLWout_MJd, color = "Tree LWout", linetype = "Tree LWout"), linewidth = 0.8) +
+  geom_line(aes(x = date, y = accu_netLW_wotree_MJd, color = "Net LW", linetype = "Net LW"), linewidth = 0.8) +
+  geom_line(aes(x = date, y = accu_netSW_MJd, color = "Net SW", linetype = "Net SW"), linewidth = 0.8) + 
+  geom_line(aes(x = date, y = accu_netRad_wotree_MJd, color = "Total Net Radiation", linetype = "Total Net Radiation"), linewidth = 0.8) +
   geom_point(data = accu_treewell_data, aes(x = date, y = accu_treeLWout_MJd, 
              shape = "Dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
@@ -1605,18 +1605,17 @@ mean_NR_acc_plot <- ggplot(data = accum_mean_data_bothzones) +
   labs(
     title = "Accumulation Mean Data Values w/o Tree LWout in Net Rad",
     x = "Date",
-    y = "Radiation Component (MJ/d)"
+    y = "Cumulative Radiation Component (MJ/d)"
   ) +
-  scale_color_manual(
-    values = c("Tree LWout" = "#D95F02", 
-               "Net LW" = "#1B7837", 
-               "Net SW" = "#2166AC", 
-               "Total Net Radiation" = "#666666")
-  ) +
+   scale_color_manual(
+   values = c("Tree LWout" = "#1B7837", 
+               "Net LW" = "#D95F02", 
+               "Net SW" = "#E6AB02", 
+               "Total Net Radiation" = "black")) +
   scale_linetype_manual(
-    values = c("Tree LWout" = "solid", 
+    values = c("Tree LWout" = "dashed", 
                "Net LW" = "solid", 
-               "Net SW" = "solid", "Total Net Radiation" = "dashed")
+               "Net SW" = "solid", "Total Net Radiation" = "solid")
   ) +
   scale_shape_manual(
     values = c("Dates that treewells developed" = 16)  # Set shape for points
@@ -1635,10 +1634,10 @@ print(mean_NR_acc_plot)
 ```{r}
 #plot WITH net Rad including treeLWout data
 mean_NR_acc_plot <- ggplot(data = accum_mean_data_bothzones) +
-  geom_line(aes(x = date, y = accu_treeLWout_MJd, color = "Tree LWout", linetype = "Tree LWout"), linewidth = 0.7) +
-  geom_line(aes(x = date, y = accu_netLW_wotree_MJd, color = "Net LW", linetype = "Net LW"), linewidth = 0.7) +
-  geom_line(aes(x = date, y = accu_netSW_MJd, color = "Net SW", linetype = "Net SW"), linewidth = 0.7) + 
-  geom_line(aes(x = date, y = accu_netRad_wtree_MJd, color = "Total Net Radiation", linetype = "Total Net Radiation"), linewidth = 0.7) +
+  geom_line(aes(x = date, y = accu_treeLWout_MJd, color = "Tree LWout", linetype = "Tree LWout"), linewidth = 0.8) +
+  geom_line(aes(x = date, y = accu_netLW_wotree_MJd, color = "Net LW", linetype = "Net LW"), linewidth = 0.8) +
+  geom_line(aes(x = date, y = accu_netSW_MJd, color = "Net SW", linetype = "Net SW"), linewidth = 0.8) + 
+  geom_line(aes(x = date, y = accu_netRad_wtree_MJd, color = "Total Net Radiation", linetype = "Total Net Radiation"), linewidth = 0.8) +
   geom_point(data = accu_treewell_data, aes(x = date, y = accu_treeLWout_MJd, 
              shape = "Dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
@@ -1649,15 +1648,15 @@ mean_NR_acc_plot <- ggplot(data = accum_mean_data_bothzones) +
     y = "Radiation Component (MJ/d)"
   ) +
   scale_color_manual(
-    values = c("Tree LWout" = "#D95F02", 
-               "Net LW" = "#1B7837", 
-               "Net SW" = "#2166AC", 
-               "Total Net Radiation" = "#666666")
+    values = c("Tree LWout" = "#1B7837", 
+               "Net LW" = "#D95F02", 
+               "Net SW" = "#E6AB02", 
+               "Total Net Radiation" = "black")
   ) +
   scale_linetype_manual(
-    values = c("Tree LWout" = "solid", 
+    values = c("Tree LWout" = "dashed", 
                "Net LW" = "solid", 
-               "Net SW" = "solid", "Total Net Radiation" = "dashed")
+               "Net SW" = "solid", "Total Net Radiation" = "solid")
   ) +
   scale_shape_manual(
     values = c("Dates that treewells developed" = 16)  # Set shape for points
@@ -1674,3 +1673,106 @@ print(mean_NR_acc_plot)
 ```
 
 \*\* net LW is negative because there is less incoming LW radiation toward the earth & surface objects than there is outgoing LW radiation form the earths surface & objects, therefor the net LW radiation is negative. **Snow or Ice Surfaces** can be highly reflective and also radiate longwave energy efficiently, which can result in negative NetLW values. LWnet being negative is a reflective of surface energy loss (heat going back out - in this case, into the snow).
+
+Cumulative Single Radiation Plots
+
+```{r}
+#persistent
+single_persb_comb_NR_plot <- ggplot() + 
+  # Column plot for Net Longwave Radiation of total plot area
+  geom_col(data = mean_dt_persb_radtree_comb, 
+           aes(x = date, y = mean_wx_netSW_MJd, fill = "Net Shortwave Radiation"), position = "stack") +
+  geom_col(data = mean_dt_persb_radtree_comb, 
+           aes(x = date, y = total_mean_netLW_wotree_MJd, fill = "Net Longwave Radiation without Trees"), position = "stack") + 
+  geom_col(data = mean_dt_persb_radtree_comb, 
+           aes(x = date, y = total_mean_net_rad_wotree_MJd, fill = "Net Radiation without Trees"), position = "stack") + 
+  geom_line(data = mean_dt_persb_radtree_comb, 
+            aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout"), linewidth = 0.8) +
+   # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_persb_snowcamera_data, 
+            aes(x = date, y = snowcam_max_depth_m * p_depth_factor, color = "Daily max snow depth"), 
+            linewidth = 0.8, linetype = 2) + 
+  # Point plot for treewell development dates
+  geom_point(data = filtered_persb_treewell_data, 
+             aes(x = date, y = snowcam_max_depth_m * p_depth_factor, shape = "Dates that treewells developed"), 
+             color = "red", fill = "red", size = 1.5) + 
+  facet_wrap(~zone + burn_status) +
+  labs(
+    title = "Mean Data Values without Tree LWout",
+    x = "Date",
+    y = "Daily Cumulative Net Radiation (MJ/d)"
+  ) +
+  # Customizing colors and shapes
+  scale_color_manual(name = "Radiation Data", 
+                     values = c("Total burned trees LWout" = "#1B7837", 
+                                "Daily max snow depth" = "#2166AC")) +
+  scale_fill_manual(name = "Radiation Data", 
+                    values = c("Net Shortwave Radiation" = "#E6AB02", 
+                               "Net Longwave Radiation without Trees" = "#D95F02", 
+                               "Net Radiation without Trees" = "black")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL),  # Remove title for shape legend
+         fill = guide_legend(title = NULL)) +  # Remove title for fill legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
+  theme_bw()
+
+
+
+single_persb_comb_NR_plot
+```
+
+```{r}
+#transitional
+single_transb_comb_NR_plot <- ggplot() + 
+  # Column plot for Net Longwave Radiation of total plot area
+  geom_col(data = mean_dt_transb_radtree_comb, 
+           aes(x = date, y = mean_wx_netSW_MJd, fill = "Net Shortwave Radiation"), position = "stack", alpha = 0.8) +
+  geom_col(data = mean_dt_transb_radtree_comb, 
+           aes(x = date, y = total_mean_netLW_wotree_MJd, fill = "Net Longwave Radiation without Trees"), position = "stack", alpha = 0.8) + 
+  geom_col(data = mean_dt_transb_radtree_comb, 
+           aes(x = date, y = total_mean_net_rad_wotree, fill = "Net Radiation without Trees"), position = "stack", alpha = 0.8) + 
+  geom_line(data = mean_dt_transb_radtree_comb, 
+            aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout"), linewidth = 0.8) +
+   # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_transb_snowcamera_data, 
+            aes(x = date, y = snowcam_max_depth_m * p_depth_factor, color = "Daily max snow depth"), 
+            linewidth = 0.8, linetype = 2) + 
+  # Point plot for treewell development dates
+  geom_point(data = filtered_transb_treewell_data, 
+             aes(x = date, y = snowcam_max_depth_m * p_depth_factor, shape = "Dates that treewells developed"), 
+             color = "red", fill = "red", size = 1.5) + 
+  facet_wrap(~zone + burn_status) +
+  labs(
+    #title = "Mean Data Values without Tree LWout",
+    x = "Date",
+    y = "Daily Cumulative Net Radiation (MJ/d)"
+  ) +
+  # Customizing colors and shapes
+  scale_color_manual(name = "Radiation Data", 
+                     values = c("Total burned trees LWout" = "#1B7837", 
+                                "Daily max snow depth" = "#2166AC")) +
+   scale_fill_manual(name = "Radiation Data", 
+                    values = c("Net Shortwave Radiation" = "#E6AB02", 
+                               "Net Longwave Radiation without Trees" = "#D95F02", 
+                               "Net Radiation without Trees" = "black")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL),  # Remove title for shape legend
+         fill = guide_legend(title = NULL)) +  # Remove title for fill legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
+  theme_bw()
+
+single_transb_comb_NR_plot
+```
+
+```{r}
+#combining total NetRad plots - with and without treeLWout included in bars
+single_mean_NetRad_comb <- ggarrange(single_persb_comb_NR_plot, single_transb_comb_NR_plot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+single_mean_NetRad_comb
+```
