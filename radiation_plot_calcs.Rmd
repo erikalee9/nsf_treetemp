@@ -1536,7 +1536,7 @@ mean_dt_transb_radtree_comb$accu_netLW_wotree_MJd <- Reduce(`+`, mean_dt_transb_
 
 mean_dt_transb_radtree_comb$accu_netRad_wtree_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_net_rad_wtree_MJd, accumulate = TRUE)
 
-mean_dt_transb_radtree_comb$accu_netRad_wotree_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_net_rad_wotree, accumulate = TRUE)x
+mean_dt_transb_radtree_comb$accu_netRad_wotree_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_net_rad_wotree, accumulate = TRUE)
 ```
 
 ```{r}
@@ -1589,11 +1589,9 @@ accu_treewell_data <- accum_mean_data_bothzones %>%
 Accumulation Plotting
 
 ```{r}
-library(ggplot2)
-library(scales)  # Load scales package for number formatting
 
 #plot with out net Rad including treeLWout data
-mean_NR_acc_plot <- ggplot(data = accum_mean_data_bothzones) +
+mean_NR_acc_wotree_plot <- ggplot(data = accum_mean_data_bothzones) +
   geom_line(aes(x = date, y = accu_treeLWout_MJd, color = "Tree LWout", linetype = "Tree LWout"), linewidth = 0.8) +
   geom_line(aes(x = date, y = accu_netLW_wotree_MJd, color = "Net LW", linetype = "Net LW"), linewidth = 0.8) +
   geom_line(aes(x = date, y = accu_netSW_MJd, color = "Net SW", linetype = "Net SW"), linewidth = 0.8) + 
@@ -1603,19 +1601,19 @@ mean_NR_acc_plot <- ggplot(data = accum_mean_data_bothzones) +
              color = "black", fill = "black", size = 1.5) +
   facet_wrap(~zone + burn_status) +
   labs(
-    title = "Accumulation Mean Data Values w/o Tree LWout in Net Rad",
+    title = "Without Tree LWout in Net Rad",
     x = "Date",
     y = "Cumulative Radiation Component (MJ/d)"
   ) +
    scale_color_manual(
-   values = c("Tree LWout" = "#1B7837", 
-               "Net LW" = "#D95F02", 
-               "Net SW" = "#E6AB02", 
+   values = c("Tree LWout" = "#D95F02", 
+               "Net LW" = "#1B7837", 
+               "Net SW" = "#2166AC", 
                "Total Net Radiation" = "black")) +
   scale_linetype_manual(
-    values = c("Tree LWout" = "dashed", 
+    values = c("Tree LWout" = "solid", 
                "Net LW" = "solid", 
-               "Net SW" = "solid", "Total Net Radiation" = "solid")
+               "Net SW" = "solid", "Total Net Radiation" = "dashed")
   ) +
   scale_shape_manual(
     values = c("Dates that treewells developed" = 16)  # Set shape for points
@@ -1628,12 +1626,12 @@ mean_NR_acc_plot <- ggplot(data = accum_mean_data_bothzones) +
   ) +
   theme_bw()
 
-print(mean_NR_acc_plot)
+print(mean_NR_acc_wotree_plot)
 ```
 
 ```{r}
 #plot WITH net Rad including treeLWout data
-mean_NR_acc_plot <- ggplot(data = accum_mean_data_bothzones) +
+mean_NR_acc_wtree_plot <- ggplot(data = accum_mean_data_bothzones) +
   geom_line(aes(x = date, y = accu_treeLWout_MJd, color = "Tree LWout", linetype = "Tree LWout"), linewidth = 0.8) +
   geom_line(aes(x = date, y = accu_netLW_wotree_MJd, color = "Net LW", linetype = "Net LW"), linewidth = 0.8) +
   geom_line(aes(x = date, y = accu_netSW_MJd, color = "Net SW", linetype = "Net SW"), linewidth = 0.8) + 
@@ -1643,20 +1641,19 @@ mean_NR_acc_plot <- ggplot(data = accum_mean_data_bothzones) +
              color = "black", fill = "black", size = 1.5) +
   facet_wrap(~zone + burn_status) +
   labs(
-    title = "Accumulation Mean Data Values with Tree LWout in Net Rad",
+    title = "With Tree LWout in Net Rad",
     x = "Date",
     y = "Radiation Component (MJ/d)"
   ) +
   scale_color_manual(
-    values = c("Tree LWout" = "#1B7837", 
-               "Net LW" = "#D95F02", 
-               "Net SW" = "#E6AB02", 
-               "Total Net Radiation" = "black")
-  ) +
+   values = c("Tree LWout" = "#D95F02", 
+               "Net LW" = "#1B7837", 
+               "Net SW" = "#2166AC", 
+               "Total Net Radiation" = "black")) +
   scale_linetype_manual(
-    values = c("Tree LWout" = "dashed", 
+    values = c("Tree LWout" = "solid", 
                "Net LW" = "solid", 
-               "Net SW" = "solid", "Total Net Radiation" = "solid")
+               "Net SW" = "solid", "Total Net Radiation" = "dashed")
   ) +
   scale_shape_manual(
     values = c("Dates that treewells developed" = 16)  # Set shape for points
@@ -1669,7 +1666,13 @@ mean_NR_acc_plot <- ggplot(data = accum_mean_data_bothzones) +
   ) +
   theme_bw()
 
-print(mean_NR_acc_plot)
+print(mean_NR_acc_wtree_plot)
+```
+
+```{r}
+accum_comb_NR_wandwotree <- ggarrange(mean_NR_acc_wtree_plot, mean_NR_acc_wotree_plot, nrow = 1, ncol = 2, common.legend = TRUE, legend = "right")
+
+accum_comb_NR_wandwotree
 ```
 
 \*\* net LW is negative because there is less incoming LW radiation toward the earth & surface objects than there is outgoing LW radiation form the earths surface & objects, therefor the net LW radiation is negative. **Snow or Ice Surfaces** can be highly reflective and also radiate longwave energy efficiently, which can result in negative NetLW values. LWnet being negative is a reflective of surface energy loss (heat going back out - in this case, into the snow).
@@ -1775,4 +1778,195 @@ single_transb_comb_NR_plot
 single_mean_NetRad_comb <- ggarrange(single_persb_comb_NR_plot, single_transb_comb_NR_plot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
 
 single_mean_NetRad_comb
+```
+
+# Air TreeLWout Plots
+
+```{r}
+#creating filtered dataframes that have day and phase for weather station air temp data
+
+##transitional
+airT_dt_transb <- filtered_transb_rad_wx %>%
+  filter(phase == "day") %>%
+  group_by(date) %>%
+  summarize(mean_airT_C = mean(AirTC_Avg, na.rm = TRUE), max_wxs_snowdepth_m = max(SnowDepth_m))
+
+treeair_transb_comp <- avg_dt_transb_treeLW_burned %>%
+  inner_join(airT_dt_transb)
+
+#this is for the treewell development dates on the tree temp/air plot
+transb_air_treewell <- full_treewell_data %>%
+  filter(zone == "transitional") %>%
+  mutate(treewell_developement = case_when(
+    treewell_developement == "maybe" ~ "yes",
+    treewell_developement == "no snow" ~ "no",
+    TRUE ~ treewell_developement  # Keep all other values unchanged
+  )) %>%
+  inner_join(treeair_transb_comp) %>%
+  filter(treewell_developement == "yes")
+
+##persistent
+airT_dt_persb <- filtered_persb_rad_wx %>%
+  filter(phase == "day") %>%
+  group_by(date) %>%
+  summarize(mean_airT_C = mean(AirTC_Avg, na.rm = TRUE), max_wxs_snowdepth_m = max(SnowDepth_m))
+
+treeair_persb_comp <- avg_dt_persb_treeLW_burned %>%
+  inner_join(airT_dt_persb)
+
+#this is for the treewell development dates on the tree temp/air plot
+persb_air_treewell <- full_treewell_data %>%
+  filter(zone == "persistent") %>%
+  mutate(treewell_developement = case_when(
+    treewell_developement == "maybe" ~ "yes",
+    treewell_developement == "no snow" ~ "no",
+    TRUE ~ treewell_developement  # Keep all other values unchanged
+  )) %>%
+  inner_join(treeair_persb_comp) %>%
+  filter(treewell_developement == "yes")
+```
+
+```{r}
+#combining all the dataframes to just facet wrap from one  
+## for temp lines
+all_treeair_comp <- rbind(treeair_transb_comp, treeair_persb_comp)
+
+# for treewell date points
+all_air_treewell <- rbind(persb_air_treewell, transb_air_treewell)
+```
+
+Plotting
+
+```{r}
+treeair_comb_plot <- ggplot() +
+  geom_line(data = all_treeair_comp, 
+            aes(x = date, y = b_treetemp_C, color = "Tree Temp")) + # Add color inside aes
+  geom_line(data = all_treeair_comp, 
+            aes(x = date, y = mean_airT_C, color = "Air Temp")) + # Use a different y variable for Air Temp
+  geom_point(data = all_air_treewell, 
+             aes(x = date, y = b_treetemp_C, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  scale_color_manual(values = c("Tree Temp" = "#D95F02", "Air Temp" = "#2166AC")) +  # Manually set line colors
+  facet_wrap(~zone + burn_status) +
+  labs(
+    #title = "Mean Data Values without Tree LWout",
+    x = "Date",
+    y = "Average Daytime Temp (C)"
+  ) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 19)) + 
+  guides(color = guide_legend(title = NULL), 
+         shape = guide_legend(title = NULL), 
+         fill = guide_legend(title = NULL)) + 
+  theme_bw()
+  
+
+treeair_comb_plot
+```
+
+```{r}
+#adding radiation to the above plots
+p_mean_NetRad_wotree_plot <- ggplot() + 
+  # Column plot for Net Longwave Radiation of total plot area
+  geom_col(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_net_rad_wotree_MJd), fill = "#666666", position = "stack", alpha = 0.8) +
+  # Line plot for Total burned trees LWout
+  geom_line(data = mean_dt_persb_radtree_comb, aes(x = date, y = total_mean_tree_LWout_MJd, color = "Total burned trees LWout (MJ/d)")) +
+   # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(data = filtered_persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m * p_depth_factor, 
+             color = "Daily max snow depth (m)"), linewidth = 0.6) + 
+  # Point plot for treewell development dates
+  geom_point(data = filtered_persb_treewell_data, aes(x = date, y = snowcam_max_depth_m * p_depth_factor, 
+             shape = "Dates that treewells developed"), 
+             color = "darkgoldenrod3", fill = "darkgoldenrod3", size = 1.5) + 
+  facet_wrap(~zone + burn_status) +
+  labs(
+    title = "Mean Data Values without Tree LWout",
+    x = "Date",
+    y = "Total Net Radiation (MJ/day)"
+  ) +
+  # Customizing colors and shapes
+  scale_color_manual(name = "Radiation Data", 
+                     values = c("Total burned trees LWout (MJ/d)" = "#D95F02", "Daily max snow depth (m)" = "grey30")) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 21)) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+  scale_y_continuous(
+    sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
+  theme_bw()
+
+p_mean_NetRad_wotree_plot
+```
+
+```{r}
+p_mean_airtreewell <- ggplot() +
+  geom_line(data = treeair_persb_comp, 
+            aes(x = date, y = b_treetemp_C, color = "Tree Temp")) + # Add color inside aes
+  geom_line(data = treeair_persb_comp, 
+            aes(x = date, y = mean_airT_C, color = "Air Temp")) + # Use a different y variable for Air Temp
+  geom_point(data = persb_air_treewell, 
+             aes(x = date, y = b_treetemp_C, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  scale_color_manual(values = c("Tree Temp" = "#D95F02", "Air Temp" = "#2166AC")) +  # Manually set line colors
+  facet_wrap(~zone + burn_status) +
+  labs(
+    #title = "Mean Data Values without Tree LWout",
+    x = "Date",
+    y = "Average Daytime Temp (C)"
+  ) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 19)) + 
+  guides(color = guide_legend(title = NULL), 
+         shape = guide_legend(title = NULL), 
+         fill = guide_legend(title = NULL)) + 
+  theme_bw()
+
+p_mean_airtreewell
+```
+
+```{r}
+#install.packages("patchwork")
+library(patchwork)
+
+#combining plots using patchwork to get x-axis to match
+persb_NR_airtree_plot <- p_mean_NetRad_wotree_plot / p_mean_airtreewell + 
+                         plot_layout(nrow = 2) & theme(axis.title.x = element_blank())
+
+persb_NR_airtree_plot
+
+
+persb_NR_airtree_plot
+```
+
+Doing the same thing as above, but for transitional zone
+
+```{r}
+t_mean_airtreewell <- ggplot() +
+  geom_line(data = treeair_transb_comp, 
+            aes(x = date, y = b_treetemp_C, color = "Tree Temp")) + # Add color inside aes
+  geom_line(data = treeair_transb_comp, 
+            aes(x = date, y = mean_airT_C, color = "Air Temp")) + # Use a different y variable for Air Temp
+  geom_point(data = transb_air_treewell, 
+             aes(x = date, y = b_treetemp_C, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  scale_color_manual(values = c("Tree Temp" = "#D95F02", "Air Temp" = "#2166AC")) +  # Manually set line colors
+  facet_wrap(~zone + burn_status) +
+  labs(
+    #title = "Mean Data Values without Tree LWout",
+    x = "Date",
+    y = "Average Daytime Temp (C)"
+  ) +
+  scale_shape_manual(values = c("Dates that treewells developed" = 19)) + 
+  guides(color = guide_legend(title = NULL), 
+         shape = guide_legend(title = NULL), 
+         fill = guide_legend(title = NULL)) + 
+  theme_bw()
+
+t_mean_airtreewell
+```
+
+```{r}
+#combining plots using patchwork to get x-axis to match
+transb_NR_airtree_plot <- t_mean_NetRad_wotree_plot / t_mean_airtreewell + 
+                         plot_layout(nrow = 2) & theme(axis.title.x = element_blank())
+
+transb_NR_airtree_plot
 ```
