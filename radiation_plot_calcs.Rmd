@@ -704,7 +704,15 @@ t_mean_NetLW_wtree_plot <- ggplot() +
   scale_y_continuous(
     sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
-  theme_bw()
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))
 
 
 t_mean_NetLW_wtree_plot
@@ -740,7 +748,15 @@ t_mean_NetLW_wotree_plot <- ggplot() +
   scale_y_continuous(
     sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
-  theme_bw()
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))
 
 t_mean_NetLW_wotree_plot
 ```
@@ -788,7 +804,15 @@ t_mean_NetSW_plot <- ggplot() +
   scale_y_continuous(
     sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
-  theme_bw()
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))
 
 t_mean_NetSW_plot
 ```
@@ -821,7 +845,15 @@ t_mean_NetRad_wtree_plot <- ggplot() +
   scale_y_continuous(
     sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
-  theme_bw()
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))
 
 t_mean_NetRad_wtree_plot
 ```
@@ -855,7 +887,15 @@ t_mean_NetRad_wotree_plot <- ggplot() +
   scale_y_continuous(
     sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
-  theme_bw()
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))
 
 t_mean_NetRad_wotree_plot
 ```
@@ -1353,7 +1393,15 @@ p_mean_NetLW_wtree_plot <- ggplot() +
   scale_y_continuous(
     sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
-  theme_bw()
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))
 
 
 p_mean_NetLW_wtree_plot
@@ -1388,7 +1436,15 @@ p_mean_NetLW_wotree_plot <- ggplot() +
   scale_y_continuous(
     sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
-  theme_bw()
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))
 
 
 p_mean_NetLW_wotree_plot
@@ -1430,7 +1486,15 @@ p_mean_NetSW_plot <- ggplot() +
   scale_y_continuous(
     sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
-  theme_bw()
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))
 
 p_mean_NetSW_plot
 ```
@@ -1464,7 +1528,15 @@ p_mean_NetRad_wtree_plot <- ggplot() +
   scale_y_continuous(
     sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
-  theme_bw()
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))
 
 p_mean_NetRad_wtree_plot
 ```
@@ -1498,7 +1570,15 @@ p_mean_NetRad_wotree_plot <- ggplot() +
   scale_y_continuous(
     sec.axis = sec_axis(~./depth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
-  theme_bw()
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))
 
 p_mean_NetRad_wotree_plot
 ```
@@ -1537,6 +1617,17 @@ mean_dt_transb_radtree_comb$accu_netLW_wotree_MJd <- Reduce(`+`, mean_dt_transb_
 mean_dt_transb_radtree_comb$accu_netRad_wtree_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_net_rad_wtree_MJd, accumulate = TRUE)
 
 mean_dt_transb_radtree_comb$accu_netRad_wotree_MJd <- Reduce(`+`, mean_dt_transb_radtree_comb$total_mean_net_rad_wotree, accumulate = TRUE)
+
+#adding accumulation snowdepth to mean_dt dataframes
+mean_dt_transb_radtree_comb$accu_max_snowdepth_cm <- Reduce(`+`, accu_transb_treewell_dates$snowcam_max_depth_cm, accumulate = TRUE) 
+
+#making a meteres snowdepth column from the above data
+mean_dt_transb_radtree_comb <- mean_dt_transb_radtree_comb %>%
+  mutate(accu_max_snowdepth_m = accu_max_snowdepth_cm/100)
+
+#adding in non-cumulative snow depths
+mean_dt_transb_radtree_comb <- mean_dt_transb_radtree_comb %>%
+  inner_join(accu_transb_treewell_dates)
 ```
 
 ```{r}
@@ -1552,13 +1643,25 @@ mean_dt_persb_radtree_comb$accu_netLW_wotree_MJd <- Reduce(`+`, mean_dt_persb_ra
 mean_dt_persb_radtree_comb$accu_netRad_wtree_MJd <- Reduce(`+`, mean_dt_persb_radtree_comb$total_mean_net_rad_wtree_MJd, accumulate = TRUE)
 
 mean_dt_persb_radtree_comb$accu_netRad_wotree_MJd <- Reduce(`+`, mean_dt_persb_radtree_comb$total_mean_net_rad_wotree_MJd, accumulate = TRUE)
+
+#adding accumulation snowdepth to mean_dt dataframes
+mean_dt_persb_radtree_comb$accu_max_snowdepth_cm <- Reduce(`+`, accu_persb_treewell_dates$snowcam_max_depth_cm, accumulate = TRUE) 
+
+#making a meteres snowdepth column from the above data
+mean_dt_persb_radtree_comb <- mean_dt_persb_radtree_comb %>%
+  mutate(accu_max_snowdepth_m = accu_max_snowdepth_cm/100)
+
+#adding in non-cumulative snowdepths
+mean_dt_persb_radtree_comb <- mean_dt_persb_radtree_comb %>%
+  inner_join(accu_persb_treewell_dates)
 ```
 
 ```{r}
 #making an accumulation dataframe with both snow zones on it, so I can simply facet wrap by that for the plots
 
 accum_mean_data_bothzones <- rbind(mean_dt_transb_radtree_comb, mean_dt_persb_radtree_comb) %>%
-  select(date, phase, zone, burn_status, accu_netSW_MJd, accu_netLW_wtree_MJd, accu_netLW_wotree_MJd, accu_netRad_wtree_MJd, accu_netRad_wotree_MJd, accu_treeLWout_MJd)
+  select(date, phase, zone, burn_status, accu_netSW_MJd, accu_netLW_wtree_MJd, accu_netLW_wotree_MJd, accu_netRad_wtree_MJd, accu_netRad_wotree_MJd, accu_treeLWout_MJd, accu_max_snowdepth_cm, accu_max_snowdepth_m, snowcam_max_depth_cm, conditions, treewell_developement) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100)
 ```
 
 ```{r}
@@ -1587,6 +1690,8 @@ accu_treewell_data <- accum_mean_data_bothzones %>%
 ```
 
 Accumulation Plotting
+
+-   Don't use the following 2 plots,use the ones with snow instead!
 
 ```{r}
 
@@ -1675,9 +1780,138 @@ accum_comb_NR_wandwotree <- ggarrange(mean_NR_acc_wtree_plot, mean_NR_acc_wotree
 accum_comb_NR_wandwotree
 ```
 
+Accumulation Plots with Secondary Y-axis for snow depth data
+
+-   Use these plots!
+
+```{r}
+accu_snowdepth_factor <- 200000
+```
+
+```{r}
+#plotting net rad with out including treeLWout data
+mean_NR_acc_wotree_plot <- ggplot(data = accum_mean_data_bothzones) +
+  # Line plot for snow cam max depth on a secondary y-axis
+   geom_line(aes(x = date, y = snowcam_max_depth_m * accu_snowdepth_factor, 
+                color = "Daily Max Snow Depth", linetype = "Daily Max Snow Depth"), linewidth = 0.8) + 
+  geom_line(aes(x = date, y = accu_treeLWout_MJd, color = "Tree LWout", linetype = "Tree LWout"), linewidth = 0.8) +
+  geom_line(aes(x = date, y = accu_netLW_wotree_MJd, color = "Net LW", linetype = "Net LW"), linewidth = 0.8) +
+  geom_line(aes(x = date, y = accu_netSW_MJd, color = "Net SW", linetype = "Net SW"), linewidth = 0.8) + 
+  geom_line(aes(x = date, y = accu_netRad_wotree_MJd, color = "Total Net Radiation", linetype = "Total Net Radiation"), linewidth = 0.8) +
+  geom_point(data = accu_treewell_data, aes(x = date, y = accu_treeLWout_MJd, 
+                                           shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  # Line plot for snow cam max depth on a secondary y-axis
+  facet_wrap(~zone + burn_status) +
+  labs(
+    title = "Without Tree LWout in Net Rad",
+    x = "Date",
+    y = "Cumulative Radiation Component (MJ/d)"
+  ) +
+  scale_color_manual(
+    values = c("Tree LWout" = "#D95F02", 
+               "Net LW" = "#1B7837", 
+               "Net SW" = "#2166AC", 
+               "Total Net Radiation" = "black",
+               "Daily Max Snow Depth" = "#666666")) +
+  scale_linetype_manual(
+    values = c("Tree LWout" = "solid", 
+               "Net LW" = "solid", 
+               "Net SW" = "solid", 
+               "Total Net Radiation" = "dashed", 
+               "Daily Max Snow Depth" = "solid")
+  ) +
+  scale_shape_manual(
+    values = c("Dates that treewells developed" = 16)  # Set shape for points
+  ) +
+  scale_y_continuous(labels = scales::label_number(accuracy = 1)) + 
+  guides(
+    color = guide_legend(title = NULL, 
+                         override.aes = list(linetype = c("solid","solid", "solid", "dashed", "solid"))),  # Combine color and linetype
+    linetype = "none",  # Remove the separate linetype legend
+    shape = guide_legend(title = NULL)  # Remove the legend title for shape
+  ) +
+  scale_y_continuous( labels = scales::label_number(accuracy = 1),  # Prevent scientific notation
+    sec.axis = sec_axis(~./accu_snowdepth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))                     # Facet text size (if facet_wrap is used)
+
+print(mean_NR_acc_wotree_plot)
+
+```
+
+```{r}
+#plotting net rad WITH including treeLWout data
+mean_NR_acc_wotree_plot <- ggplot(data = accum_mean_data_bothzones) +
+  # Line plot for snow cam max depth on a secondary y-axis
+  geom_line(aes(x = date, y = snowcam_max_depth_m * accu_snowdepth_factor, 
+                color = "Daily Max Snow Depth", linetype = "Daily Max Snow Depth"), linewidth = 0.8) + 
+  geom_line(aes(x = date, y = accu_treeLWout_MJd, color = "Tree LWout", linetype = "Tree LWout"), linewidth = 0.8) +
+  geom_line(aes(x = date, y = accu_netLW_wotree_MJd, color = "Net LW", linetype = "Net LW"), linewidth = 0.8) +
+  geom_line(aes(x = date, y = accu_netSW_MJd, color = "Net SW", linetype = "Net SW"), linewidth = 0.8) + 
+  geom_line(aes(x = date, y = accu_netRad_wtree_MJd, color = "Total Net Radiation", linetype = "Total Net Radiation"), linewidth = 0.8) +
+  geom_point(data = accu_treewell_data, aes(x = date, y = accu_treeLWout_MJd, 
+                                           shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  facet_wrap(~zone + burn_status) +
+  labs(
+    title = "With Tree LWout in Net Rad",
+    x = "Date",
+    y = "Cumulative Radiation Component (MJ/d)"
+  ) +
+  scale_color_manual(
+    values = c("Tree LWout" = "#D95F02", 
+               "Net LW" = "#1B7837", 
+               "Net SW" = "#2166AC", 
+               "Total Net Radiation" = "black",
+               "Daily Max Snow Depth" = "#666666")) +
+  scale_linetype_manual(
+    values = c("Tree LWout" = "solid", 
+               "Net LW" = "solid", 
+               "Net SW" = "solid", 
+               "Total Net Radiation" = "dashed", 
+               "Daily Max Snow Depth" = "solid")
+  ) +
+  scale_shape_manual(
+    values = c("Dates that treewells developed" = 16)  # Set shape for points
+  ) +
+  scale_y_continuous(labels = scales::label_number(accuracy = 1)) + 
+  guides(
+    color = guide_legend(title = NULL, 
+                         override.aes = list(linetype = c("solid", "solid", "solid","dashed", "solid"))),  # Combine color and linetype
+    linetype = "none",  # Remove the separate linetype legend
+    shape = guide_legend(title = NULL)  # Remove the legend title for shape
+  ) +
+  scale_y_continuous( labels = scales::label_number(accuracy = 1),  # Prevent scientific notation
+    sec.axis = sec_axis(~./accu_snowdepth_factor, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+  ) +
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))   
+
+print(mean_NR_acc_wotree_plot)
+
+```
+
 \*\* net LW is negative because there is less incoming LW radiation toward the earth & surface objects than there is outgoing LW radiation form the earths surface & objects, therefor the net LW radiation is negative. **Snow or Ice Surfaces** can be highly reflective and also radiate longwave energy efficiently, which can result in negative NetLW values. LWnet being negative is a reflective of surface energy loss (heat going back out - in this case, into the snow).
 
 Cumulative Single Radiation Plots
+
+-   Not sure I want to use these? They are pretty busy
 
 ```{r}
 #persistent
@@ -1857,7 +2091,15 @@ treeair_comb_plot <- ggplot() +
   guides(color = guide_legend(title = NULL), 
          shape = guide_legend(title = NULL), 
          fill = guide_legend(title = NULL)) + 
-  theme_bw()
+  theme_bw() + 
+   theme(
+    plot.title = element_text(size = 15),      # Title size
+    axis.title.x = element_text(size = 13),                   # X-axis title size
+    axis.title.y = element_text(size = 13),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12))   
   
 
 treeair_comb_plot
@@ -1897,6 +2139,128 @@ p_mean_NetRad_wotree_plot <- ggplot() +
 p_mean_NetRad_wotree_plot
 ```
 
+Air and Tree Temp Comparisons
+
+```{r}
+#create a dataframe for both zones Total Net Radiations
+mean_dt_transb_radtree_comb<- mean_dt_transb_radtree_comb %>%
+  rename(total_mean_net_rad_wotree_MJd = total_mean_net_rad_wotree)
+
+mean_NR_comb_data <- rbind(mean_dt_persb_radtree_comb,mean_dt_transb_radtree_comb)
+```
+
+```{r}
+#depth factor for air temps 
+temp_depthfactor <- 200
+```
+
+```{r}
+#persistent plot with net radiation, air and tree temps and treewells 
+p_airtreetemp_NR_plot <- ggplot() +
+  # Primary axis for radiation components, mapping fill to aesthetic for legend inclusion
+  geom_col(data = mean_dt_persb_radtree_comb, 
+           aes(x = date, y = total_mean_net_rad_wotree_MJd, fill = "Total Net Radiation"), 
+           position = "stack", alpha = 0.7) +
+  
+  # Secondary axis for temperature
+  geom_line(data = treeair_persb_comp, 
+            aes(x = date, y = b_treetemp_C*temp_depthfactor, color = "Tree Temp"), linewidth = 0.8) + 
+  geom_line(data = treeair_persb_comp, 
+            aes(x = date, y = mean_airT_C*temp_depthfactor, color = "Air Temp"), linewidth = 0.8) + 
+  
+  # Points for treewell development dates
+  geom_point(data = persb_air_treewell, 
+             aes(x = date, y = b_treetemp_C*temp_depthfactor, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  
+  # Manually set line colors for temperature and fill color for net radiation
+  scale_color_manual(values = c("Tree Temp" = "#D95F02", "Air Temp" = "#2166AC")) +
+  scale_fill_manual(values = c("Total Net Radiation" = "#666666")) +  # Include fill for geom_col
+  
+  # Primary axis labels and facet
+  facet_wrap(~zone + burn_status) +
+  labs(
+    x = "Date",
+    y = "Radiation (MJ/day)"
+  ) +
+  
+  # Set up the secondary axis for temperature, adjust the transformation if needed
+  scale_y_continuous(
+    name = "Radiation (MJ/day)", 
+    sec.axis = sec_axis(~ ./temp_depthfactor, name = "Average Daytime Temp (C)")
+  ) +
+  
+  # Manually set the shape for treewell points
+  scale_shape_manual(values = c("Dates that treewells developed" = 19)) + 
+  
+  # Legends without additional titles
+  guides(color = guide_legend(title = NULL), 
+         shape = guide_legend(title = NULL), 
+         fill = guide_legend(title = NULL)) + 
+  
+  # Theme
+  theme_bw()
+
+# Print the plot
+p_airtreetemp_NR_plot
+
+```
+
+```{r}
+#transitional plot with net radiation, air and tree temps and treewells 
+t_airtreetemp_NR_plot <- ggplot() +
+  # Primary axis for radiation components, mapping fill to aesthetic for legend inclusion
+  geom_col(data = mean_dt_transb_radtree_comb, 
+           aes(x = date, y = total_mean_net_rad_wotree_MJd, fill = "Total Net Radiation"), 
+           position = "stack", alpha = 0.7) +
+  
+  # Secondary axis for temperature
+  geom_line(data = treeair_transb_comp, 
+            aes(x = date, y = b_treetemp_C*temp_depthfactor, color = "Tree Temp"), linewidth = 0.8) + 
+  geom_line(data = treeair_transb_comp, 
+            aes(x = date, y = mean_airT_C*temp_depthfactor, color = "Air Temp"), linewidth = 0.8) + 
+  
+  # Points for treewell development dates
+  geom_point(data = transb_air_treewell, 
+             aes(x = date, y = b_treetemp_C*temp_depthfactor, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  
+  # Manually set line colors for temperature and fill color for net radiation
+  scale_color_manual(values = c("Tree Temp" = "#D95F02", "Air Temp" = "#2166AC")) +
+  scale_fill_manual(values = c("Total Net Radiation" = "#666666")) +  # Include fill for geom_col
+  
+  # Primary axis labels and facet
+  facet_wrap(~zone + burn_status) +
+  labs(
+    x = "Date",
+    y = "Radiation (MJ/day)"
+  ) +
+  
+  # Set up the secondary axis for temperature, adjust the transformation if needed
+  scale_y_continuous(
+    name = "Radiation (MJ/day)", 
+    sec.axis = sec_axis(~ ./temp_depthfactor, name = "Average Daytime Temp (C)")
+  ) +
+  
+  # Manually set the shape for treewell points
+  scale_shape_manual(values = c("Dates that treewells developed" = 19)) + 
+  
+  # Legends without additional titles
+  guides(color = guide_legend(title = NULL), 
+         shape = guide_legend(title = NULL), 
+         fill = guide_legend(title = NULL)) + 
+  
+  # Theme
+  theme_bw()
+
+# Print the plot
+t_airtreetemp_NR_plot
+```
+
+\*\* need to combine above two plots then export and save this plot!
+
+Air/Tree temp plots without NR
+
 ```{r}
 p_mean_airtreewell <- ggplot() +
   geom_line(data = treeair_persb_comp, 
@@ -1920,6 +2284,9 @@ p_mean_airtreewell <- ggplot() +
   theme_bw()
 
 p_mean_airtreewell
+```
+
+```{}
 ```
 
 ```{r}
