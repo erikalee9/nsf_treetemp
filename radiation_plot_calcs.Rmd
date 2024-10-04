@@ -29,6 +29,7 @@ library(ggpubr)
 library(scales)
 #package for accumulation sums 
 library(purrr)
+library(patchwork)
 
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
@@ -2160,7 +2161,7 @@ p_airtreetemp_NR_plot <- ggplot() +
   # Primary axis for radiation components, mapping fill to aesthetic for legend inclusion
   geom_col(data = mean_dt_persb_radtree_comb, 
            aes(x = date, y = total_mean_net_rad_wotree_MJd, fill = "Total Net Radiation"), 
-           position = "stack", alpha = 0.7) +
+           position = "stack", alpha = 0.6) +
   
   # Secondary axis for temperature
   geom_line(data = treeair_persb_comp, 
@@ -2212,7 +2213,7 @@ t_airtreetemp_NR_plot <- ggplot() +
   # Primary axis for radiation components, mapping fill to aesthetic for legend inclusion
   geom_col(data = mean_dt_transb_radtree_comb, 
            aes(x = date, y = total_mean_net_rad_wotree_MJd, fill = "Total Net Radiation"), 
-           position = "stack", alpha = 0.7) +
+           position = "stack", alpha = 0.6) +
   
   # Secondary axis for temperature
   geom_line(data = treeair_transb_comp, 
@@ -2257,7 +2258,11 @@ t_airtreetemp_NR_plot <- ggplot() +
 t_airtreetemp_NR_plot
 ```
 
-\*\* need to combine above two plots then export and save this plot!
+```{r}
+treeairtemp_comb <- ggarrange(p_airtreetemp_NR_plot, t_airtreetemp_NR_plot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+treeairtemp_comb
+```
 
 Air/Tree temp plots without NR
 
@@ -2286,12 +2291,7 @@ p_mean_airtreewell <- ggplot() +
 p_mean_airtreewell
 ```
 
-```{}
-```
-
 ```{r}
-#install.packages("patchwork")
-library(patchwork)
 
 #combining plots using patchwork to get x-axis to match
 persb_NR_airtree_plot <- p_mean_NetRad_wotree_plot / p_mean_airtreewell + 
