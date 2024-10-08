@@ -184,6 +184,69 @@ filtered_persb_snowcamera_data <- persb_snowcamera_data %>%
   rename(treewell_developed = treewell_developement)
 ```
 
+```{r}
+#plotting just a snow depth difference between pers_lp and sf data
+
+##calling in spruce-fir snowdepth camera data
+persb_sf_highmort_snowdepths <- read_csv("nsf/camera_snowdepths/2024_persb_sf_highmort_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "max_depth_cm") %>%
+  mutate(date = as.Date(date)) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
+  select(zone, burn_status, species, mortality, date, time_mst, snowcam_max_depth_m, snowcam_max_depth_cm, conditions, date_removed)
+
+persb_sf_lowmort_snowdepths <- read_csv("nsf/camera_snowdepths/2024_persb_sf_lowmort_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "max_depth_cm") %>%
+  mutate(date = as.Date(date)) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
+  select(zone, burn_status, species, mortality, date, time_mst, snowcam_max_depth_m, snowcam_max_depth_cm, conditions, date_removed)
+
+persb_lp_highmort_snowdepths <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_east_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "max_depth_cm") %>%
+  mutate(date = as.Date(date)) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
+  select(zone, burn_status, species, mortality, date, time_mst, snowcam_max_depth_m, snowcam_max_depth_cm, conditions, date_removed)
+
+persb_lp_lowmort_snowdepths <- read_csv("nsf/camera_snowdepths/2024_persb_lp_lowmort_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "max_depth_cm") %>%
+  mutate(date = as.Date(date)) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
+  select(zone, burn_status, species, mortality, date, time_mst, snowcam_max_depth_m, snowcam_max_depth_cm, conditions, date_removed)
+```
+
+```{r}
+#snow camera dataframes combined by species, not species and mortality
+#lodgepole
+persb_lp_snowdepths <- persb_lp_highmort_snowdepths %>%
+  full_join(persb_lp_lowmort_snowdepths)
+
+#spruce-fir
+persb_sf_snowdepths <- persb_sf_highmort_snowdepths %>%
+  full_join(persb_sf_lowmort_snowdepths)
+```
+
+```{r}
+#plotting persb camera snowdepths
+
+persb_species_snowdepth_plots <- ggplot() +
+   geom_line(data = persb_sf_highmort_snowdepths, aes(x = date, y = snowcam_max_depth_m, color = "SF High Mortality", linetype = "SF High Mortality")) + 
+   geom_line(data = persb_sf_lowmort_snowdepths, aes(x = date, y = snowcam_max_depth_m, color = "SF Low Mortality", linetype = "SF Low Mortality")) + 
+   geom_line(data = persb_lp_highmort_snowdepths, aes(x = date, y = snowcam_max_depth_m, color = "LP High Mortality", linetype = "LP High Mortality")) + 
+   geom_line(data = persb_lp_lowmort_snowdepths, aes(x = date, y = snowcam_max_depth_m, color = "LP Low Mortality", linetype = "LP Low Mortality")) +
+   scale_color_manual(values = c("SF High Mortality" = "red", 
+                                 "SF Low Mortality" = "orange", 
+                                 "LP High Mortality" = "darkblue", 
+                                 "LP Low Mortality" = "turquoise")) +
+   scale_linetype_manual(values = c("SF High Mortality" = "solid", 
+                                    "SF Low Mortality" = "dashed", 
+                                    "LP High Mortality" = "solid", 
+                                    "LP Low Mortality" = "dashed")) +
+   labs(color = "Data", linetype = "Data")
+
+  
+
+persb_species_snowdepth_plots
+```
+
 Combining data into one dataframe by burn_status
 
 ```{r}
