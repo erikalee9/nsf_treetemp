@@ -130,6 +130,22 @@ stats_monthly_ns_db <- stats_monthly_ns_b %>%
 ##don't need to do for ub because I already have that
 ```
 
+### Charred/Uncharred Differenced Data
+
+```{r}
+#burned n/s stats
+stats_monthly_c_uc <- final_15min_gb_temps %>%
+  mutate(datetime = as.POSIXct(datetime), month = format(datetime, "%m")) %>%
+  #calculating temp_diff for 15-minute interval of charred/uncharred
+  mutate(temp_diff = charred_temp - uncharred_temp %>%
+  #calculating monthly stats
+  group_by(month, zone, burn_status) %>%
+  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
 ### GB/DB Differenced Data
 
 ```{r}
