@@ -567,7 +567,7 @@ write_csv(full_unburned_combined_data, "nsf/treetemp_data/full_unburned_combined
 
 \*\* need to create a dataframe for only the gb trees and do the following comparisons, because I have to subtract it form the north/south aspects dataframes because deadburned trees do not have charred/uncharred aspect temps
 
-\*\* Use the following final_hourly_GB temps dataset to do plotting of charred/uncharred comparisons!
+\*\* Use the following final_hourly_GB temps dataset to do plotting of charred/uncharred comparisons, as well as for stats calculations!
 
 ```{r}
 #green burned dataframe
@@ -591,6 +591,15 @@ final_hourly_gb_temps <-final_gb_temps %>%
   #mean_hourly_treetemp is the mean of all the db/gb/live trees in the dataframe averaged by burn_status on an hourly timestep
   summarize(mean_north_temp = mean(north_temp), mean_south_temp = mean(south_temp), mean_charred_temp = mean(charred_temp), mean_uncharred_temp = mean(uncharred_temp), .groups = 'drop') %>%
   mutate(month = month(datetime_hour))
+```
+
+```{r}
+#writing this gb csv to use in stats calculations!
+
+##hourly
+write_csv(final_hourly_gb_temps, "nsf/treetemp_data/final_hourly_gb_temps.csv")
+##15-minute
+write_csv(final_gb_temps, "nsf/treetemp_data/final_15min_gb_temps.csv")
 ```
 
 ### Pers_b
