@@ -26,7 +26,6 @@ library(rstatix)
 library(htmlwidgets)
 library(RColorBrewer)
 library(patchwork)
-library(xlsx)
 
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
@@ -132,7 +131,7 @@ filtered_pers_b_aspects <- filtered_pers_b_aspects %>%
 
 filtered_pers_ub_aspects <- filtered_pers_ub_aspects %>%
   mutate(burn_status = case_when(
-    startsWith(tree_name, "ub") ~ "alive",
+    startsWith(tree_name, "ub") ~ "live",
     TRUE ~ NA_character_  # Optional: handle other cases if needed
   )) %>%
   #adding a zone column
@@ -149,7 +148,7 @@ filtered_trans_b_aspects <- filtered_trans_b_aspects %>%
 
 filtered_trans_ub_aspects <- filtered_trans_ub_aspects %>%
   mutate(burn_status = case_when(
-    startsWith(tree_name, "ub") ~ "alive",
+    startsWith(tree_name, "ub") ~ "live",
     TRUE ~ NA_character_  # Optional: handle other cases if needed
   )) %>%
   mutate(zone = "transitional")
@@ -566,13 +565,40 @@ write_csv(full_unburned_combined_data, "nsf/treetemp_data/full_unburned_combined
 
 ## N/S Aspect Dataframes
 
+\*\* need to create a dataframe for only the gb trees and do the following comparisons, because I have to subtract it form the north/south aspects dataframes because deadburned trees do not have charred/uncharred aspect temps
+
+\*\* Use the following final_hourly_GB temps dataset to do plotting of charred/uncharred comparisons!
+
+```{r}
+#green burned dataframe
+full_gb_data <- full_burned_combined_data %>%
+  filter(burn_status == "green burn") %>%
+  filter(!(tree_name == "gb_w")) %>%
+  #getting mean temperature of all trees, instead of having individual trees identified
+  group_by(datetime, aspect, zone, burn_status) %>%
+  # Calculate the mean temperature for each aspect
+  summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop')
+
+final_gb_temps <- full_gb_data%>%
+  group_by(datetime, burn_status, zone) %>%
+  pivot_wider(names_from = aspect, values_from = mean_temp) %>%
+  rename(north_temp = north, south_temp = south, charred_temp = charred, uncharred_temp = uncharred) %>%
+  summarize(north_temp, south_temp, charred_temp, uncharred_temp)
+
+final_hourly_gb_temps <-final_gb_temps %>%
+  mutate(datetime_hour = floor_date(datetime, unit = "hour")) %>%  # Create an hourly datetime column
+  group_by(datetime_hour, zone, burn_status) %>%  # Group by the hourly datetime
+  #mean_hourly_treetemp is the mean of all the db/gb/live trees in the dataframe averaged by burn_status on an hourly timestep
+  summarize(mean_north_temp = mean(north_temp), mean_south_temp = mean(south_temp), mean_charred_temp = mean(charred_temp), mean_uncharred_temp = mean(uncharred_temp), .groups = 'drop') %>%
+  mutate(month = month(datetime_hour))
+```
+
 ### Pers_b
 
 Creating a clean dataframe with columns for north and south temps, instead of rows (wide format)
 
 ```{r}
 #persistent burned 
-
 full_pers_ns_data <- full_burned_combined_data %>%
   filter(!(aspect %in% c("charred", "uncharred"))) %>%
   filter(zone == "persistent") %>%
@@ -619,7 +645,6 @@ full_pers_ns_data <- final_persb_ns_temps %>%
 
 ```{r}
 #transitional burned 
-
 full_trans_ns_data <- full_burned_combined_data %>%
   filter(!(aspect %in% c("charred", "uncharred"))) %>%
   filter(zone == "transitional") %>%
@@ -1195,4 +1220,31 @@ print(full_hourly_gbdbub)
 write_csv(full_hourly_ns, "nsf/treetemp_data/full_hourly_ns.csv")
 
 write_csv(full_hourly_gbdbub, "nsf/treetemp_data/full_hourly_gbdbub.csv")
+```
+
+## Plotting charred/uncharred comparisons
+
+```{r}
+#making a daily dt/nt dataset
+daily_final_gb_temps <- final_hourly_gb_temps %>%
+  mutate(
+    date = date(datetime_hour),  # Create the date column
+    phase = case_when(
+      hour(datetime_hour) >= 8 & hour(datetime_hour) < 17 ~ "day",
+      TRUE ~ "night"
+    )
+  ) %>%
+  group_by(date, month, phase, zone, burn_status) %>%
+  summarize(mean_north_temp = mean(mean_north_temp), mean_south_temp = mean(mean_south_temp), mean_charred_temp = mean(mean_charred_temp), mean_uncharred_temp = mean(mean_uncharred_temp))
+```
+
+```{r}
+dtnt_gb_aspect_comparison <- ggplot(data = daily_final_gb_temps) +
+  geom_line(aes(x = date, y = mean_north_temp), color = "green") +
+  geom_line(aes(x = date, y = mean_south_temp), color = "red") +
+  geom_line(aes(x = date, y = mean_charred_temp), color = "black") +
+  geom_line(aes(x = date, y = mean_uncharred_temp), color = "grey") +
+  facet_wrap (~ zone + phase, dir = "v")
+
+dtnt_gb_aspect_comparison
 ```
