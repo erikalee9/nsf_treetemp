@@ -42,6 +42,10 @@ final_15min_ns_b <- read_csv("nsf/treetemp_data/final_15min_ns_b.csv")
 
 final_15min_ns_ub <- read_csv("nsf/treetemp_data/final_15min_ns_ub.csv")
 
+final_hourly_ns_b <- read_csv("nsf/treetemp_data/final_hourly_ns_ub.csv")
+
+final_hourly_ns_ub <- read_csv("nsf/treetemp_data/final_hourly_ns_b.csv")
+
 final_15min_gbdb <- read_csv("nsf/treetemp_data/final_15min_gbdb.csv")
 
 final_15min_gbdb_ub <- read_csv("nsf/treetemp_data/final_15min_gbdb_ub.csv")
@@ -50,6 +54,14 @@ final_15min_gbub <- read_csv("nsf/treetemp_data/final_15min_gbub.csv")
 
 final_15min_dbub <- read_csv("nsf/treetemp_data/final_15min_dbub.csv")
 
+final_hourly_gbdb <- read_csv("nsf/treetemp_data/final_hourly_gbdb.csv")
+
+final_hourly_gbdb_ub <- read_csv("nsf/treetemp_data/final_hourly_gbdb_ub.csv")
+
+final_hourly_gbub <- read_csv("nsf/treetemp_data/final_hourly_gbub.csv")
+
+final_hourly_dbub <- read_csv("nsf/treetemp_data/final_hourly_dbub.csv")
+
 final_daynight_singleavg_temps <- read_csv("nsf/treetemp_data/final_daynight_singleavg_temps.csv")
 ```
 
@@ -57,7 +69,19 @@ final_daynight_singleavg_temps <- read_csv("nsf/treetemp_data/final_daynight_sin
 #new full dataframes to load
 full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv")
 
+full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv")
+
 full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv")
+
+full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv")
+```
+
+Pulling in Data for gb only comparisons of charred/uncharred data with n/s as well
+
+```{r}
+final_15min_gb_temps <- read_csv("nsf/treetemp_data/final_15min_gb_temps.csv")
+
+final_hourly_gb_temps <- read_csv("nsf/treetemp_data/final_hourly_gb_temps.csv")
 ```
 
 ## Calculating Stats
