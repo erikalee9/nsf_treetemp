@@ -1,0 +1,398 @@
+---
+title: "aspect_temp_comparison"
+output: html_document
+date: "2024-10-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#initial set up
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(plotly)
+library(rstatix)
+library(htmlwidgets)
+library(RColorBrewer)
+library(patchwork)
+#packages for exporting csvs as tables
+library(knitr)
+library(kableExtra)
+library(pagedown)
+
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
+
+## Loading in Data
+
+```{r}
+persb_aspects <- read_csv("nsf/105E_pers_burned/105E_pers_b_aspects.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST')) %>%
+  select(datetime, sensor_id, temp, aspect, tree_name) %>%
+  #filtering out gb_w since we are not using this anymore
+  filter(tree_name != "gb_w")
+
+persub_aspects <- read_csv("nsf/105E_pers_unburned/105E_pers_ub_aspects.csv") %>%
+   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST')) %>%
+  select(datetime, sensor_id, temp, aspect, tree_name) 
+
+transb_aspects <- read_csv("nsf/105E_trans_burned/105E_trans_b_aspects.csv") %>%
+   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST')) %>%
+  select(datetime, sensor_id, temp, aspect, tree_name)
+
+transub_aspects <- read_csv("nsf/105E_trans_unburned/105E_trans_ub_aspects.csv") %>%
+   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST')) %>%
+  select(datetime, sensor_id, temp, aspect, tree_name) 
+```
+
+## Data Wrangling/Filtering
+
+```{r}
+#filtered to correct datetime range
+
+filtered_persb_aspects <- persb_aspects %>%
+  mutate(zone = "persistent", burn_status = case_when(
+    startsWith(tree_name, "gb") ~ "green burn",
+    startsWith(tree_name, "db") ~ "dead burn",
+    TRUE ~ zone  # Keep existing values for other cases
+  )) %>%
+  #filtering to datetime range for analysis
+  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 23:45:00")
+
+filtered_persub_aspects <- persb_aspects %>%
+  mutate(zone = "persistent", burn_status = "live") %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 23:45:00")
+
+filtered_transb_aspects <- transb_aspects %>%
+  mutate(zone = "transitional", burn_status = case_when(
+    startsWith(tree_name, "gb") ~ "green burn",
+    startsWith(tree_name, "db") ~ "dead burn",
+    TRUE ~ zone  # Keep existing values for other cases
+  )) %>%
+  #filtering to datetime range for analysis
+  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 23:45:00")
+
+filtered_transub_aspects <- transb_aspects %>%
+  mutate(zone = "transitional", burn_status = "live") %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 23:45:00")
+```
+
+```{r}
+#making a full aspect dataframe to work from
+filtered_full_aspects <- bind_rows(filtered_persb_aspects, filtered_transb_aspects, filtered_persub_aspects, filtered_transub_aspects)
+```
+
+Making an hourly dataset to helps smooth out plot
+
+-   averaging all four trees per site values together(by burn status) for this dataset, so there are less lines
+
+```{r}
+filtered_hourly_full_aspect <- filtered_full_aspects %>%
+  mutate(time = format(datetime, "%H:%M:%S")) %>%  # Create a new time column
+  mutate(datetime_hour = floor_date(datetime, unit = "hour")) %>%  # Create an hourly datetime column
+  group_by(datetime_hour, zone, burn_status, aspect) %>%  # Group by the hourly datetime
+  #mean_hourly_treetemp is the mean of all the db/gb/live trees in the dataframe averaged by burn_status on an hourly timestep
+  summarize(mean_hourly_treetemp = mean(temp), .groups = 'drop') %>%
+  mutate(month = month(datetime_hour))
+```
+
+```{r}
+#making a dt_nt dataframe that can be used to do a daily average of the 
+```
+
+```{r}
+#making a dataframe to compare ONLY greenburned trees north/south/charred/uncharred since the GB trees are the only trees with the charred/uncharred sensors
+gb_hourly_full_aspects <- filtered_hourly_full_aspect %>%
+  filter(burn_status == "green burn")
+
+#wide dataset, not long, so I can plot individual columns
+gb_wide_hourly_aspects <- gb_hourly_full_aspects %>%
+  pivot_wider(
+    names_from = aspect,  # Column to become new column names
+    values_from = mean_hourly_treetemp      # Column to use for values
+  )
+
+#now I am making a charred/uncharred dataset and a north/south dataset
+
+gb_char_full_aspects <- gb_hourly_full_aspects %>%
+  filter(aspect %in% c("charred", "uncharred"))
+
+gb_northsouth_full_aspects <- gb_hourly_full_aspects %>%
+  filter(aspect %in% c("north", "south"))
+```
+
+```{r}
+feb_filt_hourly_aspect <- filtered_hourly_full_aspect %>%
+  filter(datetime_hour >= "2024-02-02 00:00:00" & datetime_hour <= "2024-02-23 23:00:00")
+
+march_filt_hourly_aspect <- filtered_hourly_full_aspect %>%
+  filter(datetime_hour >= "2024-03-01 00:00:00" & datetime_hour <= "2024-03-31 23:00:00")
+```
+
+```{r}
+#making first of the month hourly daily timeframes to compare
+t_feb2_hourly_aspect <- filtered_hourly_full_aspect %>%
+  filter(datetime_hour >= "2024-02-02 00:00:00" & datetime_hour <= "2024-02-02 23:00:00") %>%
+  filter(zone == "transitional")
+
+p_feb2_hourly_aspect <- filtered_hourly_full_aspect %>%
+  filter(datetime_hour >= "2024-02-02 00:00:00" & datetime_hour <= "2024-02-02 23:00:00") %>%
+  filter(zone == "persistent")
+
+t_march1_hourly_aspect <- filtered_hourly_full_aspect %>%
+  filter(datetime_hour >= "2024-03-01 00:00:00" & datetime_hour <= "2024-03-01 23:00:00") %>%
+  filter(zone == "transitional")
+
+p_march1_hourly_aspect <- filtered_hourly_full_aspect %>%
+  filter(datetime_hour >= "2024-03-01 00:00:00" & datetime_hour <= "2024-03-01 23:00:00") %>%
+  filter(zone == "persistent")
+
+t_april1_hourly_aspect <- filtered_hourly_full_aspect %>%
+  filter(datetime_hour >= "2024-04-01 00:00:00" & datetime_hour <= "2024-04-01 23:00:00") %>%
+  filter(zone == "transitional")
+
+p_april1_hourly_aspect <- filtered_hourly_full_aspect %>%
+  filter(datetime_hour >= "2024-04-01 00:00:00" & datetime_hour <= "2024-04-01 23:00:00") %>%
+  filter(zone == "persistent")
+
+t_may1_hourly_aspect <- filtered_hourly_full_aspect %>%
+  filter(datetime_hour >= "2024-05-01 00:00:00" & datetime_hour <= "2024-05-01 23:00:00") %>%
+  filter(zone == "transitional")
+
+p_may1_hourly_aspect <- filtered_hourly_full_aspect %>%
+  filter(datetime_hour >= "2024-05-01 00:00:00" & datetime_hour <= "2024-05-01 23:00:00") %>%
+  filter(zone == "persistent")
+```
+
+## Stats Tests
+
+To compare the aspects and get values for how they differ
+
+T-tests - DON'T USE THESE (YET)
+
+```{r}
+#running an anova test, because I am comparing three or or more aspects to each other
+# Perform a t-test comparing 2 aspects at a time
+##north/south
+northsouth_aspect_ttest <- t.test(mean_hourly_treetemp ~ aspect, data = filtered_hourly_full_aspect[filtered_hourly_full_aspect$aspect %in% c("north", "south"), ])
+
+# Summary 
+print(northsouth_aspect_ttest)
+
+##north/charred
+northcharred_aspect_ttest <- t.test(mean_hourly_treetemp ~ aspect, data = filtered_hourly_full_aspect[filtered_hourly_full_aspect$aspect %in% c("north", "charred"), ])
+
+# Summary 
+print(northcharred_aspect_ttest)
+
+##north/uncharred
+northuncharred_aspect_ttest <- t.test(mean_hourly_treetemp ~ aspect, data = filtered_hourly_full_aspect[filtered_hourly_full_aspect$aspect %in% c("north", "uncharred"), ])
+
+# Summary
+print(northuncharred_aspect_ttest)
+
+##south/charred
+southcharred_aspect_ttest <- t.test(mean_hourly_treetemp ~ aspect, data = filtered_hourly_full_aspect[filtered_hourly_full_aspect$aspect %in% c("south", "charred"), ])
+
+# Summary
+print(southcharred_aspect_ttest)
+
+##north/uncharred
+northuncharred_aspect_ttest <- t.test(mean_hourly_treetemp ~ aspect, data = filtered_hourly_full_aspect[filtered_hourly_full_aspect$aspect %in% c("north", "uncharred"), ])
+
+# Summary
+print(northuncharred_aspect_ttest)
+```
+
+### Levene Test
+
+```{r}
+#install.packages("car")
+library(car)
+```
+
+```{r}
+#first have to check to see if variances are equal using the levenes test
+# Levene's Test for aspect
+leveneTest(mean_hourly_treetemp ~ aspect, data = filtered_hourly_full_aspect)
+
+# Levene's Test for burn status
+leveneTest(mean_hourly_treetemp ~ burn_status, data = filtered_hourly_full_aspect)
+
+# Levene's Test for interaction between aspect and burn status
+leveneTest(mean_hourly_treetemp~ aspect * burn_status, data = filtered_hourly_full_aspect)
+```
+
+These levene tests show that the variances are unequal (all p-values are significant), therefore I am using a Welchs ANOVA test, which does not assume equal variances
+
+### Welch's ANOVA Test
+
+```{r}
+# Welch's ANOVA (no assumption of equal variances)
+oneway.test(mean_hourly_treetemp ~ aspect * burn_status, data = filtered_hourly_full_aspect)
+```
+
+Results:
+
+data: mean_hourly_treetemp and aspect \* burn_status F = 14.262, num df = 9, denom df = 22081, p-value \< 2.2e-16
+
+Interpretation:
+
+1.  **F-value**: The F-value of 14.262 indicates that there is a significant difference between the group means. In the context of ANOVA, a higher F-value suggests a larger difference between the group means relative to the variability within the groups.
+
+2.  **p-value (\< 2.2e-16)**: The p-value is very small (close to 0), which means that the observed differences in mean temperatures between groups (combinations of aspect and burn status) are highly unlikely to have occurred by random chance.
+
+    -   Since the p-value is less than the standard significance level (usually 0.05), you can **reject the null hypothesis** that the group means are equal.
+
+    -   This implies that there is a statistically significant difference in tree temperatures across different aspects and burn statuses.
+
+### POST-HOC Test:
+
+Since I have a significant result, the next step is to identify which specific groups (combinations of aspect and burn status) differ from each other. You can use a post-hoc test such as **Tukey's Honest Significant Difference (HSD)** to determine pairwise comparisons between the groups.
+
+```{r}
+# Tukey's HSD post-hoc test
+pairwise_results <- pairwise.t.test(filtered_hourly_full_aspect$mean_hourly_treetemp, interaction(filtered_hourly_full_aspect$aspect, filtered_hourly_full_aspect$burn_status), p.adjust.method = "bonferroni")
+```
+
+```{r}
+#saving results as dataframe
+# Convert the matrix of p-values into a data frame
+pairwise_results_df <- as.data.frame(as.table(pairwise_results$p.value))
+
+# Save the data frame to a CSV file
+write.csv(pairwise_results_df, "nsf/treetemp_data/stats_pairwise_results.csv", row.names = FALSE)
+```
+
+Calculating an effect size: the effect size (such as **eta-squared**) can quantify the magnitude of the difference between groups.
+
+```{r}
+library(effectsize)
+
+welch_anova_model <- oneway.test(mean_hourly_treetemp ~ aspect * burn_status, data = filtered_hourly_full_aspect)
+
+eta_squared(welch_anova_model)
+```
+
+\*\* need to interpret this effect size calculation more... not sure exactly what it is telling me.
+
+## Plotting
+
+```{r}
+feb_aspect_BP <- ggplot(feb_filt_hourly_aspect, aes(x = aspect, y = mean_hourly_treetemp)) +
+  geom_boxplot() +
+  labs(title = "Feb Values by Aspect", x = "aspect", y = "mean_hourly_treetemp") +
+  theme_bw() +
+  facet_wrap (~ zone + burn_status)
+
+feb_aspect_BP
+```
+
+```{r}
+#to display the colors
+display.brewer.pal(n = 8, name = "Dark2")
+
+#to get the hex number of the colors
+brewer.pal(n = 8, name = "Dark2")
+```
+
+```{r}
+#setting a color-blind friendly custom palette for gb/db/ubn- using RColorBrewer
+##blue is unburned, orange is dead burned, green is green burned
+burnstatus_colors <- c("#D95F02","#1B7837", adjustcolor("#2166AC", alpha = 0.7))
+
+aspect_colors <- c("#D95F02","#1B7837", "#666666","#2166AC")
+```
+
+```{r}
+aspect_comparison <- ggplot(data = feb_filt_hourly_aspect) +
+  geom_line(aes(x = datetime_hour, y = mean_hourly_treetemp, color = burn_status)) + 
+  facet_wrap(~zone + aspect) +
+  scale_color_manual(values = burnstatus_colors) +  # Apply custom colors
+  labs(color = "Burn Status") +  # Add a label for the color legend
+  theme_bw()
+
+aspect_comparison
+```
+
+Plotting Individually, then Combining
+
+```{r}
+#dataframes for plotting individually
+trans_filt_hourly_aspects <- filtered_hourly_full_aspect %>%
+  filter( zone == "transitional")
+
+pers_filt_hourly_aspects <- filtered_hourly_full_aspect %>%
+  filter( zone == "persistent")
+```
+
+```{r}
+trans_aspect_comparison <- ggplot(data = trans_filt_hourly_aspects ) +
+  geom_line(aes(x = datetime_hour, y = mean_hourly_treetemp, color = burn_status)) + 
+  facet_wrap(~zone) + 
+  facet_grid(burn_status ~ aspect) +
+  scale_color_manual(values = burnstatus_colors) +  # Apply custom colors
+  labs(color = "Burn Status") +  # Add a label for the color legend
+  theme_bw()
+
+trans_aspect_comparison
+```
+
+```{r}
+#one-day comparison
+t_feb2_aspect_comparison <- ggplot(data = t_feb2_hourly_aspect) +
+  geom_line(aes(x = datetime_hour, y = mean_hourly_treetemp, color = burn_status)) + 
+  facet_wrap(~zone + aspect) +
+  scale_color_manual(values = burnstatus_colors) +  # Apply custom colors
+  labs(color = "Burn Status") +  # Add a label for the color legend
+  theme_bw()
+
+t_feb2_aspect_comparison 
+
+## should also do this for persistent zone then combine the plots
+```
+
+```{r}
+t_march1_aspect_comparison <- ggplot(data = t_march1_hourly_aspect) +
+  geom_line(aes(x = datetime_hour, y = mean_hourly_treetemp, color = burn_status)) + 
+  facet_wrap(~zone + aspect) +
+  scale_color_manual(values = burnstatus_colors) +  # Apply custom colors
+  labs(color = "Burn Status") +  # Add a label for the color legend
+  theme_bw()
+
+t_march1_aspect_comparison 
+
+p_march1_aspect_comparison <- ggplot(data = p_march1_hourly_aspect) +
+  geom_line(aes(x = datetime_hour, y = mean_hourly_treetemp, color = burn_status)) + 
+  facet_wrap(~zone + aspect) +
+  scale_color_manual(values = burnstatus_colors) +  # Apply custom colors
+  labs(color = "Burn Status") +  # Add a label for the color legend
+  theme_bw()
+
+p_march1_aspect_comparison 
+```
+
+Plotting only the GB trees to see if there is a charred/uncharred importance for tree temps
+
+```{r}
+gb_aspects_plot <- ggplot(data = gb_wide_hourly_aspects) +
+  geom_line(aes(x = datetime_hour, y = north), color = "green") + 
+  geom_line(aes(x = datetime_hour, y = south), color = "red") +
+  geom_line(aes(x = datetime_hour, y = charred), color = "black", linetype = "dashed") +
+  geom_line(aes(x = datetime_hour, y = uncharred), color = "grey", linetype = "dashed") +
+  facet_wrap(~zone) +
+  labs(color = "Aspect") +  # Add a label for the color legend
+  theme_bw()
+
+gb_aspects_plot 
+
+## this plot is too confusing... need to do a daily timestep so there is less variation and the data is easier to process... 
+```
