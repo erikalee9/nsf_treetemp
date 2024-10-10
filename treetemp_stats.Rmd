@@ -82,8 +82,8 @@ Pulling in Data for gb only comparisons of charred/uncharred data with n/s as we
 final_15min_gb_temps <- read_csv("nsf/treetemp_data/final_15min_gb_temps.csv") %>%
   mutate(day = as.Date(datetime), month = month(datetime))
 
-final_hourly_gb_temps <- read_csv("nsf/treetemp_data/final_hourly_gb_temps.csv") %>%
-  mutate(day = as.Date(datetime), month = month(datetime))
+final_hourly_gb_temps <- read_csv("nsf/treetemp_data/final_hourly_gb_temps.csv")%>%
+  mutate(day = as.Date(datetime_hour), month = month(datetime_hour))
 ```
 
 ## Calculating Stats
@@ -154,7 +154,6 @@ stats_monthly_c_uc <- final_15min_gb_temps %>%
 
 ```{r}
 # to compare noth/south with charred/uncharred, I need to make new n/s_gb only datasets
-
 stats_monthly_s_uc <- final_hourly_gb_temps %>%
   select(datetime_hour, month, zone, burn_status, mean_south_temp, mean_uncharred_temp) %>%
   mutate(temp_diff = mean_south_temp - mean_uncharred_temp) %>%
@@ -292,13 +291,52 @@ stats_monthly_ns <- full_15min_ns %>%
 
 ```{r}
 monthly_gb_data <- final_15min_gb_temps %>%
+  mutate(
+    datetime = as.POSIXct(datetime),
+    month = format(datetime, "%m")
+  ) %>%
+  select(datetime, day, month, everything()) %>%
+  mutate(
+    ns_avg_temp = rowMeans(cbind(north_temp, south_temp)),
+    c_uc_avg_temp = rowMeans(cbind(charred_temp, uncharred_temp)),
+    s_c_avg_temp = rowMeans(cbind(south_temp, charred_temp)),
+    s_uc_avg_temp = rowMeans(cbind(south_temp, uncharred_temp)),
+    n_c_avg_temp = rowMeans(cbind(north_temp, charred_temp)),
+    n_uc_avg_temp = rowMeans(cbind(north_temp, uncharred_temp)),
+    ns_temp_diff = north_temp - south_temp,
+    c_uc_temp_diff = charred_temp - uncharred_temp,
+    s_c_temp_diff = south_temp - charred_temp,
+    s_uc_temp_diff = south_temp - uncharred_temp,
+    n_c_temp_diff = north_temp - charred_temp,
+    n_uc_temp_diff = north_temp - uncharred_temp
+  ) %>%
   group_by(month, zone, burn_status) %>%
-  summarize(mean_north_temp = mean(north_temp, na.rm = TRUE), mean_south_temp = mean(south_temp, na.rm = TRUE), mean_charred_temp = mean(charred_temp, na.rm = TRUE), mean_uncharred_temp = mean(uncharred_temp, na.rm = TRUE), ns_avg_temp = mean((north_temp+south_temp/2), na.rm = TRUE), c_uc_avg_temp = mean((charred_temp + uncharred_temp/2), na.rm = TRUE), s_c_avg_temp = mean((south_temp+charred_temp/2), na.rm = TRUE), s_uc_avg_temp = mean((south_temp+uncharred_temp/2), na.rm = TRUE), n_c_avg_temp = mean((north_temp+charred_temp/2), na.rm = TRUE), n_uc_avg_temp = mean(north_temp+uncharred_temp/2), ns_temp_diff = mean(north_temp - south_temp), c_uc_temp_diff = mean(charred_temp - uncharred_temp), s_c_temp_diff = mean(south_temp - charred_temp), s_uc_temp_diff = mean(south_temp - uncharred_temp), n_c_temp_diff = mean(north_temp - charred_temp), n_uc_temp_diff = mean(north_temp - uncharred_temp), .groups = 'drop')
+  summarize(
+    mean_north_temp = mean(north_temp, na.rm = TRUE),
+    mean_south_temp = mean(south_temp, na.rm = TRUE),
+    mean_charred_temp = mean(charred_temp, na.rm = TRUE),
+    mean_uncharred_temp = mean(uncharred_temp, na.rm = TRUE),
+    ns_avg_temp = mean(ns_avg_temp, na.rm = TRUE),
+    c_uc_avg_temp = mean(c_uc_avg_temp, na.rm = TRUE),
+    s_c_avg_temp = mean(s_c_avg_temp, na.rm = TRUE),
+    s_uc_avg_temp = mean(s_uc_avg_temp, na.rm = TRUE),
+    n_c_avg_temp = mean(n_c_avg_temp, na.rm = TRUE),
+    n_uc_avg_temp = mean(n_uc_avg_temp, na.rm = TRUE),
+    ns_temp_diff = mean(ns_temp_diff, na.rm = TRUE),
+    c_uc_temp_diff = mean(c_uc_temp_diff, na.rm = TRUE),
+    s_c_temp_diff = mean(s_c_temp_diff, na.rm = TRUE),
+    s_uc_temp_diff = mean(s_uc_temp_diff, na.rm = TRUE),
+    n_c_temp_diff = mean(n_c_temp_diff, na.rm = TRUE),
+    n_uc_temp_diff = mean(n_uc_temp_diff, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
 ```
 
-\*\* keep working on the below code, it is not working right now??
+Don't use the below code
 
 ```{r}
+## dont use this!
 #charred/uncharred monthly stas
 stats_monthly_c_uc_V2 <- monthly_gb_data %>%
   #calculating monthly stats
@@ -394,6 +432,17 @@ write_csv(stats_monthly_gbub, "nsf/treetemp_data/stats_monthly_gbub.csv")
 write_csv(stats_monthly_dbub, "nsf/treetemp_data/stats_monthly_dbub.csv")
 
 write_csv(stats_monthly_daynight, "nsf/treetemp_data/stats_monthly_daynight.csv")
+
+#new charred/uncharred/n/s comparisons
+write_csv(stats_monthly_c_uc, "nsf/treetemp_data/stats_montly_c_uc.csv")
+
+write_csv(stats_monthly_s_c, "nsf/treetemp_data/stats_montly_s_c.csv")
+
+write_csv(stats_monthly_s_uc, "nsf/treetemp_data/stats_montly_s_uc.csv")
+
+write_csv(stats_monthly_n_c, "nsf/treetemp_data/stats_montly_n_c.csv")
+
+write_csv(stats_monthly_n_uc, "nsf/treetemp_data/stats_montly_n_uc.csv")
 ```
 
 \*\*not using the below conversion process as of 2024-07-22, just adding csvs to word doc and turning into a table
