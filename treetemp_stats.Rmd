@@ -603,3 +603,92 @@ In summary, these metrics together help you understand the magnitude, relative s
 -   very high coefficient of variation and percent differences mean that there is a lot of variability of temperatures, even on a daily and monthly scale.
 
 \*\*Made edits to test git connection
+
+# T-Tests
+
+Loading Data for tree temps
+
+```{r}
+pers_b_aspects <- read_csv("nsf/105E_pers_burned/105E_pers_b_aspects.csv") %>%
+  mutate(datetime = force_tz(datetime, tz = 'MST'))
+
+trans_b_aspects <- read_csv("nsf/105E_trans_burned/105E_trans_b_aspects.csv") %>%
+  mutate(datetime = force_tz(datetime, tz = 'MST'))
+
+pers_ub_aspects <- read_csv("nsf/105E_pers_unburned/105E_pers_ub_aspects.csv") %>%
+  mutate(datetime = force_tz(datetime, tz = 'MST'))
+
+trans_ub_aspects <- read_csv("nsf/105E_trans_unburned/105E_trans_ub_aspects.csv") %>%
+  mutate(datetime = force_tz(datetime, tz = 'MST'))
+```
+
+Filtering dataframes for the purpose of temp comparisons
+
+```{r}
+filtered_pers_b_aspects <- pers_b_aspects %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
+
+filtered_pers_ub_aspects <- pers_ub_aspects %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
+
+filtered_trans_b_aspects <- trans_b_aspects %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
+
+filtered_trans_ub_aspects <- trans_ub_aspects %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
+```
+
+## T-Test Dataframes
+
+```{r}
+#using earlier dataframes to compare on a hourly timestep 
+##testing with the hourly gb dataset - final_hourly_gb_temps
+
+t_test_hourly_gb_s_n_result <- t.test(final_15min_gb_temps$south_temp, final_15min_gb_temps$north_temp)
+
+print(t_test_hourly_gb_s_n_result)
+```
+
+-   above is statistically significant!
+
+```{r}
+t_test_hourly_gb_s_c_result <- t.test(final_15min_gb_temps$south_temp, final_15min_gb_temps$charred_temp)
+
+print(t_test_hourly_gb_s_c_result)
+```
+
+-   above is NOT statistically significant
+
+```{r}
+t_test_hourly_gb_s_uc_result <- t.test(final_15min_gb_temps$south_temp, final_15min_gb_temps$uncharred_temp)
+
+print(t_test_hourly_gb_s_uc_result)
+```
+
+-   Above is statistically significant!
+
+```{r}
+t_test_hourly_gb_n_c_result <- t.test(final_15min_gb_temps$north_temp, final_15min_gb_temps$charred_temp)
+
+print(t_test_hourly_gb_n_c_result)
+```
+
+-   above is statistically significant!
+
+```{r}
+t_test_hourly_gb_n_uc_result <- t.test(final_15min_gb_temps$north_temp, final_15min_gb_temps$uncharred_temp)
+
+print(t_test_hourly_gb_n_uc_result)
+```
+
+-   above is statistically significant!
+
+\*\* so what do I do if all these comparisons ARE statistically significant except south-charred comparison?
+
+\*\* maybe I should separate this into snow zones?
+
+-   also do the same thing for gb vs db vs live, and db north/south and live north/south
