@@ -134,6 +134,23 @@ stats_monthly_ns_db <- stats_monthly_ns_b %>%
 ##don't need to do for ub because I already have that
 ```
 
+### North/South Differenced Data
+
+\*\* differenced in the same way as the charred/uncharred below!
+
+```{r}
+stats_monthly_s_n <- final_15min_gb_temps %>%
+  mutate(datetime = as.POSIXct(datetime), month = format(datetime, "%m")) %>%
+  #calculating temp_diff for 15-minute interval of charred/uncharred
+  mutate(temp_diff = south_temp - north_temp) %>%
+  #calculating monthly stats
+  group_by(month, zone, burn_status) %>%
+  summarize(mean_south_temp = mean(south_temp), mean_north_temp = mean(north_temp), mean_temp = mean((south_temp + north_temp)/2), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
 ### Charred/Uncharred Differenced Data
 
 ```{r}
@@ -443,6 +460,10 @@ write_csv(stats_monthly_s_uc, "nsf/treetemp_data/stats_montly_s_uc.csv")
 write_csv(stats_monthly_n_c, "nsf/treetemp_data/stats_montly_n_c.csv")
 
 write_csv(stats_monthly_n_uc, "nsf/treetemp_data/stats_montly_n_uc.csv")
+```
+
+```{r}
+write_csv(stats_monthly_s_n, "nsf/treetemp_data/stats_monthly_s_n.csv")
 ```
 
 \*\*not using the below conversion process as of 2024-07-22, just adding csvs to word doc and turning into a table
