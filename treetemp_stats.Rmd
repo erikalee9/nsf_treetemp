@@ -42,9 +42,9 @@ final_15min_ns_b <- read_csv("nsf/treetemp_data/final_15min_ns_b.csv")
 
 final_15min_ns_ub <- read_csv("nsf/treetemp_data/final_15min_ns_ub.csv")
 
-final_hourly_ns_b <- read_csv("nsf/treetemp_data/final_hourly_ns_ub.csv")
+final_hourly_ns_b <- read_csv("nsf/treetemp_data/final_hourly_ns_b.csv")
 
-final_hourly_ns_ub <- read_csv("nsf/treetemp_data/final_hourly_ns_b.csv")
+final_hourly_ns_ub <- read_csv("nsf/treetemp_data/final_hourly_ns_ub.csv")
 
 final_15min_gbdb <- read_csv("nsf/treetemp_data/final_15min_gbdb.csv")
 
@@ -79,9 +79,11 @@ full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv")
 Pulling in Data for gb only comparisons of charred/uncharred data with n/s as well
 
 ```{r}
-final_15min_gb_temps <- read_csv("nsf/treetemp_data/final_15min_gb_temps.csv")
+final_15min_gb_temps <- read_csv("nsf/treetemp_data/final_15min_gb_temps.csv") %>%
+  mutate(day = as.Date(datetime), month = month(datetime))
 
-final_hourly_gb_temps <- read_csv("nsf/treetemp_data/final_hourly_gb_temps.csv")
+final_hourly_gb_temps <- read_csv("nsf/treetemp_data/final_hourly_gb_temps.csv") %>%
+  mutate(day = as.Date(datetime), month = month(datetime))
 ```
 
 ## Calculating Stats
@@ -91,26 +93,28 @@ final_hourly_gb_temps <- read_csv("nsf/treetemp_data/final_hourly_gb_temps.csv")
 Based on meeting w/ Stephanie on 7/17/24 - I already calculated avg_temp for 15min timestep in "data_wrangling" rmarkdown, now I will calculate the mean_diff for 15minute timestep, then do the other calculations by month
 
 ```{r}
+## don't use this one!
 #burned n/s stats
 stats_monthly_ns_b <- final_15min_ns_b %>%
   #calculating temp_diff for 15-minute interval
   mutate(temp_diff = south_temp - north_temp) %>%
   #calculating monthly stats
   group_by(month, zone, burn_status) %>%
-  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+  summarize(mean_north_temp = mean(north_temp), mean_south_temp = mean(south_temp), mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
     coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
 
 ```{r}
+## don't use this once! Use the one lower down with combined burned/ub
 #unburned n/s stats
 stats_monthly_ns_ub <- final_15min_ns_ub %>%
   #calculating temp_diff for 15-minute interval
   mutate(temp_diff = south_temp - north_temp) %>%
   #calculating monthly stats
   group_by(month, zone, burn_status) %>%
-  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+  summarize(mean_north_temp = mean(north_temp), mean_south_temp = mean(south_temp), mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
     coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
@@ -137,10 +141,68 @@ stats_monthly_ns_db <- stats_monthly_ns_b %>%
 stats_monthly_c_uc <- final_15min_gb_temps %>%
   mutate(datetime = as.POSIXct(datetime), month = format(datetime, "%m")) %>%
   #calculating temp_diff for 15-minute interval of charred/uncharred
-  mutate(temp_diff = charred_temp - uncharred_temp %>%
+  mutate(temp_diff = charred_temp - uncharred_temp) %>%
   #calculating monthly stats
   group_by(month, zone, burn_status) %>%
-  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+  summarize(mean_charred_temp = mean(charred_temp), mean_uncharred_temp = mean(uncharred_temp), mean_temp = mean((charred_temp + uncharred_temp)/2), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
+### South / Uncharred Differenced Data
+
+```{r}
+# to compare noth/south with charred/uncharred, I need to make new n/s_gb only datasets
+
+stats_monthly_s_uc <- final_hourly_gb_temps %>%
+  select(datetime_hour, month, zone, burn_status, mean_south_temp, mean_uncharred_temp) %>%
+  mutate(temp_diff = mean_south_temp - mean_uncharred_temp) %>%
+  #calculating monthly stats
+  group_by(month, zone, burn_status) %>%
+  summarize(mean_south_temp = mean(mean_south_temp), mean_uncharred_temp = mean(mean_uncharred_temp), mean_temp = mean((mean_south_temp + mean_uncharred_temp)/2), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
+### South / Charred Differenced Data
+
+```{r}
+stats_monthly_s_c <- final_hourly_gb_temps %>%
+  select(datetime_hour, month, zone, burn_status, mean_south_temp, mean_charred_temp) %>%
+  mutate(temp_diff = mean_south_temp - mean_charred_temp) %>%
+  #calculating monthly stats
+  group_by(month, zone, burn_status) %>%
+  summarize(mean_south_temp = mean(mean_south_temp), mean_charred_temp = mean(mean_charred_temp), mean_temp = mean((mean_south_temp + mean_charred_temp)/2), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
+### North / Uncharred Differenced Data
+
+```{r}
+stats_monthly_n_uc <- final_hourly_gb_temps %>%
+  select(datetime_hour, month, zone, burn_status, mean_north_temp, mean_uncharred_temp) %>%
+  mutate(temp_diff = mean_north_temp - mean_uncharred_temp) %>%
+  #calculating monthly stats
+  group_by(month, zone, burn_status) %>%
+  summarize(mean_north_temp = mean(mean_north_temp), mean_uncharred_temp = mean(mean_uncharred_temp), mean_temp = mean((mean_north_temp + mean_uncharred_temp)/2), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
+    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
+  mutate_if(is.numeric, round, 3)
+```
+
+### North / Charred Differenced Data
+
+```{r}
+stats_monthly_n_c <- final_hourly_gb_temps %>%
+  select(datetime_hour, month, zone, burn_status, mean_north_temp, mean_charred_temp) %>%
+  mutate(temp_diff = mean_north_temp - mean_charred_temp) %>%
+  #calculating monthly stats
+  group_by(month, zone, burn_status) %>%
+  summarize(mean_north_temp = mean(mean_north_temp), mean_charred_temp = mean(mean_charred_temp), mean_temp = mean((mean_north_temp + mean_charred_temp)/2), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
     coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
@@ -224,6 +286,27 @@ stats_monthly_ns <- full_15min_ns %>%
     coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
+```
+
+#### Charred/Uncharred/N/S GB Comparisons
+
+```{r}
+monthly_gb_data <- final_15min_gb_temps %>%
+  group_by(month, zone, burn_status) %>%
+  summarize(mean_north_temp = mean(north_temp, na.rm = TRUE), mean_south_temp = mean(south_temp, na.rm = TRUE), mean_charred_temp = mean(charred_temp, na.rm = TRUE), mean_uncharred_temp = mean(uncharred_temp, na.rm = TRUE), ns_avg_temp = mean((north_temp+south_temp/2), na.rm = TRUE), c_uc_avg_temp = mean((charred_temp + uncharred_temp/2), na.rm = TRUE), s_c_avg_temp = mean((south_temp+charred_temp/2), na.rm = TRUE), s_uc_avg_temp = mean((south_temp+uncharred_temp/2), na.rm = TRUE), n_c_avg_temp = mean((north_temp+charred_temp/2), na.rm = TRUE), n_uc_avg_temp = mean(north_temp+uncharred_temp/2), ns_temp_diff = mean(north_temp - south_temp), c_uc_temp_diff = mean(charred_temp - uncharred_temp), s_c_temp_diff = mean(south_temp - charred_temp), s_uc_temp_diff = mean(south_temp - uncharred_temp), n_c_temp_diff = mean(north_temp - charred_temp), n_uc_temp_diff = mean(north_temp - uncharred_temp), .groups = 'drop')
+```
+
+\*\* keep working on the below code, it is not working right now??
+
+```{r}
+#charred/uncharred monthly stas
+stats_monthly_c_uc_V2 <- monthly_gb_data %>%
+  #calculating monthly stats
+  group_by(month, zone, burn_status) %>%
+  summarize(c_uc_mean_temp = mean(c_uc_avg_temp), mean_diff = mean(c_uc_temp_diff), sd = sd(c_uc_temp_diff, na.rm = TRUE),
+    coeff_var = (sd(c_uc_temp_diff, na.rm = TRUE) / abs(mean(c_uc_temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
+  mutate(across(where(is.numeric), round, 3))
 ```
 
 #### GBDBUB Comparison
