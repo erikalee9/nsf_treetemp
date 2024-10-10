@@ -692,3 +692,5 @@ print(t_test_hourly_gb_n_uc_result)
 \*\* maybe I should separate this into snow zones?
 
 -   also do the same thing for gb vs db vs live, and db north/south and live north/south
+
+-    also analyze by MONTH to see monthly patterns
