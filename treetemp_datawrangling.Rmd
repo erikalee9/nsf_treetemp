@@ -26,6 +26,7 @@ library(rstatix)
 library(htmlwidgets)
 library(RColorBrewer)
 library(patchwork)
+library(ggpubr)
 
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
@@ -1249,10 +1250,19 @@ daily_final_gb_temps <- final_hourly_gb_temps %>%
   group_by(date, month, phase, zone, burn_status) %>%
   summarize(mean_north_temp = mean(mean_north_temp), mean_south_temp = mean(mean_south_temp), mean_charred_temp = mean(mean_charred_temp), mean_uncharred_temp = mean(mean_uncharred_temp))
 
-
+#adding day/night columns to hourly gb_temps
+final_hourly_gb_temps <- final_hourly_gb_temps %>%
+  mutate(
+    date = date(datetime_hour),  # Create the date column
+    phase = case_when(
+      hour(datetime_hour) >= 8 & hour(datetime_hour) < 17 ~ "day",
+      TRUE ~ "night"
+    )) %>%
+  select(datetime_hour, date, month, phase, everything())
 ```
 
 ```{r}
+#day/night mean temps plots
 dtnt_gb_aspect_comparison <- ggplot(data = daily_final_gb_temps) +
   geom_line(aes(x = date, y = mean_north_temp, color = "North Temp")) +
   geom_line(aes(x = date, y = mean_south_temp, color = "South Temp")) +
@@ -1270,6 +1280,254 @@ dtnt_gb_aspect_comparison
 ```
 
 The above plot makes it look like the charred temps are the highest, not sure why?
+
+```{r}
+#day/night hourly temps plots
+hourly_gb_aspect_comparison <- ggplot(data = final_hourly_gb_temps) +
+  geom_line(aes(x = date, y = mean_north_temp, color = "North Temp")) +
+  geom_line(aes(x = date, y = mean_south_temp, color = "South Temp")) +
+  geom_line(aes(x = date, y = mean_charred_temp, color = "Charred Temp")) +
+  geom_line(aes(x = date, y = mean_uncharred_temp, color = "Uncharred Temp")) +
+  facet_wrap(~ zone + phase, dir = "v") +
+  scale_color_manual(
+    values = c("North Temp" = "green", "South Temp" = "red", "Charred Temp" = "black", "Uncharred Temp" = "grey"),
+    name = "Temperature Type"  # Legend title
+  ) + 
+  facet_wrap(~phase + zone)
+
+
+hourly_gb_aspect_comparison 
+```
+
+### Box Plot of hourly data
+
+```{r}
+## have to make a new, long, dataframe first
+final_hourly_gb_temps_long <- final_hourly_gb_temps %>%
+  #renaming aspect variables so it only says "south" not "mean_south_temp"
+  rename_with(~ gsub("_temp", "", gsub("mean_", "", .)), starts_with("mean_")) %>%
+  pivot_longer(cols = c(north, south, charred, uncharred),
+               names_to = "temp_type", values_to = "temperature")
+```
+
+```{r}
+#creating a daytime dataframe and a night time dataframe to make the facet_wrapped plots more easy to see
+##persistent
+dt_p_final_hourly_gb_temps_long <- final_hourly_gb_temps_long %>%
+  filter(phase == "day", zone == "persistent")
+
+nt_p_final_hourly_gb_temps_long <- final_hourly_gb_temps_long %>%
+  filter(phase == "night", zone == "persistent")
+
+##transitional
+dt_t_final_hourly_gb_temps_long <- final_hourly_gb_temps_long %>%
+  filter(phase == "day", zone == "transitional")
+
+nt_t_final_hourly_gb_temps_long <- final_hourly_gb_temps_long %>%
+  filter(phase == "night", zone == "transitional")
+```
+
+```{r}
+#hourly boxplot
+hourly_gb_aspect_comparison_boxplot <- ggplot(data = final_hourly_gb_temps_long) +
+  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
+  facet_wrap(~ zone + phase + month, scales = "free") + 
+  scale_fill_manual(
+    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
+  theme_bw()
+
+# Display the plot
+print(hourly_gb_aspect_comparison_boxplot)
+```
+
+```{r}
+#dt hourly boxplot - persistent
+dt_p_hourly_gb_aspect_comparison_boxplot <- ggplot(data = dt_p_final_hourly_gb_temps_long) +
+  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
+  facet_wrap(~ zone + phase + month, scales = "free") + 
+  scale_fill_manual(
+    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
+  theme_bw()
+
+# Display the plot
+print(dt_p_hourly_gb_aspect_comparison_boxplot)
+```
+
+```{r}
+dt_t_hourly_gb_aspect_comparison_boxplot <- ggplot(data = dt_t_final_hourly_gb_temps_long) +
+  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
+  facet_wrap(~ zone + phase + month, scales = "free") + 
+  scale_fill_manual(
+    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
+  theme_bw()
+
+# Display the plot
+print(dt_t_hourly_gb_aspect_comparison_boxplot)
+```
+
+```{r}
+#arranging dt plots next to each other
+dt_hourly_gb_comb_plots <- ggarrange(
+  dt_p_hourly_gb_aspect_comparison_boxplot,
+  dt_t_hourly_gb_aspect_comparison_boxplot,
+  nrow = 1,
+  common.legend = TRUE,
+  legend = "right")
+
+# adding a title to combined plot
+dt_hourly_gb_comb_plots <- annotate_figure(
+  dt_hourly_gb_comb_plots,
+  top = text_grob("Daytime Hourly Mean Temps", size = 14)
+)
+
+# Display the combined plot
+dt_hourly_gb_comb_plots
+```
+
+Night Time Plots by zone
+
+```{r}
+#nt hourly boxplot - persistent
+nt_p_hourly_gb_aspect_comparison_boxplot <- ggplot(data = nt_p_final_hourly_gb_temps_long) +
+  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
+  facet_wrap(~ zone + phase + month, scales = "free") + 
+  scale_fill_manual(
+    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
+  theme_bw()
+
+# Display the plot
+print(nt_p_hourly_gb_aspect_comparison_boxplot)
+```
+
+```{r}
+#nighttime hourly boxplot - transitional
+nt_t_hourly_gb_aspect_comparison_boxplot <- ggplot(data = nt_t_final_hourly_gb_temps_long) +
+  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
+  facet_wrap(~ zone + phase + month, scales = "free") + 
+  scale_fill_manual(
+    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
+  theme_bw()
+
+# Display the plot
+print(nt_t_hourly_gb_aspect_comparison_boxplot)
+```
+
+```{r}
+#arranging dt plots next to each other
+nt_hourly_gb_comb_plots <- ggarrange(
+  nt_p_hourly_gb_aspect_comparison_boxplot, 
+  nt_t_hourly_gb_aspect_comparison_boxplot,
+  nrow = 1,
+  common.legend = TRUE,
+  legend = "right")
+
+nt_hourly_gb_comb_plots
+```
+
+Boxplots by Mean Daily Data
+
+```{r}
+## have to make a new, long, dataframe first
+final_daily_gb_temps_long <- daily_final_gb_temps %>%
+  #renaming aspect variables so it only says "south" not "mean_south_temp"
+  rename_with(~ gsub("_temp", "", gsub("mean_", "", .)), starts_with("mean_")) %>%
+  pivot_longer(cols = c(north, south, charred, uncharred),
+               names_to = "temp_type", values_to = "temperature")
+```
+
+Day/Night Long Dataframes - for boxplot plotting
+
+```{r}
+dt_p_final_daily_gb_temps_long <- final_daily_gb_temps_long %>%
+  filter(phase == "day", zone == "persistent")
+
+nt_p_final_daily_gb_temps_long <- final_daily_gb_temps_long %>%
+  filter(phase == "night", zone == "persistent")
+
+##transitional
+dt_t_final_daily_gb_temps_long <- final_daily_gb_temps_long %>%
+  filter(phase == "day", zone == "transitional")
+
+nt_t_final_daily_gb_temps_long <- final_daily_gb_temps_long %>%
+  filter(phase == "night", zone == "transitional")
+```
+
+Plotting Daily Means by Phase + Zone
+
+```{r}
+#dt hourly boxplot - persistent
+dt_p_daily_gb_aspect_comparison_boxplot <- ggplot(data = dt_p_final_daily_gb_temps_long) +
+  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
+  facet_wrap(~ zone + phase + month, scales = "free") + 
+  scale_fill_manual(
+    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
+  theme_bw()
+
+# Display the plot
+print(dt_p_daily_gb_aspect_comparison_boxplot)
+```
+
+```{r}
+#dt hourly boxplot - persistent
+dt_t_daily_gb_aspect_comparison_boxplot <- ggplot(data = dt_t_final_daily_gb_temps_long) +
+  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
+  facet_wrap(~ zone + phase + month, scales = "free") + 
+  scale_fill_manual(
+    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
+  theme_bw()
+
+# Display the plot
+print(dt_t_daily_gb_aspect_comparison_boxplot)
+```
+
+```{r}
+#arranging dt plots next to each other
+dt_daily_gb_comb_plots <- ggarrange(
+  dt_p_daily_gb_aspect_comparison_boxplot,
+  dt_t_daily_gb_aspect_comparison_boxplot,
+  nrow = 1,
+  common.legend = TRUE,
+  legend = "right")
+
+# adding a title to combined plot
+dt_daily_gb_comb_plots <- annotate_figure(
+  dt_daily_gb_comb_plots,
+  top = text_grob("Daytime Daily Mean Temps", size = 14)
+)
+
+# Display the combined plot
+dt_daily_gb_comb_plots
+```
+
+\
+\
+\
+\
+
+# Display the combined plot
+
+dt_hourly_gb_comb_plots
 
 ```{r}
 #new dataframe with charred/uncharred/north/south aspects for feb
@@ -1295,6 +1553,10 @@ may_p_full_aspects <- filtered_pers_b_aspects %>%
   mutate(month = month(datetime)) %>%
   filter(tree_name !="gb_w") %>%
   filter(month == "5")
+
+```
+
+```{r}
 
 ```
 
