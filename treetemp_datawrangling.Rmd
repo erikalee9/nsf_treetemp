@@ -85,16 +85,20 @@ start_time <- ymd_hms("2024-02-02 00:00:00")
 end_time <- ymd_hms("2024-05-24 00:00:00")
 
 filtered_pers_b_aspects <- pers_b_aspects %>%
-  filter(datetime >= start_time & datetime <= end_time)
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
 
 filtered_pers_ub_aspects <- pers_ub_aspects %>%
-  filter(datetime >= start_time & datetime <= end_time)
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
 
 filtered_trans_b_aspects <- trans_b_aspects %>%
-  filter(datetime >= start_time & datetime <= end_time)
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
 
 filtered_trans_ub_aspects <- trans_ub_aspects %>%
-  filter(datetime >= start_time & datetime <= end_time)
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
 ```
 
 ```{r}
@@ -1241,19 +1245,86 @@ daily_final_gb_temps <- final_hourly_gb_temps %>%
     phase = case_when(
       hour(datetime_hour) >= 8 & hour(datetime_hour) < 17 ~ "day",
       TRUE ~ "night"
-    )
-  ) %>%
+    )) %>%
   group_by(date, month, phase, zone, burn_status) %>%
   summarize(mean_north_temp = mean(mean_north_temp), mean_south_temp = mean(mean_south_temp), mean_charred_temp = mean(mean_charred_temp), mean_uncharred_temp = mean(mean_uncharred_temp))
+
+
 ```
 
 ```{r}
 dtnt_gb_aspect_comparison <- ggplot(data = daily_final_gb_temps) +
-  geom_line(aes(x = date, y = mean_north_temp), color = "green") +
-  geom_line(aes(x = date, y = mean_south_temp), color = "red") +
-  geom_line(aes(x = date, y = mean_charred_temp), color = "black") +
-  geom_line(aes(x = date, y = mean_uncharred_temp), color = "grey") +
-  facet_wrap (~ zone + phase, dir = "v")
+  geom_line(aes(x = date, y = mean_north_temp, color = "North Temp")) +
+  geom_line(aes(x = date, y = mean_south_temp, color = "South Temp")) +
+  geom_line(aes(x = date, y = mean_charred_temp, color = "Charred Temp")) +
+  geom_line(aes(x = date, y = mean_uncharred_temp, color = "Uncharred Temp")) +
+  facet_wrap(~ zone + phase, dir = "v") +
+  scale_color_manual(
+    values = c("North Temp" = "green", "South Temp" = "red", "Charred Temp" = "black", "Uncharred Temp" = "grey"),
+    name = "Temperature Type"  # Legend title
+  ) + 
+  facet_wrap(~phase + zone)
 
-dtnt_gb_aspect_comparison
+
+dtnt_gb_aspect_comparison 
 ```
+
+The above plot makes it look like the charred temps are the highest, not sure why?
+
+```{r}
+#new dataframe with charred/uncharred/north/south aspects for feb
+
+feb_t_full_aspects <- filtered_trans_b_aspects %>%
+  select(datetime, zone, burn_status, aspect, tree_name, temp) %>%
+  mutate(month = month(datetime)) %>%
+  filter(month == "2")
+
+feb_p_full_aspects <- filtered_pers_b_aspects %>%
+  select(datetime, zone, burn_status, aspect, tree_name, temp) %>%
+  mutate(month = month(datetime)) %>%
+  filter(tree_name !="gb_w") %>%
+  filter(month == "2")
+
+may_t_full_aspects <- filtered_trans_b_aspects %>%
+  select(datetime, zone, burn_status, aspect, tree_name, temp) %>%
+  mutate(month = month(datetime)) %>%
+  filter(month == "5")
+
+may_p_full_aspects <- filtered_pers_b_aspects %>%
+  select(datetime, zone, burn_status, aspect, tree_name, temp) %>%
+  mutate(month = month(datetime)) %>%
+  filter(tree_name !="gb_w") %>%
+  filter(month == "5")
+
+```
+
+```{r}
+#plotting feb dates to see if there is a substantial difference between char patterns
+t_feb_aspect_plot <- ggplot(data = feb_t_full_aspects) +
+  geom_line(aes(x = datetime, y = temp, color = aspect, linetype = burn_status)) +
+  facet_wrap(~tree_name)
+
+t_feb_aspect_plot
+
+p_feb_aspect_plot <- ggplot(data = feb_p_full_aspects) +
+  geom_line(aes(x = datetime, y = temp, color = aspect, linetype = burn_status)) +
+  facet_wrap(~tree_name)
+
+p_feb_aspect_plot
+```
+
+```{r}
+t_may_aspect_plot <- ggplot(data = may_t_full_aspects) +
+  geom_line(aes(x = datetime, y = temp, color = aspect, linetype = burn_status)) +
+  facet_wrap(~tree_name)
+
+t_may_aspect_plot
+
+p_may_aspect_plot <- ggplot(data = feb_p_full_aspects) +
+  geom_line(aes(x = datetime, y = temp, color = aspect, linetype = burn_status)) +
+  facet_wrap(~tree_name)
+
+p_may_aspect_plot
+```
+
+\*\* at the pers may plot -\> looks like charred trees are actually getting much warmer than in feb.
