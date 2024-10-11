@@ -644,11 +644,13 @@ filtered_trans_ub_aspects <- trans_ub_aspects %>%
 
 ## T-Test Dataframes
 
+### Green burned trees
+
 ```{r}
 #using earlier dataframes to compare on a hourly timestep 
 ##testing with the hourly gb dataset - final_hourly_gb_temps
 
-t_test_hourly_gb_s_n_result <- t.test(final_15min_gb_temps$south_temp, final_15min_gb_temps$north_temp)
+t_test_hourly_gb_s_n_result <- t.test(final_hourly_gb_temps$mean_south_temp, final_hourly_gb_temps$mean_north_temp)
 
 print(t_test_hourly_gb_s_n_result)
 ```
@@ -656,7 +658,15 @@ print(t_test_hourly_gb_s_n_result)
 -   above is statistically significant!
 
 ```{r}
-t_test_hourly_gb_s_c_result <- t.test(final_15min_gb_temps$south_temp, final_15min_gb_temps$charred_temp)
+t_test_hourly_gb_c_uc_result <- t.test(final_hourly_gb_temps$mean_charred_temp, final_hourly_gb_temps$mean_uncharred_temp)
+
+print(t_test_hourly_gb_c_uc_result )
+```
+
+-   above is statistically significant
+
+```{r}
+t_test_hourly_gb_s_c_result <- t.test(final_hourly_gb_temps$mean_south_temp, final_hourly_gb_temps$mean_charred_temp)
 
 print(t_test_hourly_gb_s_c_result)
 ```
@@ -664,15 +674,15 @@ print(t_test_hourly_gb_s_c_result)
 -   above is NOT statistically significant
 
 ```{r}
-t_test_hourly_gb_s_uc_result <- t.test(final_15min_gb_temps$south_temp, final_15min_gb_temps$uncharred_temp)
+t_test_hourly_gb_s_uc_result <- t.test(final_hourly_gb_temps$mean_south_temp, final_hourly_gb_temps$mean_uncharred_temp)
 
 print(t_test_hourly_gb_s_uc_result)
 ```
 
--   Above is statistically significant!
+-   Above is NOT statistically significant!
 
 ```{r}
-t_test_hourly_gb_n_c_result <- t.test(final_15min_gb_temps$north_temp, final_15min_gb_temps$charred_temp)
+t_test_hourly_gb_n_c_result <- t.test(final_hourly_gb_temps$mean_north_temp, final_hourly_gb_temps$mean_charred_temp)
 
 print(t_test_hourly_gb_n_c_result)
 ```
@@ -680,17 +690,567 @@ print(t_test_hourly_gb_n_c_result)
 -   above is statistically significant!
 
 ```{r}
-t_test_hourly_gb_n_uc_result <- t.test(final_15min_gb_temps$north_temp, final_15min_gb_temps$uncharred_temp)
+t_test_hourly_gb_n_uc_result <- t.test(final_hourly_gb_temps$mean_north_temp, final_hourly_gb_temps$mean_uncharred_temp)
 
 print(t_test_hourly_gb_n_uc_result)
 ```
 
--   above is statistically significant!
+-   above is NOT statistically significant!
 
-\*\* so what do I do if all these comparisons ARE statistically significant except south-charred comparison?
+Monthly GB T-Tests - to look at monthly trends
 
-\*\* maybe I should separate this into snow zones?
+```{r}
+#creating monthly dataframes
+final_hourly_gb_temps <- final_hourly_gb_temps %>%
+  mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))
 
--   also do the same thing for gb vs db vs live, and db north/south and live north/south
+feb_gb_data <- final_hourly_gb_temps %>%
+  filter(month == "2")
 
--    also analyze by MONTH to see monthly patterns
+march_gb_data <- final_hourly_gb_temps %>%
+  filter(month == "3")
+
+april_gb_data <- final_hourly_gb_temps %>%
+  filter(month == "4")
+
+may_gb_data <- final_hourly_gb_temps %>%
+  filter(month == "5")
+```
+
+Monthly T-Tests to compare seasonal differences
+
+Monthly GB N-S comparison
+
+```{r}
+t_test_feb_gb_s_n_result <- t.test(feb_gb_data$mean_south_temp, feb_gb_data$mean_north_temp)
+
+print(t_test_feb_gb_s_n_result)
+## above is every so slightly significant
+
+t_test_march_gb_s_n_result <- t.test(march_gb_data$mean_south_temp, march_gb_data$mean_north_temp)
+
+print(t_test_march_gb_s_n_result)
+##above is significant
+
+t_test_april_gb_s_n_result <- t.test(april_gb_data$mean_south_temp, april_gb_data$mean_north_temp)
+
+print(t_test_april_gb_s_n_result)
+## above is significant
+
+t_test_may_gb_s_n_result <- t.test(may_gb_data$mean_south_temp, may_gb_data$mean_north_temp)
+
+print(t_test_may_gb_s_n_result)
+#above is not significant!
+```
+
+Monthly GB C-UC Comparison
+
+```{r}
+t_test_feb_gb_c_uc_result <- t.test(feb_gb_data$mean_charred_temp, feb_gb_data$mean_uncharred_temp)
+
+print(t_test_feb_gb_c_uc_result)
+## above is not significant
+
+t_test_march_gb_c_uc_result <- t.test(march_gb_data$mean_charred_temp, march_gb_data$mean_uncharred_temp)
+
+print(t_test_march_gb_c_uc_result)
+## above is not significant
+
+t_test_april_gb_c_uc_result <- t.test(april_gb_data$mean_charred_temp, april_gb_data$mean_uncharred_temp)
+
+print(t_test_april_gb_c_uc_result)
+## above is not significant? - p value = 0.03027
+
+t_test_may_gb_c_uc_result <- t.test(may_gb_data$mean_charred_temp, may_gb_data$mean_uncharred_temp)
+
+print(t_test_may_gb_c_uc_result)
+## above is significant!
+```
+
+Monthly GB S-C comparison
+
+```{r}
+t_test_feb_gb_s_c_result <- t.test(feb_gb_data$mean_south_temp, feb_gb_data$mean_charred_temp)
+
+print(t_test_feb_gb_s_c_result)
+## above is not significant - 0.195
+
+t_test_march_gb_s_c_result <- t.test(march_gb_data$mean_south_temp, march_gb_data$mean_charred_temp)
+
+print(t_test_march_gb_s_c_result)
+## above is not significant - 0.2871
+
+t_test_april_gb_s_c_result <- t.test(april_gb_data$mean_south_temp, april_gb_data$mean_charred_temp)
+
+print(t_test_april_gb_s_c_result)
+## above is not significant - 0.4538
+
+t_test_may_gb_s_c_result <- t.test(may_gb_data$mean_south_temp, may_gb_data$mean_charred_temp)
+
+print(t_test_may_gb_s_c_result)
+## above IS Significant! p = 0.002422
+```
+
+Monthly GB S-UC Comparison
+
+```{r}
+## none of these comparisons are significant
+
+t_test_feb_gb_s_uc_result <- t.test(feb_gb_data$mean_south_temp, feb_gb_data$mean_uncharred_temp)
+
+print(t_test_feb_gb_s_uc_result)
+## above is not significant - 0.4534
+
+t_test_march_gb_s_uc_result <- t.test(march_gb_data$mean_south_temp, march_gb_data$mean_uncharred_temp)
+
+print(t_test_march_gb_s_uc_result)
+## above is not significant - 0.2455
+
+t_test_april_gb_s_uc_result <- t.test(april_gb_data$mean_south_temp, april_gb_data$mean_uncharred_temp)
+
+print(t_test_april_gb_s_uc_result)
+## above is not significant - 0.1629
+
+t_test_may_gb_s_uc_result <- t.test(may_gb_data$mean_south_temp, may_gb_data$mean_uncharred_temp)
+
+print(t_test_may_gb_s_uc_result)
+## above is not significant - 0.4025
+```
+
+Monthly GB N-C comparison
+
+```{r}
+## all of these combinations are significant differences!
+
+t_test_feb_gb_n_c_result <- t.test(feb_gb_data$mean_north_temp, feb_gb_data$mean_charred_temp)
+
+print(t_test_feb_gb_n_c_result)
+## above is not significant? - 0.086
+
+t_test_march_gb_n_c_result <- t.test(march_gb_data$mean_north_temp, march_gb_data$mean_charred_temp)
+
+print(t_test_march_gb_n_c_result)
+## above is significant - 0.007399
+
+t_test_april_gb_n_c_result <- t.test(april_gb_data$mean_north_temp, april_gb_data$mean_charred_temp)
+
+print(t_test_april_gb_n_c_result)
+## above is significant - 0.001116
+
+t_test_may_gb_n_c_result <- t.test(may_gb_data$mean_north_temp, may_gb_data$mean_charred_temp)
+
+print(t_test_may_gb_n_c_result)
+## above IS Significant! p = 0.00265
+```
+
+Monthly GB N-UC Comparisons
+
+```{r}
+## none of these comparisons are significant
+
+t_test_feb_gb_n_uc_result <- t.test(feb_gb_data$mean_north_temp, feb_gb_data$mean_uncharred_temp)
+
+print(t_test_feb_gb_n_uc_result)
+## above is significant? - 0.02531
+
+t_test_march_gb_n_uc_result <- t.test(march_gb_data$mean_north_temp, march_gb_data$mean_uncharred_temp)
+
+print(t_test_march_gb_n_uc_result)
+## above is significant? - 0.01287
+
+t_test_april_gb_n_uc_result <- t.test(april_gb_data$mean_north_temp, april_gb_data$mean_uncharred_temp)
+
+print(t_test_april_gb_n_uc_result)
+## above is not significant - 0.3065
+
+t_test_may_gb_n_uc_result <- t.test(may_gb_data$mean_north_temp, may_gb_data$mean_uncharred_temp)
+
+print(t_test_may_gb_n_uc_result)
+## above is not significant - 0.3222
+```
+
+### Dead Burned Trees
+
+```{r}
+#have to set up a new dataframe with pivoted wider values
+final_hourly_db_temps <- full_hourly_gbdbub %>%
+  # Pivot wider, creating separate columns for db_south_temp and db_north_temp
+  select(datetime_hour, day, month, zone, aspect, db_temp) %>%
+  pivot_wider(
+    names_from = aspect,      # The column to pivot by (north/south aspects)
+    values_from = db_temp,    # The values to populate the new columns
+    names_prefix = "db_"      # Prefix to add to the new column names
+  ) %>%
+  rename(
+    south_temp = db_south,
+    north_temp = db_north
+  )
+```
+
+```{r}
+t_test_hourly_db_s_n_result <- t.test(final_hourly_db_temps$south_temp, final_hourly_db_temps$north_temp)
+
+print(t_test_hourly_db_s_n_result)
+```
+
+Experimenting with facet wrapping and plotting data - DONT LIKE THIS! Not sure how to interpret it
+
+```{r}
+# Group by your variable (e.g., month) and run t-tests for each group
+t_test_results <- final_hourly_db_temps %>%
+  group_by(month, zone) %>%
+  nest() %>%
+  mutate(t_test = map(data, ~ tidy(t.test(.x$south_temp, .x$north_temp)))) %>%
+  unnest(t_test)
+
+# Plot the p-values or estimates and use facet_wrap for each group
+ggplot(t_test_results, aes(x = month, y = estimate)) +
+  geom_point() +
+  facet_wrap(~ month) +  # Facet by the grouping variable
+  labs(title = "T-test Results by Month", x = "Month", y = "Mean Difference in Temperature") +
+  theme_minimal()
+```
+
+Monthly DB S-N comparisons
+
+```{r}
+#making monthly dataframes
+feb_db_data <- final_hourly_db_temps %>%
+  filter(month == "2")
+
+march_db_data <- final_hourly_db_temps %>%
+  filter(month == "3")
+
+april_db_data <- final_hourly_db_temps %>%
+  filter(month == "4")
+
+may_db_data <- final_hourly_db_temps %>%
+  filter(month == "5")
+```
+
+```{r}
+t_test_feb_db_s_n_result <- t.test(feb_db_data$south_temp, feb_db_data$north_temp)
+
+print(t_test_feb_db_s_n_result)
+## above is significant
+
+t_test_march_db_s_n_result <- t.test(march_db_data$south_temp, march_db_data$north_temp)
+
+print(t_test_march_db_s_n_result)
+##above is significant
+
+t_test_april_db_s_n_result <- t.test(april_db_data$south_temp, april_db_data$north_temp)
+
+print(t_test_april_db_s_n_result)
+## above is significant
+
+t_test_may_db_s_n_result <- t.test(may_db_data$south_temp, may_db_data$north_temp)
+
+print(t_test_may_db_s_n_result)
+#above is not significant
+```
+
+### Live Trees
+
+```{r}
+#have to set up a new dataframe with pivoted wider values
+final_hourly_ub_temps <- full_hourly_gbdbub %>%
+  # Pivot wider, creating separate columns for db_south_temp and db_north_temp
+  select(datetime_hour, day, month, zone, aspect, ub_temp) %>%
+  pivot_wider(
+    names_from = aspect,      # The column to pivot by (north/south aspects)
+    values_from = ub_temp,    # The values to populate the new columns
+    names_prefix = "ub_"      # Prefix to add to the new column names
+  ) %>%
+  rename(
+    south_temp = ub_south,
+    north_temp = ub_north
+  )
+```
+
+```{r}
+t_test_hourly_ub_s_n_result <- t.test(final_hourly_ub_temps$south_temp, final_hourly_ub_temps$north_temp)
+
+print(t_test_hourly_ub_s_n_result)
+```
+
+-   the above is significant!
+
+Monthly live S-N comparisons
+
+```{r}
+#making monthly dataframes
+feb_ub_data <- final_hourly_ub_temps %>%
+  filter(month == "2")
+
+march_ub_data <- final_hourly_ub_temps %>%
+  filter(month == "3")
+
+april_ub_data <- final_hourly_ub_temps %>%
+  filter(month == "4")
+
+may_ub_data <- final_hourly_ub_temps %>%
+  filter(month == "5")
+```
+
+```{r}
+t_test_feb_ub_s_n_result <- t.test(feb_ub_data$south_temp, feb_ub_data$north_temp)
+
+print(t_test_feb_ub_s_n_result)
+## above is significant
+
+t_test_march_ub_s_n_result <- t.test(march_ub_data$south_temp, march_ub_data$north_temp)
+
+print(t_test_march_ub_s_n_result)
+##above is significant
+
+t_test_april_ub_s_n_result <- t.test(april_ub_data$south_temp, april_ub_data$north_temp)
+
+print(t_test_april_ub_s_n_result)
+## above is significant
+
+t_test_may_ub_s_n_result <- t.test(may_ub_data$south_temp, may_ub_data$north_temp)
+
+print(t_test_may_ub_s_n_result)
+#above is not significant
+```
+
+## Zone-specific T-Tests
+
+### Green Burned
+
+```{r}
+#setting up dataframes
+p_final_hourly_gb_temps <- final_hourly_gb_temps %>%
+  filter (zone == "persistent")
+
+t_final_hourly_gb_temps <- final_hourly_gb_temps %>%
+  filter (zone == "transitional")
+
+p_t_test_hourly_gb_s_n_result <- t.test(p_final_hourly_gb_temps$mean_south_temp, p_final_hourly_gb_temps$mean_north_temp)
+
+print(p_t_test_hourly_gb_s_n_result)
+
+t_t_test_hourly_gb_s_n_result <- t.test(t_final_hourly_gb_temps$mean_south_temp, t_final_hourly_gb_temps$mean_north_temp)
+
+print(t_t_test_hourly_gb_s_n_result)
+```
+
+Monthly GB S-N Comparison - by zone
+
+```{r}
+p_feb_gb_data <- feb_gb_data %>%
+  filter(zone == "persistent")
+
+t_feb_gb_data <- feb_gb_data %>%
+  filter(zone == "transitional")
+
+p_march_gb_data <- feb_gb_data %>%
+  filter(zone == "persistent")
+
+t_march_gb_data <- feb_gb_data %>%
+  filter(zone == "transitional")
+
+p_april_gb_data <- feb_gb_data %>%
+  filter(zone == "persistent")
+
+t_april_gb_data <- feb_gb_data %>%
+  filter(zone == "transitional")
+
+p_may_gb_data <- feb_gb_data %>%
+  filter(zone == "persistent")
+
+t_may_gb_data <- feb_gb_data %>%
+  filter(zone == "transitional")
+```
+
+### Dead Burned
+
+```{r}
+p_final_hourly_db_temps <- final_hourly_db_temps %>%
+  filter (zone == "persistent")
+
+t_final_hourly_db_temps <- final_hourly_db_temps %>%
+  filter (zone == "transitional")
+
+p_t_test_hourly_db_s_n_result <- t.test(p_final_hourly_db_temps$south_temp, p_final_hourly_db_temps$north_temp)
+
+print(p_t_test_hourly_db_s_n_result)
+
+t_t_test_hourly_db_s_n_result <- t.test(t_final_hourly_db_temps$south_temp, t_final_hourly_db_temps$north_temp)
+
+print(t_t_test_hourly_db_s_n_result)
+```
+
+Monthly DB S-N Comparisons by zone
+
+```{r}
+#dataframes
+p_feb_db_data <- feb_db_data %>%
+  filter(zone == "persistent")
+
+t_feb_db_data <- feb_db_data %>%
+  filter(zone == "transitional")
+
+p_march_db_data <- march_db_data %>%
+  filter(zone == "persistent")
+
+t_march_db_data <- march_db_data %>%
+  filter(zone == "transitional")
+
+p_april_db_data <- april_db_data %>%
+  filter(zone == "persistent")
+
+t_april_db_data <- april_db_data %>%
+  filter(zone == "transitional")
+
+p_may_db_data <- may_db_data %>%
+  filter(zone == "persistent")
+
+t_may_db_data <- may_db_data %>%
+  filter(zone == "transitional")
+```
+
+Persistent
+
+```{r}
+p_t_test_feb_db_s_n_result <- t.test(p_feb_db_data$south_temp, p_feb_db_data$north_temp)
+
+print(p_t_test_feb_db_s_n_result)
+## above is significant
+
+p_t_test_march_db_s_n_result <- t.test(p_march_db_data$south_temp, p_march_db_data$north_temp)
+
+print(p_t_test_march_db_s_n_result)
+##above is significant
+
+p_t_test_april_db_s_n_result <- t.test(p_april_db_data$south_temp, p_april_db_data$north_temp)
+
+print(p_t_test_april_db_s_n_result)
+## above is significant
+
+p_t_test_may_db_s_n_result <- t.test(p_may_db_data$south_temp, p_may_db_data$north_temp)
+
+print(p_t_test_may_db_s_n_result)
+#above is not significant
+```
+
+Transitional
+
+```{r}
+t_t_test_feb_db_s_n_result <- t.test(t_feb_db_data$south_temp, t_feb_db_data$north_temp)
+
+print(t_t_test_feb_db_s_n_result)
+## above is significant
+
+t_t_test_march_db_s_n_result <- t.test(t_march_db_data$south_temp, t_march_db_data$north_temp)
+
+print(t_t_test_march_db_s_n_result)
+##above is significant
+
+t_t_test_april_db_s_n_result <- t.test(t_april_db_data$south_temp, t_april_db_data$north_temp)
+
+print(t_t_test_april_db_s_n_result)
+## above is significant
+
+t_t_test_may_db_s_n_result <- t.test(t_may_db_data$south_temp, t_may_db_data$north_temp)
+
+print(t_t_test_may_db_s_n_result)
+#above is not significant
+```
+
+### Live
+
+```{r}
+p_final_hourly_ub_temps <- final_hourly_ub_temps %>%
+  filter (zone == "persistent")
+
+t_final_hourly_ub_temps <- final_hourly_ub_temps %>%
+  filter (zone == "transitional")
+
+p_t_test_hourly_ub_s_n_result <- t.test(p_final_hourly_ub_temps$south_temp, p_final_hourly_ub_temps$north_temp)
+
+print(p_t_test_hourly_ub_s_n_result)
+
+t_t_test_hourly_ub_s_n_result <- t.test(t_final_hourly_ub_temps$south_temp, t_final_hourly_ub_temps$north_temp)
+
+print(t_t_test_hourly_ub_s_n_result)
+```
+
+Monthly Live S-N Comparisons by zone
+
+```{r}
+#dataframes
+p_feb_ub_data <- feb_ub_data %>%
+  filter(zone == "persistent")
+
+t_feb_ub_data <- feb_ub_data %>%
+  filter(zone == "transitional")
+
+p_march_ub_data <- march_ub_data %>%
+  filter(zone == "persistent")
+
+t_march_ub_data <- march_ub_data %>%
+  filter(zone == "transitional")
+
+p_april_ub_data <- april_ub_data %>%
+  filter(zone == "persistent")
+
+t_april_ub_data <- april_ub_data %>%
+  filter(zone == "transitional")
+
+p_may_ub_data <- may_ub_data %>%
+  filter(zone == "persistent")
+
+t_may_ub_data <- may_ub_data %>%
+  filter(zone == "transitional")
+```
+
+Persistent
+
+```{r}
+p_t_test_feb_ub_s_n_result <- t.test(p_feb_ub_data$south_temp, p_feb_ub_data$north_temp)
+
+print(p_t_test_feb_ub_s_n_result)
+## above is not significant
+
+p_t_test_march_ub_s_n_result <- t.test(p_march_ub_data$south_temp, p_march_ub_data$north_temp)
+
+print(p_t_test_march_ub_s_n_result)
+##above is not significant
+
+p_t_test_april_ub_s_n_result <- t.test(p_april_ub_data$south_temp, p_april_ub_data$north_temp)
+
+print(p_t_test_april_ub_s_n_result)
+## above is not significant
+
+p_t_test_may_ub_s_n_result <- t.test(p_may_ub_data$south_temp, p_may_ub_data$north_temp)
+
+print(p_t_test_may_ub_s_n_result)
+#above is not significant
+```
+
+transitional
+
+```{r}
+t_t_test_feb_ub_s_n_result <- t.test(t_feb_ub_data$south_temp, t_feb_ub_data$north_temp)
+
+print(t_t_test_feb_ub_s_n_result)
+## above is significant
+
+t_t_test_march_ub_s_n_result <- t.test(t_march_ub_data$south_temp, t_march_ub_data$north_temp)
+
+print(t_t_test_march_ub_s_n_result)
+##above is significant
+
+t_t_test_april_ub_s_n_result <- t.test(t_april_ub_data$south_temp, t_april_ub_data$north_temp)
+
+print(p_t_test_april_ub_s_n_result)
+## above is significant
+
+t_t_test_may_ub_s_n_result <- t.test(t_may_ub_data$south_temp, t_may_ub_data$north_temp)
+
+print(t_t_test_may_ub_s_n_result)
+#above is not significant
+```
