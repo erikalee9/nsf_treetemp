@@ -86,20 +86,24 @@ start_time <- ymd_hms("2024-02-02 00:00:00")
 end_time <- ymd_hms("2024-05-24 00:00:00")
 
 filtered_pers_b_aspects <- pers_b_aspects %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime <= as.POSIXct("2024-05-24 00:00:00", tz = "MST"))
 
 filtered_pers_ub_aspects <- pers_ub_aspects %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
+ mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime <= as.POSIXct("2024-05-24 00:00:00", tz = "MST"))
 
 filtered_trans_b_aspects <- trans_b_aspects %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
+ mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime <= as.POSIXct("2024-05-24 00:00:00", tz = "MST"))
 
 filtered_trans_ub_aspects <- trans_ub_aspects %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime <= as.POSIXct("2024-05-24 00:00:00", tz = "MST"))
 ```
 
 ```{r}
@@ -134,7 +138,8 @@ filtered_pers_b_aspects <- filtered_pers_b_aspects %>%
   #adding a zone column
   mutate(zone = "persistent") %>%
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
-         month = as.numeric(format(datetime, "%m")))
+         month = as.numeric(format(datetime, "%m"))) %>%
+  select(datetime, day, month, zone, burn_status, sensor_id, tree_name, everything())
 
 filtered_pers_ub_aspects <- filtered_pers_ub_aspects %>%
   mutate(burn_status = case_when(
@@ -144,7 +149,8 @@ filtered_pers_ub_aspects <- filtered_pers_ub_aspects %>%
   #adding a zone column
   mutate(zone = "persistent") %>%
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
-         month = as.numeric(format(datetime, "%m")))
+         month = as.numeric(format(datetime, "%m"))) %>%
+  select(datetime, day, month, zone, burn_status, sensor_id, tree_name, everything())
 
 filtered_trans_b_aspects <- filtered_trans_b_aspects %>%
   mutate(burn_status = case_when(
@@ -155,7 +161,8 @@ filtered_trans_b_aspects <- filtered_trans_b_aspects %>%
   #adding a zone column
   mutate(zone = "transitional") %>%
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
-         month = as.numeric(format(datetime, "%m")))
+         month = as.numeric(format(datetime, "%m"))) %>%
+  select(datetime, day, month, zone, burn_status, sensor_id, tree_name, everything())
 
 filtered_trans_ub_aspects <- filtered_trans_ub_aspects %>%
   mutate(burn_status = case_when(
@@ -610,6 +617,7 @@ final_hourly_gb_temps <-final_gb_temps %>%
 
 ##hourly
 write_csv(final_hourly_gb_temps, "nsf/treetemp_data/final_hourly_gb_temps.csv")
+
 ##15-minute
 write_csv(final_gb_temps, "nsf/treetemp_data/final_15min_gb_temps.csv")
 ```
@@ -642,7 +650,7 @@ final_persb_ns_temps <- full_pers_ns_data %>%
 ```{r}
 #persistent unburned final dataset
 full_pers_ub_ns_data <- full_unburned_combined_data %>%
-  mutate(burn_status = "unburned") %>%
+  mutate(burn_status = "live") %>%
   filter(zone == "persistent") %>%
   #getting mean temperature of all trees, instead of having individual trees identified
   group_by(datetime, day, month, aspect, zone, burn_status) %>%
@@ -658,6 +666,7 @@ final_pers_ub_ns_temps <- full_pers_ub_ns_data %>%
 
 ```{r}
 #creating a full n/s green burned, db, ub dataframe to do comparisons on later
+## USE THIS DATAFRAME FOR FURTHER DATA ANALYSIS
 full_pers_ns_data <- final_persb_ns_temps %>%
   full_join(final_pers_ub_ns_temps)
 ```
@@ -686,7 +695,7 @@ final_transb_ns_temps <- full_trans_ns_data %>%
 ```{r}
 #tranitional unburned final dataset
 full_trans_ub_ns_data <- full_unburned_combined_data %>%
-  mutate(burn_status = "unburned") %>%
+  mutate(burn_status = "live") %>%
   filter(zone == "transitional") %>%
   #getting mean temperature of all trees, instead of having individual trees identified
   group_by(datetime, day, month, aspect, zone, burn_status) %>%
@@ -702,6 +711,7 @@ final_trans_ub_ns_temps <- full_trans_ub_ns_data %>%
 
 ```{r}
 #creating a full n/s green burned, db, ub dataframe to do comparisons on later
+## USE THIS DATAFRAME FOR FURTHER DATA ANALYSIS
 full_trans_ns_data <- final_transb_ns_temps %>%
   full_join(final_trans_ub_ns_temps)
 ```
@@ -717,31 +727,18 @@ Creating a clean dataframe with columns for gb, db, and ub temps, instead of row
 full_pers_gbdb_data <- full_burned_combined_data %>%
   filter(!(aspect %in% c("charred", "uncharred"))) %>%
   filter(zone == "persistent") %>%
-  #remove gb_w tree, so there is two gb and two db
-  filter(!(tree_name == "gb_w"))
+  #remove gb_w tree
+  filter(!(tree_name == "gb_w")) %>%
+  #getting mean temperature of all trees, instead of having individual trees identified
+  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  # Calculate the mean temperature for each aspect
+  summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop')
 
-clean_persb_gbdb_temps <- full_pers_gbdb_data %>%
-  group_by(datetime, burn_status, zone, aspect) %>%
-  pivot_wider(names_from = burn_status, values_from = temp) %>%
+final_pers_gbdb_temps <- full_pers_gbdb_data %>%
+  group_by(datetime, day, month, aspect, zone) %>%
+  pivot_wider(names_from = burn_status, values_from = mean_temp) %>%
   rename(gb_temp = "green burn", db_temp = "dead burn") %>%
-  # Selecting only rows where tree_name is "gb_s" or "db_s"
-  filter(tree_name %in% c("gb_s", "db_s")) %>%
-  select(c(-tree_name, -sensor_id))
-
-
-##creatinging individual dataframes for north and south temps, then going to rebind them to get rid of the NA issues
-gb_persb_temps <- clean_persb_gbdb_temps %>%
-  select(-db_temp) %>%
-  # Filter out rows with NA
-  filter(!is.na(gb_temp))
-
-db_persb_temps <- clean_persb_gbdb_temps %>%
-  select(-gb_temp) %>%
-  filter(!is.na(db_temp))
-
-##joining north/south dataframes
-final_persb_gbdb_temps <- gb_persb_temps %>%
-  full_join(db_persb_temps, by = c("datetime", "aspect", "zone"))
+  summarize(gb_temp, db_temp)
 ```
 
 ### Trans_b
@@ -750,68 +747,52 @@ final_persb_gbdb_temps <- gb_persb_temps %>%
 #transitional burned 
 
 full_trans_gbdb_data <- full_burned_combined_data %>%
-  #there is a missing datetime for db_north, so I have to filter this dataset specifically to exclude the first datetime reading
   filter(!(aspect %in% c("charred", "uncharred"))) %>%
-  filter(zone == "transitional")
+  filter(zone == "transitional") %>%
+  #getting mean temperature of all trees, instead of having individual trees identified
+  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  # Calculate the mean temperature for each aspect
+  summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop')
 
-clean_transb_gbdb_temps <- full_trans_gbdb_data %>%
-  group_by(datetime, burn_status, zone, aspect) %>%
-  pivot_wider(names_from = burn_status, values_from = temp) %>%
+final_trans_gbdb_temps <- full_trans_gbdb_data %>%
+  group_by(datetime, day, month, aspect, zone) %>%
+  pivot_wider(names_from = burn_status, values_from = mean_temp) %>%
   rename(gb_temp = "green burn", db_temp = "dead burn") %>%
-  # Selecting only rows where tree_name is "gb_s" or "db_s"
-  filter(tree_name %in% c("gb_s", "db_s")) %>%
-  select(c(-tree_name, -sensor_id))
-
-
-##creatinging individual dataframes for north and south temps, then going to rebind them to get rid of the NA issues
-gb_transb_temps <- clean_transb_gbdb_temps %>%
-  select(-db_temp) %>%
-  # Filter out rows with NA
-  filter(!is.na(gb_temp))
-
-db_transb_temps <- clean_transb_gbdb_temps %>%
-  select(-gb_temp) %>%
-  filter(!is.na(db_temp))
-
-##joining north/south dataframes
-final_transb_gbdb_temps <- gb_transb_temps %>%
-  full_join(db_transb_temps, by = c("datetime", "aspect", "zone"))
+  summarize(gb_temp, db_temp)
 ```
 
 ### Pers_ub
 
 ```{r}
+#persistent unburned final dataset
 full_pers_ub_data <- full_unburned_combined_data %>%
-  filter(zone == "persistent")
+  mutate(burn_status = "live") %>%
+  filter(zone == "persistent") %>%
+  #getting mean temperature of all trees, instead of having individual trees identified
+  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  # Calculate the mean temperature for each aspect
+  summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop')
 
-clean_pers_ub_temps <- full_pers_ub_data %>%
-  group_by(datetime, burn_status, zone, aspect) %>%
-  pivot_wider(names_from = burn_status, values_from = temp) %>%
-  rename(ub_temp = "alive") %>%
-  #selecting one tree, "ub_s"
-  filter(tree_name == "ub_s") %>%
-  select(c(-tree_name, -sensor_id))
-
-# final pers_ub temps dataframe
-final_pers_ub_temps <- clean_pers_ub_temps
+final_pers_ub_temps <- full_pers_ub_data %>%
+  rename(ub_temp = mean_temp) %>%
+  select(-burn_status)
 ```
 
 ### Trans_ub
 
 ```{r}
+#transitional unburned final dataset
 full_trans_ub_data <- full_unburned_combined_data %>%
-  filter(zone == "transitional")
+  mutate(burn_status = "live") %>%
+  filter(zone == "transitional") %>%
+  #getting mean temperature of all trees, instead of having individual trees identified
+  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  # Calculate the mean temperature for each aspect
+  summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop')
 
-clean_trans_ub_temps <- full_trans_ub_data %>%
-  group_by(datetime, burn_status, zone, aspect) %>%
-  pivot_wider(names_from = burn_status, values_from = temp) %>%
-  rename(ub_temp = "alive") %>%
-  #selecting one tree, "ub_e"
-  filter(tree_name == "ub_e") %>%
-  select(c(-tree_name, -sensor_id))
-
-# final pers_ub temps dataframe
-final_trans_ub_temps <- clean_trans_ub_temps
+final_trans_ub_temps <- full_trans_ub_data %>%
+  rename(ub_temp = mean_temp) %>%
+  select(-burn_status)
 ```
 
 # Final 15-minute Dataframes
@@ -829,7 +810,7 @@ Combining burned and unburned dataframes by zone and 15-minute timestep - this i
 final_15min_ns_ub <- bind_rows(final_pers_ub_ns_temps, final_trans_ub_ns_temps) %>%
   #adding in mean temp of north and south temps
   mutate(avg_temp = mean((south_temp + north_temp) / 2)) %>%
-  mutate(burn_status = "unburned") %>%
+  mutate(burn_status = "live") %>%
   select(datetime, day, month, zone, burn_status, everything())
 ```
 
@@ -873,14 +854,17 @@ write_csv(final_hourly_ns_ub, "nsf/treetemp_data/final_hourly_ns_ub.csv")
 
 ## GB/DB/UB Aspects
 
+\*\* keep working on this - 10/18/24!
+
 ```{r}
 # GB/DB comparison
-final_15min_gbdb <- bind_rows(final_persb_gbdb_temps, final_transb_gbdb_temps) %>%
-  #adding in day & month
-  mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
-         month = as.numeric(format(datetime, "%m"))) %>%
+
+final_15min_gbdb <- final_persb_gbdb_temps %>% 
+  full_join(final_transb_gbdb_temps) %>%
   #adding in mean temp of north and south temps
-  mutate(avg_temp = mean((gb_temp + db_temp) / 2)) %>%
+  mutate(avg_temp = mean((gb_temp + db_temp) / 2)) 
+
+%>%
   select(datetime, day, month, zone, everything())
 
 #adding in an hourly version of this final_15min_gbdb dataframe
@@ -1142,36 +1126,30 @@ write_csv(final_daynight_singleavg_temps, "nsf/treetemp_data/final_daynight_sing
 
 # Creating a single comparison dataframe for N/S and GB/DB/UB comparisons and stats
 
+\*\* mean of all gb/db trees, averaged by burn_status
+
 ### 15-minute timestep
 
 ```{r}
-full_15min_ns <- bind_rows(full_pers_ns_data, full_trans_ns_data) %>%
-  #adding in day, month and time columns
-  mutate(datetime = as.POSIXct(datetime, tz = "MST"), 
-         day = format(datetime, "%Y-%m-%d"),  # Extract the day in 'YYYY-MM-DD' format as a string
-         month = format(datetime, "%m"),      # Extract the month as a numeric string
-         time = format(datetime, "%H:%M:%S")) %>%
-#adding in mean temp of gbdb/gbub/dbub temps
-  mutate(ns_avg_temp = mean((north_temp + south_temp) / 2)) %>%
-  select(datetime, time, day, month, zone, everything()) %>%
-  #calculating temp difference for 15-minute intervals
-  mutate(temp_diff = south_temp - north_temp)
+full_15min_ns <- full_pers_ns_data %>%
+  full_join(full_trans_ns_data) %>%
+#adding in mean temp of n/s temps
+  mutate(ns_avg_temp = ((north_temp + south_temp)/2), ns_temp_diff = (south_temp - north_temp))
 ```
 
 ```{r}
 # GB/DB/UB comparison
-full_15min_gbdbub <- bind_rows(final_persb_gbdb_temps, final_transb_gbdb_temps) %>%
-  full_join(final_15min_gbdb_ub) %>%
-  #adding in day, month and time columns
- mutate(datetime = as.POSIXct(datetime, tz = "MST"), 
-         day = format(datetime, "%Y-%m-%d"),  # Extract the day in 'YYYY-MM-DD' format as a string
-         month = format(datetime, "%m"),      # Extract the month as a numeric string
-         time = format(datetime, "%H:%M:%S")) %>%
+full_15min_gbdbub <- final_persb_gbdb_temps %>%
+  full_join(final_transb_gbdb_temps)
+
+%>%
+
+%>%
   #adding in mean temp of gbdb/gbub/dbub temps
   mutate(gbdb_avg_temp = mean((gb_temp + db_temp) / 2)) %>%
   mutate(gbub_avg_temp = mean((gb_temp + ub_temp) / 2)) %>%
   mutate(dbub_avg_temp = mean((db_temp + ub_temp) / 2)) %>%
-  select(datetime, time, day, month, zone, everything()) %>%
+  select(datetime, day, month, zone, everything()) %>%
   #calculating temp_diff for 15-minute interval
   mutate(gbdb_temp_diff = gb_temp - db_temp) %>%
   mutate(gbub_temp_diff = gb_temp - ub_temp) %>%
@@ -1189,29 +1167,25 @@ write_csv(full_15min_gbdbub, "nsf/treetemp_data/full_15min_gbdbub.csv")
 ### hourly timestep
 
 ```{r}
-full_hourly_ns_b <- bind_rows(final_persb_ns_temps, final_transb_ns_temps) %>%
+full_hourly_ns_b <- final_persb_ns_temps %>%
+  full_join(final_transb_ns_temps) %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S")) %>% 
   mutate(datetime_hour = floor_date(datetime, unit = "hour")) %>%
   mutate(day = format(datetime, "%Y-%m-%d"),
          month = format(datetime, "%m"),
          time = format(datetime, "%H:%M:%S")) %>%
-  mutate(ns_avg_temp = mean((north_temp + south_temp) / 2)) %>%
-  select(datetime, time, day, month, zone, everything()) %>%
-  #calculating temp difference for 15-minute intervals
-  mutate(temp_diff = south_temp - north_temp) %>%
-  select(datetime, day, time, month, zone, burn_status, north_temp, south_temp, ns_avg_temp, temp_diff)
+  group_by(datetime_hour, day, month, burn_status) %>%
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), ns_avg_temp = ((north_temp + south_temp)/2), ns_temp_diff = (south_temp - north_temp))
 
-full_hourly_ns_ub <- bind_rows(final_pers_ub_ns_temps, final_trans_ub_ns_temps) %>%
+full_hourly_ns_ub <- final_pers_ub_ns_temps %>%
+full_join(final_trans_ub_ns_temps) %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S")) %>% 
   mutate(datetime_hour = floor_date(datetime, unit = "hour")) %>%
   mutate(day = format(datetime, "%Y-%m-%d"),
          month = format(datetime, "%m"),
          time = format(datetime, "%H:%M:%S")) %>%
-  mutate(ns_avg_temp = mean((north_temp + south_temp) / 2)) %>%
-  select(datetime, time, day, month, zone, everything()) %>%
-  #calculating temp difference for 15-minute intervals
-  mutate(temp_diff = south_temp - north_temp) %>%
-  select(datetime, day, time, month, zone, burn_status, north_temp, south_temp, ns_avg_temp, temp_diff)
+  group_by(datetime_hour, day, month, burn_status) %>%
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), ns_avg_temp = ((north_temp + south_temp)/2), ns_temp_diff = (south_temp - north_temp))
 
 #making a final dataframe that has burned and unburned 
 full_hourly_ns <- bind_rows(full_hourly_ns_b, full_hourly_ns_ub)
@@ -1246,6 +1220,8 @@ full_hourly_gbdbub <- final_persb_gbdb_temps %>%
     dbub_temp_diff = mean(dbub_temp_diff, na.rm = TRUE), 
     .groups = 'drop'
   )
+
+
 ```
 
 ```{r}
