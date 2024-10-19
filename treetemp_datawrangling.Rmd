@@ -27,6 +27,7 @@ library(htmlwidgets)
 library(RColorBrewer)
 library(patchwork)
 library(ggpubr)
+library(suncalc)
 
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
@@ -1570,3 +1571,33 @@ p_may_aspect_plot
 ```
 
 \*\* at the pers may plot -\> looks like charred trees are actually getting much warmer than in feb.
+
+# Solar Exposure Calculations
+
+```{r}
+# Specify PSZ and TSZ locations
+##pers_b - from 105E location!
+p_b_lat <- 40.56379284
+p_b_lon <- -105.867215
+##pers_ub - from 105E locations
+p_ub_lat <- 40.5638075
+p_ub_lon <- -105.8705715
+
+##trans_b - from 105E locations!
+t_b_lat <- 40.60600629
+t_b_lon <- -105.8333335
+
+##trans_ub - from 105E locations!
+t_ub_lat <- 40.568396
+t_ub_lon <- -105.587383
+
+## use the p_b_lat/long since all of these dates/times are almost identical for sunrise/sunset
+
+# Create a date sequence from February 2nd to May 24th, 2024 for solar exposure
+solex_dates <- seq(as.Date("2024-02-02"), as.Date("2024-05-24"), by = "day")
+
+solar_times 
+
+# Get solar times for each day
+p_b_solar_times <- getSunlightTimes(date = solex_dates, lat = p_b_lat, lon = p_b_lon, tz = "MST")
+```
