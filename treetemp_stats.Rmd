@@ -37,6 +37,10 @@ setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 
 ## Loading Data
 
+-   I don't think I need all of these dataframes, but I'll need to rework the stats so that I pull from only the combined dataframes in the second chunk below!
+
+-   I should just be able to create new dataframes for burned/unburned from the combined one, that way I need less dataframes exported/stored in N-drive!
+
 ```{r}
 final_15min_ns_b <- read_csv("nsf/treetemp_data/final_15min_ns_b.csv")
 
