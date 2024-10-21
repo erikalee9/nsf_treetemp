@@ -1,0 +1,219 @@
+---
+title: "treetemp_RLout"
+output: html_document
+date: "2024-10-21"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#initial set up
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(openxlsx)
+library(plotly)
+library(rstatix)
+library(htmlwidgets)
+library(RColorBrewer)
+library(patchwork)
+#packages for exporting csvs as tables
+library(knitr)
+library(kableExtra)
+library(pagedown)
+
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
+
+# Loading Full Datasets
+
+```{r}
+#new full dataframes to load - including burned and unburned/ all burn_status types together
+full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  select(-1)
+
+full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
+   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+  select(-1)
+
+full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST'))  %>%
+  select(-1)
+
+full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv") %>%
+  mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+  select(-1)
+
+full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
+  mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+  select(-1)
+```
+
+# LWout Calculations
+
+## Setting Constants
+
+```{r}
+#pulling in dataframe that has tree circumference data by site
+treecirc_data <- read_csv("nsf/treetemp_data/105E_treecirc_data.csv")
+```
+
+Constants
+
+```{r}
+# Constants
+stefan_boltzmann_constant <- 5.67e-8
+emissivity <- 0.97
+#snowdepth and circumference are in meters
+snowdepth <- 1
+# circumference is taken from diameter at breast height 
+p_db_circ <- 0.5576
+p_gb_circ <- 0.4006
+p_live_circ <- 0.5027
+t_db_circ <- 0.5655
+t_gb_circ <- 0.5812
+t_live_circ <- 0.5341
+
+#picking an average unit depth for snow depth of 1 meter
+#constant for m2 - can adjust this if I want to change the snowdepth!
+p_gb_m2 = snowdepth*p_gb_circ
+p_db_m2 = snowdepth*p_db_circ
+p_live_m2 = snowdepth*p_live_circ
+t_gb_m2 = snowdepth*t_gb_circ
+t_db_m2 = snowdepth*t_db_circ
+t_live_m2 = snowdepth*t_live_circ
+```
+
+## LWout Calcs
+
+Full_15min_NS
+
+```{r}
+#full_15min_ns
+##converting temps in OG dataset to K from C
+full_15min_ns_K <- full_15min_ns %>%
+  mutate(north_temp_k = (north_temp + 273.15), south_temp_k = (south_temp + 273.15), ns_avg_temp_k = (ns_avg_temp + 273.15))
+```
+
+```{r}
+#LWout calcs
+full_15min_ns_LWout <- full_15min_ns_K %>%
+  mutate(
+    # Calculate longwave radiation in Wperm^2
+    n_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (north_temp_k^4), s_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (south_temp_k^4)
+  ) %>%
+  #setting a case_when to vary the circumference/snow depth measurement by tree burn status and zone
+  mutate(m2 = case_when(
+      burn_status == "green burn" & zone == "persistent" ~ 0.4006,   # Example value for burned in north zone
+      burn_status == "dead burn" & zone == "persistent" ~ 0.5576,   # Example value for burned in south zone
+      burn_status == "live" & zone == "persistent" ~ 0.5027,
+      burn_status == "green burn" & zone == "transitional" ~ 0.5812,   # Example value for burned in north zone
+      burn_status == "dead burn" & zone == "transitional" ~ 0.5655,   # Example value for burned in south zone
+      burn_status == "live" & zone == "transitional" ~ 0.5341,
+      TRUE ~ 0.4006  # Default value if neither of the conditions match
+    ),
+#calcuating Watz (power)
+    n_W =  n_LWout_wperm2 * m2,
+    s_W =  s_LWout_wperm2 * m2,
+#converting from Wperm2 to MJ/day
+    n_LWout_MJperd = n_W * 86400 / 1e6, 
+s_LWout_MJperd = s_W * 86400 / 1e6)
+```
+
+Full_Hourly_NS
+
+```{r}
+#full_15min_ns
+full_hourly_ns_K <- full_hourly_ns %>%
+  mutate(north_temp_k = (north_temp + 273.15), south_temp_k = (south_temp + 273.15), ns_avg_temp_k = (ns_avg_temp + 273.15))
+```
+
+```{r}
+#LWout calcs
+full_hourly_ns_LWout <- full_hourly_ns_K %>%
+  mutate(
+    # Calculate longwave radiation in Wperm^2
+    n_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (north_temp_k^4), s_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (south_temp_k^4)
+  ) %>%
+  #setting a case_when to vary the circumference/snow depth measurement by tree burn status and zone
+  mutate(m2 = case_when(
+      burn_status == "green burn" & zone == "persistent" ~ 0.4006,   # Example value for burned in north zone
+      burn_status == "dead burn" & zone == "persistent" ~ 0.5576,   # Example value for burned in south zone
+      burn_status == "live" & zone == "persistent" ~ 0.5027,
+      burn_status == "green burn" & zone == "transitional" ~ 0.5812,   # Example value for burned in north zone
+      burn_status == "dead burn" & zone == "transitional" ~ 0.5655,   # Example value for burned in south zone
+      burn_status == "live" & zone == "persistent" ~ 0.5341,
+      TRUE ~ 0.4006  # Default value if neither of the conditions match
+    ),
+#calcuating Watz (power)
+    n_W =  n_LWout_wperm2 * m2,
+    s_W =  s_LWout_wperm2 * m2,
+#converting from Wperm2 to MJ/day
+    n_LWout_MJperd = n_W * 86400 / 1e6, 
+s_LWout_MJperd = s_W * 86400 / 1e6)
+```
+
+Full 15min GBDBUB
+
+```{r}
+full_15min_gbdbub_K <- full_15min_gbdbub %>%
+  mutate(gb_temp_k = (gb_temp + 273.15), db_temp_k = (db_temp + 273.15), ub_temp_k = (ub_temp + 273.15))
+```
+
+```{r}
+#LWout calcs
+full_15min_gbdbub_LWout <- full_15min_gbdbub_K %>%
+  #calculating LWout in Wperm^2 by burn_status
+  mutate(gb_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (gb_temp_k^4), db_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (db_temp_k^4), ub_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (ub_temp_k^4)) %>%
+  # Define m2 based on zone
+    mutate(gb_m2 = case_when(zone == "persistent" ~ 0.4006,
+zone == "transitional" ~ 0.5812, TRUE ~ 0.4006), db_m2 = case_when(zone == "persistent" ~ 0.5576, zone == "transitional" ~ 0.5655, TRUE ~ 0.5576), ub_m2 = case_when(zone == "persistent" ~ 0.5027, zone == "transitional" ~ 0.5341, TRUE ~ 0.5576)) %>%
+  #calcuating Watz (power)
+  mutate(
+    gb_W = gb_LWout_wperm2 * gb_m2,
+    db_W =  db_LWout_wperm2 * db_m2,
+    ub_W =  ub_LWout_wperm2 * ub_m2,
+#converting from Wperm2 to MJ/day
+    gb_LWout_MJperd = gb_W * 86400 / 1e6, 
+db_LWout_MJperd = db_W * 86400 / 1e6, ub_LWout_MJperd = ub_W * 86400 / 1e6)
+```
+
+Full Hourly GB
+
+```{r}
+full_hourly_gb_K <- full_hourly_gb %>%
+  mutate(north_temp_k = (north_temp + 273.15), south_temp_k = (south_temp + 273.15), charred_temp_k = (charred_temp + 273.15), uncharred_temp_k = (uncharred_temp + 273.15))
+```
+
+The following dataframe can be used for plotting comparison of GB-only aspect/char pattern comparisons
+
+```{r}
+full_hourly_gb_LWout <- full_hourly_gb_K %>%
+  mutate(
+    # Calculate longwave radiation in Wperm^2
+    n_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (north_temp_k^4), s_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (south_temp_k^4), c_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (charred_temp_k^4), uc_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (uncharred_temp_k^4)) %>%
+  # Define m2 based on zone
+    mutate(gb_m2 = case_when(zone == "persistent" ~ 0.4006,
+zone == "transitional" ~ 0.5812, TRUE ~ 0.4006), 
+#calcuating Watz (power)
+    n_W =  n_LWout_wperm2 * gb_m2,
+    s_W =  s_LWout_wperm2 * gb_m2,
+c_W =  c_LWout_wperm2 * gb_m2,
+uc_W =  uc_LWout_wperm2 * gb_m2,
+#converting from Wperm2 to MJ/day
+    n_LWout_MJperd = n_W * 86400 / 1e6, 
+s_LWout_MJperd = s_W * 86400 / 1e6, c_LWout_MJperd = c_W * 86400 / 1e6, uc_LWout_MJperd = uc_W * 86400 / 1e6)
+```
