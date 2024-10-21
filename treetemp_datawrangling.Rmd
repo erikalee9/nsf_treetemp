@@ -615,7 +615,14 @@ final_hourly_gb_temps <-final_gb_temps %>%
   mutate(datetime_hour = floor_date(datetime, unit = "hour")) %>%  # Create an hourly datetime column
   group_by(datetime_hour, day, month, zone, burn_status) %>%  # Group by the hourly datetime
   #mean_hourly_treetemp is the mean of all the db/gb/live trees in the dataframe averaged by burn_status on an hourly timestep
-  summarize(mean_north_temp = mean(north_temp), mean_south_temp = mean(south_temp), mean_charred_temp = mean(charred_temp), mean_uncharred_temp = mean(uncharred_temp), .groups = 'drop')
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), charred_temp = mean(charred_temp), uncharred_temp = mean(uncharred_temp), ns_avg_temp = ((north_temp + south_temp)/2), sc_avg_temp = ((south_temp + charred_temp)/2), suc_avg_temp = ((south_temp + uncharred_temp)/2), nc_avg_temp = ((north_temp + charred_temp)/2), nuc_avg_temp = ((north_temp + uncharred_temp)/2), ns_temp_diff = (south_temp - north_temp), sc_temp_diff = (south_temp - charred_temp), suc_temp_diff = (south_temp - uncharred_temp), nc_temp_diff = (north_temp - charred_temp), nuc_temp_diff = (north_temp - uncharred_temp), .groups = 'drop')
+```
+
+```{r}
+#creating full dataframe with charred/uncharred/n/s comparison data for stats later
+
+full_hourly_gb <- final_hourly_gb_temps %>%
+  rename(north_temp = mean_north)
 ```
 
 ```{r}
@@ -954,6 +961,8 @@ final_hourly_dbub <- final_15min_dbub %>%
 
 ### Writing CSV
 
+\*\* don't think I need any of these exports!
+
 ```{r}
 #writing final gb/db/ub 15-minute comparison dataframes to n-drive
 write_csv(final_15min_gbdb, "nsf/treetemp_data/final_15min_gbdb.csv")
@@ -1082,6 +1091,8 @@ print(dt_transb_gbdb_diff_plot)
 
 ### Calling in Data
 
+\*\* don't think I need this section!
+
 The single_avg temps are where a single tree was chosen, then the north/south aspects were averaged
 
 ```{r}
@@ -1137,12 +1148,9 @@ write_csv(final_daynight_singleavg_temps, "nsf/treetemp_data/final_daynight_sing
 full_15min_ns <- full_pers_ns_data %>%
   full_join(full_trans_ns_data) %>%
 #adding in mean temp of n/s temps
-  mutate(ns_avg_temp = ((north_temp + south_temp)/2), ns_temp_diff = (south_temp - north_temp)) %>%
-  filter(datetime <= "2024-05-23 23:45:00")
+  mutate(ns_avg_temp = ((north_temp + south_temp)/2), ns_temp_diff = (south_temp - north_temp))
 
-
-write_csv(full_15min_ns, "nsf/treetemp_data/final_15min_ns.csv")
-
+#don't think I need the below exports!
 write_csv(final_hourly_ns_b, "nsf/treetemp_data/final_hourly_ns_b.csv")
 
 write_csv(final_hourly_ns_ub, "nsf/treetemp_data/final_hourly_ns_ub.csv")
@@ -1164,6 +1172,8 @@ full_15min_gbdbub <- final_15min_gbdb %>%
 ```
 
 Exporting full 15-minute gbdbub and n/s comparison dataframes
+
+\*\*
 
 ```{r}
 write_csv(full_15min_ns, "nsf/treetemp_data/full_15min_ns.csv")
@@ -1208,6 +1218,8 @@ full_hourly_gbdbub <- full_15min_gbdbub %>%
     .groups = 'drop'
   )
 ```
+
+\*\*
 
 ```{r}
 write_csv(full_hourly_ns, "nsf/treetemp_data/full_hourly_ns.csv")
@@ -1538,10 +1550,6 @@ may_p_full_aspects <- filtered_pers_b_aspects %>%
 ```
 
 ```{r}
-
-```
-
-```{r}
 #plotting feb dates to see if there is a substantial difference between char patterns
 t_feb_aspect_plot <- ggplot(data = feb_t_full_aspects) +
   geom_line(aes(x = datetime, y = temp, color = aspect, linetype = burn_status)) +
@@ -1596,8 +1604,142 @@ t_ub_lon <- -105.587383
 # Create a date sequence from February 2nd to May 24th, 2024 for solar exposure
 solex_dates <- seq(as.Date("2024-02-02"), as.Date("2024-05-24"), by = "day")
 
-solar_times 
-
 # Get solar times for each day
-p_b_solar_times <- getSunlightTimes(date = solex_dates, lat = p_b_lat, lon = p_b_lon, tz = "MST")
+p_b_solar_times <- getSunlightTimes(date = solex_dates, lat = p_b_lat, lon = p_b_lon, tz = "MST") %>%
+  mutate(
+    day = as.Date(date),  # Ensure 'day' is of Date type for joining
+    sunrise = with_tz(as.POSIXct(sunrise), tzone = "MST"),  # Set MST timezone
+    sunset = with_tz(as.POSIXct(sunset), tzone = "MST")     # Set MST timezone
+  )
+```
+
+## Adding Day/Night Phase to final CSVs
+
+```{r}
+#15-minute NS data
+full_15min_ns_dtnt <- full_15min_ns %>%
+  mutate(
+    day = as.Date.POSIXct(datetime, tz = "MST"),
+    datetime = with_tz(datetime, tzone = "MST")
+  ) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:15:00", tz = "MST") & 
+         datetime <= as.POSIXct("2024-05-23 23:45:00", tz = "MST")) %>%
+  left_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, burn_status, north_temp, south_temp, ns_avg_temp, ns_temp_diff, sunrise, sunset, solarNoon)
+```
+
+```{r}
+#hourly NS data
+full_hourly_ns_dtnt <- full_hourly_ns %>%
+  #adjusting TZ for datetime and day columns
+  mutate(
+    day = as.Date.POSIXct(datetime_hour, tz = "MST"),
+    datetime = with_tz(datetime_hour, tzone = "MST")
+  ) %>%
+   #filtering for the correct timeframe for both zones
+ filter(datetime_hour >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime_hour <= as.POSIXct("2024-05-23 23:00:00", tz = "MST")) %>%
+  #adding in solar exposure dataframe with sunrise/sunset times
+  left_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime_hour >= sunrise & datetime_hour < sunset ~ "day",
+      datetime_hour < sunrise ~ "night",
+      datetime_hour >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime_hour, day, month, phase, zone, burn_status, north_temp, south_temp, ns_avg_temp, ns_temp_diff, sunrise, sunset, solarNoon)
+```
+
+```{r}
+#15-minute dbgbub dataframe
+#hourly NS data
+full_15min_gbdbub_dtnt <- full_15min_gbdbub %>%
+  #adjusting TZ for datetime and day columns
+  mutate(
+    day = as.Date.POSIXct(datetime, tz = "MST"),
+    datetime = with_tz(datetime, tzone = "MST")
+  ) %>%
+   #filtering for the correct timeframe for both zones
+ filter(datetime >= as.POSIXct("2024-02-02 00:15:00", tz = "MST") & 
+         datetime <= as.POSIXct("2024-05-23 23:45:00", tz = "MST")) %>%
+  #adding in solar exposure dataframe with sunrise/sunset times
+  left_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp, gbdb_avg_temp, gbub_avg_temp, dbub_avg_temp, gbdb_temp_diff, gbub_temp_diff, dbub_temp_diff, sunrise, sunset, solarNoon)
+```
+
+```{r}
+#hourly GBDBUB data
+full_hourly_gbdbub_dtnt <- full_hourly_gbdbub %>%
+  #adjusting TZ for datetime and day columns
+  mutate(
+    day = as.Date.POSIXct(datetime_hour, tz = "MST"),
+    datetime = with_tz(datetime_hour, tzone = "MST")
+  ) %>%
+   #filtering for the correct timeframe for both zones
+ filter(datetime_hour >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime_hour <= as.POSIXct("2024-05-23 23:00:00", tz = "MST")) %>%
+  #adding in solar exposure dataframe with sunrise/sunset times
+  left_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime_hour >= sunrise & datetime_hour < sunset ~ "day",
+      datetime_hour < sunrise ~ "night",
+      datetime_hour >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime_hour, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp, gbdb_avg_temp, gbub_avg_temp, dbub_avg_temp, gbdb_temp_diff, gbub_temp_diff, dbub_temp_diff, sunrise, sunset, solarNoon)
+```
+
+```{r}
+#hourly Charred/Uncharred/North/south temps
+##didn't do a 15-minute version of this!
+
+full_hourly_gb_dtnt <- final_hourly_gb_temps %>%
+  #adjusting TZ for datetime and day columns
+  mutate(
+    day = as.Date.POSIXct(datetime_hour, tz = "MST"),
+    datetime = with_tz(datetime_hour, tzone = "MST")
+  ) %>%
+   #filtering for the correct timeframe for both zones
+ filter(datetime_hour >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime_hour <= as.POSIXct("2024-05-23 23:00:00", tz = "MST")) %>%
+  #adding in solar exposure dataframe with sunrise/sunset times
+  left_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime_hour >= sunrise & datetime_hour < sunset ~ "day",
+      datetime_hour < sunrise ~ "night",
+      datetime_hour >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime_hour, day, month, phase, zone, burn_status, north_temp, south_temp, charred_temp, uncharred_temp, ns_avg_temp, sc_avg_temp, suc_avg_temp, nc_avg_temp, nuc_avg_temp, ns_temp_diff, sc_temp_diff, suc_temp_diff, nc_temp_diff, nuc_temp_diff, sunrise, sunset, solarNoon)
+```
+
+Exporting final dataframes
+
+```{r}
+write.csv(full_15min_ns_dtnt, "nsf/treetemp_data/full_15min_ns.csv")
+
+write.csv(full_hourly_ns_dtnt, "nsf/treetemp_data/full_hourly_ns.csv")
+
+write.csv(full_15min_gbdbub_dtnt, "nsf/treetemp_data/full_15min_gbdbub.csv")
+
+write.csv(full_hourly_gbdbub_dtnt, "nsf/treetemp_data/full_hourly_gbdbub.csv")
+
+write.csv(full_hourly_gb_dtnt, "nsf/treetemp_data/full_hourly_gb.csv")
 ```
