@@ -125,12 +125,12 @@ full_15min_ns_LWout <- full_15min_ns_K %>%
       burn_status == "live" & zone == "transitional" ~ 0.5341,
       TRUE ~ 0.4006  # Default value if neither of the conditions match
     ),
-#calcuating Watz (power)
-    n_W =  n_LWout_wperm2 * m2,
-    s_W =  s_LWout_wperm2 * m2,
+#calcuating Watz (power) - dividing m2 by 2 for the north/south aspect differences as we assume that the area is only 1/2 the tree by aspect
+    n_W =  n_LWout_wperm2 * (m2/2),
+    s_W =  s_LWout_wperm2 * (m2/2),
 #converting from Wperm2 to MJ/day
     n_LWout_MJperd = n_W * 86400 / 1e6, 
-s_LWout_MJperd = s_W * 86400 / 1e6)
+s_LWout_MJperd = s_W * 86400 / 1e6) 
 ```
 
 Full_Hourly_NS
@@ -158,9 +158,9 @@ full_hourly_ns_LWout <- full_hourly_ns_K %>%
       burn_status == "live" & zone == "persistent" ~ 0.5341,
       TRUE ~ 0.4006  # Default value if neither of the conditions match
     ),
-#calcuating Watz (power)
-    n_W =  n_LWout_wperm2 * m2,
-    s_W =  s_LWout_wperm2 * m2,
+#calcuating Watz (power) - dividing m2 by 2 for the north/south aspect differences as we assume that the area is only 1/2 the tree by aspect
+    n_W =  n_LWout_wperm2 * (m2/2),
+    s_W =  s_LWout_wperm2 * (m2/2),
 #converting from Wperm2 to MJ/day
     n_LWout_MJperd = n_W * 86400 / 1e6, 
 s_LWout_MJperd = s_W * 86400 / 1e6)
@@ -200,6 +200,8 @@ full_hourly_gb_K <- full_hourly_gb %>%
 
 The following dataframe can be used for plotting comparison of GB-only aspect/char pattern comparisons
 
+\*\* Don't need to use this - we'll address gb char pattern in another, earlier assessment.
+
 ```{r}
 full_hourly_gb_LWout <- full_hourly_gb_K %>%
   mutate(
@@ -208,12 +210,32 @@ full_hourly_gb_LWout <- full_hourly_gb_K %>%
   # Define m2 based on zone
     mutate(gb_m2 = case_when(zone == "persistent" ~ 0.4006,
 zone == "transitional" ~ 0.5812, TRUE ~ 0.4006), 
-#calcuating Watz (power)
-    n_W =  n_LWout_wperm2 * gb_m2,
-    s_W =  s_LWout_wperm2 * gb_m2,
-c_W =  c_LWout_wperm2 * gb_m2,
-uc_W =  uc_LWout_wperm2 * gb_m2,
+#calcuating Watz (power)- dividing m2 by 2 for the north/south aspect differences as we assume that the area is only 1/2 the tree by aspect
+    n_W =  n_LWout_wperm2 * (gb_m2/2),
+    s_W =  s_LWout_wperm2 * (gb_m2/2),
+c_W =  c_LWout_wperm2 * (gb_m2/2),
+uc_W =  uc_LWout_wperm2 * (gb_m2/2),
 #converting from Wperm2 to MJ/day
     n_LWout_MJperd = n_W * 86400 / 1e6, 
 s_LWout_MJperd = s_W * 86400 / 1e6, c_LWout_MJperd = c_W * 86400 / 1e6, uc_LWout_MJperd = uc_W * 86400 / 1e6)
+```
+
+# Daily Mean Datasets
+
+-   taking the 15-minute datasets and making daily mean datasets with day/night phase means
+
+-   Then doing an accumulation dataset for each day
+
+```{r}
+full_daily_ns_LWout <- full_15min_ns_LWout %>%
+  group_by(day, month, phase, zone, burn_status) %>%
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), ns_avg_temp = mean(ns_avg_temp), n_LWout_wperm2 = mean(n_LWout_wperm2), s_LWout_wperm2 = mean(s_LWout_wperm2), n_LWout_MJperd = mean(n_LWout_MJperd), s_LWout_MJperd = mean(s_LWout_MJperd))
+```
+
+```{r}
+accu_full_daily_ns_LWout <- 
+
+
+mean_dt_persb_radtree_comb$accu_treeLWout_MJd <- Reduce(`+`, mean_dt_persb_radtree_comb$total_mean_tree_LWout_MJd, accumulate = TRUE)
+
 ```
