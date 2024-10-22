@@ -183,9 +183,9 @@ full_15min_gbdbub_LWout <- full_15min_gbdbub_K %>%
 zone == "transitional" ~ 0.5812, TRUE ~ 0.4006), db_m2 = case_when(zone == "persistent" ~ 0.5576, zone == "transitional" ~ 0.5655, TRUE ~ 0.5576), ub_m2 = case_when(zone == "persistent" ~ 0.5027, zone == "transitional" ~ 0.5341, TRUE ~ 0.5576)) %>%
   #calcuating Watz (power)
   mutate(
-    gb_W = gb_LWout_wperm2 * gb_m2,
-    db_W =  db_LWout_wperm2 * db_m2,
-    ub_W =  ub_LWout_wperm2 * ub_m2,
+    gb_W = gb_LWout_wperm2 * (gb_m2/2),
+    db_W =  db_LWout_wperm2 * (db_m2/2),
+    ub_W =  ub_LWout_wperm2 * (ub_m2/2),
 #converting from Wperm2 to MJ/day
     gb_LWout_MJperd = gb_W * 86400 / 1e6, 
 db_LWout_MJperd = db_W * 86400 / 1e6, ub_LWout_MJperd = ub_W * 86400 / 1e6)
@@ -328,20 +328,21 @@ accu_dt_gbdbub_LWout <- accu_full_daily_gbdbub_LWout %>%
 ```
 
 ```{r}
-#plotting gb/db/ub and north/south comparisons!
-accu_dt_gbdbub_plot <- ggplot(data = accu_dt_gbdbub_LWout) +
-  geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd, color = "green burn")) +  # First line labeled "No Snow"
-  geom_line(aes(x = day, y = accu_daily_db_LWout_MJperd, color = "dead burn")) +
-  geom_line(aes(x = day, y = accu_daily_ub_LWout_MJperd, color = "live")) +
-  facet_wrap(~zone + aspect) +
+#
+cum_dt_gbdbub_plot <- ggplot(data = accu_dt_gbdbub_LWout) +
+  geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd, color = "green burn", linetype = aspect), linewidth = 0.6) +  
+  geom_line(aes(x = day, y = accu_daily_db_LWout_MJperd, color = "dead burn", linetype = aspect), linewidth = 0.6) +
+  geom_line(aes(x = day, y = accu_daily_ub_LWout_MJperd, color = "live", linetype = aspect), linewidth = 0.6) +
+  facet_wrap(~zone + aspect, dir = "v") +
   theme_bw() +
   labs(
-    #title = "Daily Accumulation Data by Burn Status & Zone",
     x = "Date",
-    y = "Daily Accumulated LWout (MJ/day)",
-    color = "Burn Status"  # Legend title
+    y = "Daily Cumulative LWout (MJ/day)",
+    color = "Burn Status", 
+    linetype = "Aspect"
   ) +
-  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7)))
+  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid"))
 
-accu_dt_gbdbub_plot
+cum_dt_gbdbub_plot
 ```
