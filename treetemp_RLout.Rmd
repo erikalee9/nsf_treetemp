@@ -227,15 +227,121 @@ s_LWout_MJperd = s_W * 86400 / 1e6, c_LWout_MJperd = c_W * 86400 / 1e6, uc_LWout
 -   Then doing an accumulation dataset for each day
 
 ```{r}
+## use this dataset if I want to plot daily mean values!
 full_daily_ns_LWout <- full_15min_ns_LWout %>%
   group_by(day, month, phase, zone, burn_status) %>%
   summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), ns_avg_temp = mean(ns_avg_temp), n_LWout_wperm2 = mean(n_LWout_wperm2), s_LWout_wperm2 = mean(s_LWout_wperm2), n_LWout_MJperd = mean(n_LWout_MJperd), s_LWout_MJperd = mean(s_LWout_MJperd))
 ```
 
 ```{r}
-accu_full_daily_ns_LWout <- 
+#creating an accumulation dataframe
+## use this dataset if I want to plot cumulative values!
+accu_full_daily_ns_LWout <- full_daily_ns_LWout %>%
+  group_by(zone, burn_status) %>%  # Group by zone and burn_status
+  mutate(accu_daily_n_LWout_MJperd = cumsum(n_LWout_MJperd), accu_daily_s_LWout_MJperd = cumsum(s_LWout_MJperd)) %>%
+  select(day, month, phase, zone, burn_status, accu_daily_n_LWout_MJperd, accu_daily_s_LWout_MJperd)
+```
 
+```{r}
+#creating zone specific n_s dataframes from accumulation dataframe - DAY ONLY ASSESSMENT
+accu_pers_dt_ns_LWout <- accu_full_daily_ns_LWout %>%
+  filter(zone == "persistent", phase == "day")
 
-mean_dt_persb_radtree_comb$accu_treeLWout_MJd <- Reduce(`+`, mean_dt_persb_radtree_comb$total_mean_tree_LWout_MJd, accumulate = TRUE)
+accu_trans_dt_ns_LWout <- accu_full_daily_ns_LWout %>%
+  filter(zone == "transitional", phase == "day")
+```
 
+```{r}
+#pers plot
+accum_pers_dt_ns_plot <- ggplot(data = accu_pers_dt_ns_LWout) +
+  geom_line(aes(x = day, y = accu_daily_n_LWout_MJperd), color = "black") +
+  geom_line(aes(x = day, y = accu_daily_s_LWout_MJperd), color = "red") +
+  facet_wrap(~zone + burn_status + phase)
+
+accum_pers_dt_ns_plot
+```
+
+```{r}
+#trans plot
+accum_trans_dt_ns_plot <- ggplot(data = accu_trans_dt_ns_LWout) +
+  geom_line(aes(x = day, y = accu_daily_n_LWout_MJperd), color = "black") +
+  geom_line(aes(x = day, y = accu_daily_s_LWout_MJperd), color = "red") +
+  facet_wrap(~zone + burn_status + phase)
+
+accum_trans_dt_ns_plot
+```
+
+```{r}
+#full plot for daytime values that is only face-wrapped by burn_status and zone
+## USE THIS DATAFRAME
+accu_dt_ns_LWout <- accu_full_daily_ns_LWout %>%
+  filter(phase == "day") %>%
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Keep the original value if it's neither "persistent" nor "transitional"
+  ))
+```
+
+```{r}
+##use this plot!
+accu_dt_ns_plot <- ggplot(data = accu_dt_ns_LWout) +
+  geom_line(aes(x = day, y = accu_daily_n_LWout_MJperd, color = "north"), alpha = 0.9) +  # First line labeled "No Snow"
+  geom_line(aes(x = day, y = accu_daily_s_LWout_MJperd, color = "south")) +     # Second line labeled "Snow"
+  facet_wrap(~zone + burn_status) +
+  theme_bw() +
+  labs(
+    #title = "Daily Accumulation Data by Burn Status & Zone",
+    x = "Date",
+    y = "Daily Accumulated LWout (MJ/day)",
+    color = "Aspect"  # Legend title
+  ) +
+  scale_color_manual(values = c("north" = "gray25", "south" = "#D95F02"))
+
+accu_dt_ns_plot
+```
+
+GBDBUB Dataframe
+
+```{r}
+## use this dataset if I want to plot daily mean values!
+full_daily_gbdbub_LWout <- full_15min_gbdbub_LWout %>%
+  group_by(day, month, phase, zone, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp), gb_LWout_wperm2 = mean(gb_LWout_wperm2), db_LWout_wperm2 = mean(db_LWout_wperm2), ub_LWout_wperm2 = mean(ub_LWout_wperm2), gb_LWout_MJperd = mean(gb_LWout_MJperd), db_LWout_MJperd = mean(db_LWout_MJperd), ub_LWout_MJperd = mean(ub_LWout_MJperd))
+```
+
+```{r}
+#accumulation dataframe
+accu_full_daily_gbdbub_LWout <- full_daily_gbdbub_LWout %>%
+  group_by(zone, aspect) %>%  # Group by zone and aspect
+  mutate(accu_daily_gb_LWout_MJperd = cumsum(gb_LWout_MJperd), accu_daily_db_LWout_MJperd = cumsum(db_LWout_MJperd), accu_daily_ub_LWout_MJperd = cumsum(ub_LWout_MJperd)) %>%
+  select(day, month, phase, zone, aspect, accu_daily_gb_LWout_MJperd, accu_daily_db_LWout_MJperd, accu_daily_ub_LWout_MJperd)
+
+#use this dataframe for final plotting
+accu_dt_gbdbub_LWout <- accu_full_daily_gbdbub_LWout %>%
+  filter(phase == "day") %>%
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Keep the original value if it's neither "persistent" nor "transitional"
+  ))
+```
+
+```{r}
+#plotting gb/db/ub and north/south comparisons!
+accu_dt_gbdbub_plot <- ggplot(data = accu_dt_gbdbub_LWout) +
+  geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd, color = "green burn")) +  # First line labeled "No Snow"
+  geom_line(aes(x = day, y = accu_daily_db_LWout_MJperd, color = "dead burn")) +
+  geom_line(aes(x = day, y = accu_daily_ub_LWout_MJperd, color = "live")) +
+  facet_wrap(~zone + aspect) +
+  theme_bw() +
+  labs(
+    #title = "Daily Accumulation Data by Burn Status & Zone",
+    x = "Date",
+    y = "Daily Accumulated LWout (MJ/day)",
+    color = "Burn Status"  # Legend title
+  ) +
+  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7)))
+
+accu_dt_gbdbub_plot
 ```
