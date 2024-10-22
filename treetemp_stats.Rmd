@@ -69,25 +69,34 @@ final_hourly_dbub <- read_csv("nsf/treetemp_data/final_hourly_dbub.csv")
 final_daynight_singleavg_temps <- read_csv("nsf/treetemp_data/final_daynight_singleavg_temps.csv")
 ```
 
-```{r}
-#new full dataframes to load
-full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv")
-
-full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv")
-
-full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv")
-
-full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv")
-```
-
-Pulling in Data for gb only comparisons of charred/uncharred data with n/s as well
+\*\* I think I only need the following imports!
 
 ```{r}
-final_15min_gb_temps <- read_csv("nsf/treetemp_data/final_15min_gb_temps.csv") %>%
-  mutate(day = as.Date(datetime), month = month(datetime))
+#new full dataframes to load - including burned and unburned/ all burn_status types together
+full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  select(-1)
 
-final_hourly_gb_temps <- read_csv("nsf/treetemp_data/final_hourly_gb_temps.csv")%>%
-  mutate(day = as.Date(datetime_hour), month = month(datetime_hour))
+full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
+   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+  select(-1)
+
+full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST'))  %>%
+  select(-1)
+
+full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv") %>%
+  mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+  select(-1)
+
+full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
+  mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+  select(-1)
 ```
 
 ## Calculating Stats
@@ -308,7 +317,7 @@ stats_monthly_daynight <- final_daynight_singleavg_temps %>%
 #creating a monthly dataframe to carry over avg and temp_difference data into full stats dataframe - can't bind this with the stats because we need 15-minute numbers to get the correct stats
 monthly_ns_data <- full_15min_ns %>%
   group_by(month, zone, burn_status) %>%
-  summarize(mean_north_temp = mean(north_temp, na.rm = TRUE), mean_south_temp = mean(south_temp, na.rm = TRUE), ns_avg_temp = mean(ns_avg_temp, na.rm = TRUE), temp_diff = mean(temp_diff, na.rm = TRUE), .groups = 'drop')
+  summarize(mean_north_temp = mean(north_temp, na.rm = TRUE), mean_south_temp = mean(south_temp, na.rm = TRUE), ns_avg_temp = mean(ns_avg_temp, na.rm = TRUE), ns_temp_diff = mean(ns_temp_diff, na.rm = TRUE), .groups = 'drop')
 ```
 
 ```{r}
@@ -316,8 +325,8 @@ monthly_ns_data <- full_15min_ns %>%
 stats_monthly_ns <- full_15min_ns %>%
   #calculating monthly stats
   group_by(month, zone, burn_status) %>%
-  summarize(mean_north_temp = mean(north_temp), mean_south_temp = mean(south_temp), ns_mean_temp = mean(ns_avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  summarize(mean_north_temp = mean(north_temp), mean_south_temp = mean(south_temp), ns_mean_temp = mean(ns_avg_temp), mean_diff = mean(ns_temp_diff), sd = sd(ns_temp_diff, na.rm = TRUE),
+    coeff_var = (sd(ns_temp_diff, na.rm = TRUE) / abs(mean(ns_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -338,6 +347,20 @@ stats_monthly_ns_db <- stats_monthly_ns %>%
 
 stats_monthly_ns_live <- stats_monthly_ns %>%
   filter(burn_status == "live")
+```
+
+Formatting N/S Stats Monthly Tables and Exporting
+
+\*\* this format for a table looks good and works. I just need to figure out what tables I want to use! (2024-10-22 note)
+
+```{r}
+final_stats_monthly_ns_gb_table <- stats_monthly_ns_gb %>%
+  rename("burn status" = burn_status, "north temp" = mean_north_temp, "south temp" = mean_south_temp, "mean temp" = ns_mean_temp, "mean temp difference" = mean_diff, "coefficient of variance" = coeff_var) %>%
+  kbl() %>%
+  kable_styling(html_font = "Cambria") %>%
+  kable_material("striped")
+
+print(final_stats_monthly_ns_gb_table)
 ```
 
 #### Charred/Uncharred/N/S GB Comparisons
@@ -402,6 +425,8 @@ stats_monthly_c_uc_V2 <- monthly_gb_data %>%
 
 #### GBDBUB Comparison
 
+-   this small section is updated as of 2024-10-22
+
 ```{r}
 monthly_gbdbub_data <- full_15min_gbdbub %>%
   group_by(month, zone) %>%
@@ -412,45 +437,95 @@ monthly_gbdbub_data <- full_15min_gbdbub %>%
 #making a stats dataframe with combined data did not work, so I am going to bind the already created gbdbub dataframes so I have a full gbdbub stats dataframe
 
 #gb/db stats - db minus gb! - same as above no V1 version!
-stats_monthly_gbdb_V2 <- final_15min_gbdb %>%
-  #calculating temp_diff for 15-minute interval
-  mutate(gbdb_temp_diff = db_temp - gb_temp)%>%
+stats_monthly_gbdb <- full_15min_gbdbub %>%
   #calculating monthly stats
-  group_by(month, zone) %>%
-  summarize(gbdb_mean_temp = mean(avg_temp), gbdb_mean_diff = mean(gbdb_temp_diff), gbdb_sd = sd(gbdb_temp_diff, na.rm = TRUE),
+  group_by(month, zone, aspect) %>%
+  summarize(gb_mean_temp = mean(gb_temp), db_mean_temp = mean(db_temp), gbdb_mean_temp = mean(gbdb_avg_temp), gbdb_mean_temp_diff = mean(gbdb_temp_diff), gbdb_sd = sd(gbdb_temp_diff, na.rm = TRUE),
     gbdb_coeff_var = (sd(gbdb_temp_diff, na.rm = TRUE) / abs(mean(gbdb_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
+```
 
-#gb/ub stats - DONT USE
-stats_monthly_gbub_V1 <- final_15min_gbub %>%
-  #calculating temp_diff for 15-minute interval
-  mutate(gbub_temp_diff = gb_temp - ub_temp)%>%
+```{r}
+#splitting by aspect for export
+stats_monthly_gbdb_n <- stats_monthly_gbdb %>%
+  filter(aspect == "north")
+
+stats_monthly_gbdb_s <- stats_monthly_gbdb %>%
+  filter(aspect == "south")
+```
+
+```{r}
+#gb/ub stats - gb minus ub
+stats_monthly_gbub <- full_15min_gbdbub %>%
   #calculating monthly stats
-  group_by(month, zone) %>%
-  summarize(gbub_mean_temp = mean(avg_temp), gbub_mean_diff = mean(gbub_temp_diff), gbub_sd = sd(gbub_temp_diff, na.rm = TRUE),
+  group_by(month, zone, aspect) %>%
+  summarize(gb_mean_temp = mean(gb_temp), ub_mean_temp = mean(ub_temp), gbub_mean_temp = mean(gbub_avg_temp), gbub_mean_temp_diff = mean(gbub_temp_diff), gbub_sd = sd(gbub_temp_diff, na.rm = TRUE),
     gbub_coeff_var = (sd(gbub_temp_diff, na.rm = TRUE) / abs(mean(gbub_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
+```
 
-#db/ub stats
-## this is the same as the V2 version above!
-stats_monthly_dbub_V1 <- final_15min_dbub %>%
-  #calculating temp_diff for 15-minute interval
-  mutate(dbub_temp_diff = db_temp - ub_temp)%>%
+```{r}
+#splitting by aspect for export
+stats_monthly_gbub_n <- stats_monthly_gbub %>%
+  filter(aspect == "north")
+
+stats_monthly_gbub_s <- stats_monthly_gbub %>%
+  filter(aspect == "south")
+```
+
+```{r}
+#db/ub stats - db minus ub
+stats_monthly_dbub <- full_15min_gbdbub %>%
   #calculating monthly stats
-  group_by(month, zone) %>%
-  drop_na() %>%
-  summarize(dbub_mean_temp = mean(avg_temp), dbub_mean_diff = mean(dbub_temp_diff), dbub_sd = sd(dbub_temp_diff, na.rm = TRUE),
+  group_by(month, zone, aspect) %>%
+  summarize(db_mean_temp = mean(db_temp), ub_mean_temp = mean(ub_temp), dbub_mean_temp = mean(dbub_avg_temp), dbub_mean_temp_diff = mean(dbub_temp_diff), dbub_sd = sd(dbub_temp_diff, na.rm = TRUE),
     dbub_coeff_var = (sd(dbub_temp_diff, na.rm = TRUE) / abs(mean(dbub_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
-
-##joining all V2 dataframes
-stats_monthly_gbdbub <- stats_monthly_gbdb_V2 %>%
-  full_join(stats_monthly_gbub_V2) %>%
-  full_join(stats_monthly_dbub_V2)
 ```
+
+```{r}
+#splitting by aspect for export
+stats_monthly_dbub_n <- stats_monthly_dbub %>%
+  filter(aspect == "north")
+
+stats_monthly_dbub_s <- stats_monthly_dbub %>%
+  filter(aspect == "south")
+```
+
+Formatting GB DB UB tables - have not exported yet!
+
+```{r}
+#gbdb
+final_stats_monthly_gbdb_table <- rbind(stats_monthly_gbdb_n, stats_monthly_gbdb_s) %>%
+  rename("GB temp" = gb_mean_temp, "DB temp" = db_mean_temp, "mean temp" = gbdb_mean_temp, "mean temp difference" = gbdb_mean_temp_diff, "sd" = gbdb_sd, "coefficient of variance" = gbdb_coeff_var) %>%
+  kbl() %>%
+  kable_styling(html_font = "Cambria") %>%
+  kable_material("striped")
+
+final_stats_monthly_gbdb_table <- final_stats_monthly_gbdb_table %>%
+  row_spec(8, extra_css = "border-bottom: 2px solid black;")
+
+print(final_stats_monthly_gbdb_table)
+```
+
+```{r}
+#gbub
+final_stats_monthly_gbub_table <- rbind(stats_monthly_gbub_n, stats_monthly_gbub_s) %>%
+  rename("GB temp" = gb_mean_temp, "UB temp" = ub_mean_temp, "mean temp" = gbub_mean_temp, "mean temp difference" = gbub_mean_temp_diff, "sd" = gbub_sd, "coefficient of variance" = gbub_coeff_var) %>%
+  kbl() %>%
+  kable_styling(html_font = "Cambria") %>%
+  kable_material("striped")
+
+final_stats_monthly_gbub_table <- final_stats_monthly_gbub_table %>%
+  row_spec(8, extra_css = "border-bottom: 2px solid black;")
+
+print(final_stats_monthly_gbub_table)
+```
+
+\*\* keep working on the above table formatting! - 2024.10.22
 
 #### Saving New full stats as CSVs
 
