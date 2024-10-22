@@ -913,6 +913,14 @@ final_hourly_gbdb_ub <- final_15min_gbdb_ub %>%
 ```
 
 ```{r}
+#creating a combined gbdbub full dataframe
+## this is an important step in data wrangling - need this for final csvs
+full_15min_gbdbub <- final_15min_gbdb %>%
+  select(-avg_temp) %>%
+  inner_join(final_15min_gbdb_ub)
+```
+
+```{r}
 #GB/UB comparison
 
 ##have to create a new dataframe for this step that gets rid of db temps
@@ -1158,8 +1166,7 @@ write_csv(final_hourly_ns_ub, "nsf/treetemp_data/final_hourly_ns_ub.csv")
 
 ```{r}
 # GB/DB/UB comparison
-full_15min_gbdbub <- final_15min_gbdb %>%
-  full_join(final_15min_gbdb_ub) %>%
+full_15min_gbdbub <- full_15min_gbdbub %>%
   #adding in mean temp of gbdb/gbub/dbub temps
   mutate(gbdb_avg_temp = ((gb_temp + db_temp) / 2)) %>%
   mutate(gbub_avg_temp = ((gb_temp + ub_temp) / 2)) %>%
@@ -1624,7 +1631,7 @@ full_15min_ns_dtnt <- full_15min_ns %>%
   ) %>%
   filter(datetime >= as.POSIXct("2024-02-02 00:15:00", tz = "MST") & 
          datetime <= as.POSIXct("2024-05-23 23:45:00", tz = "MST")) %>%
-  left_join(p_b_solar_times, by = "day") %>%
+  inner_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
   mutate(
     phase = case_when(
@@ -1661,7 +1668,9 @@ full_hourly_ns_dtnt <- full_hourly_ns %>%
 ```{r}
 #15-minute dbgbub dataframe
 #hourly NS data
-full_15min_gbdbub_dtnt <- full_15min_gbdbub %>%
+full_15min_gbdbub_dtnt <- full_15min_gbdbub 
+
+%>%
   #adjusting TZ for datetime and day columns
   mutate(
     day = as.Date.POSIXct(datetime, tz = "MST"),
