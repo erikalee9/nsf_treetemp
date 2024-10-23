@@ -28,6 +28,8 @@ library(patchwork)
 library(knitr)
 library(kableExtra)
 library(pagedown)
+library(ggpubr)
+library(ggpattern)
 
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
@@ -346,3 +348,371 @@ cum_dt_gbdbub_plot <- ggplot(data = accu_dt_gbdbub_LWout) +
 
 cum_dt_gbdbub_plot
 ```
+
+# Boxplots of Char Pattern Comparisons
+
+## GB Trees
+
+```{r}
+#making a daytime dataframe 
+full_hourly_gb_dt <- full_hourly_gb %>%
+  filter(phase == "day") %>%
+  rename(north = north_temp, south = south_temp, charred = charred_temp, uncharred = uncharred_temp) %>%
+  pivot_longer(cols = c(north, south, charred, uncharred),
+               names_to = "temp_type", values_to = "temperature") %>%
+  select(datetime_hour, day, month, phase, zone, burn_status, temp_type, temperature)
+
+#parsing into zone dataframes
+pers_full_hourly_gb_dt <- full_hourly_gb_dt %>%
+  filter(zone == "persistent") %>%
+  mutate(zone = "PSZ")
+
+trans_full_hourly_gb_dt <- full_hourly_gb_dt %>%
+  filter(zone == "transitional") %>%
+  mutate(zone = "TSZ")
+```
+
+```{r}
+#PSZ
+pers_dt_gb_aspect_comparison <- ggplot(pers_full_hourly_gb_dt) + 
+  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
+  facet_wrap(~ zone + month + phase, scales = "free") + 
+  scale_fill_manual(
+    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
+  theme_bw()
+
+pers_dt_gb_aspect_comparison
+```
+
+```{r}
+#TSZ
+trans_dt_gb_aspect_comparison <- ggplot(trans_full_hourly_gb_dt) + 
+  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
+  facet_wrap(~ zone + month + phase, scales = "free") + 
+  scale_fill_manual(
+    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
+  theme_bw()
+
+trans_dt_gb_aspect_comparison
+```
+
+\*\* could just do box plots of statistically significant comparisons and put p-values on them?
+
+## DB Trees
+
+```{r}
+#making a daytime dataframe 
+full_15min_db_dt <- full_15min_gbdbub %>%
+  filter(phase == "day") %>%
+  select(datetime, day, month, phase, zone, aspect, db_temp) %>%
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ", zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # This line ensures other zones are preserved
+  )) %>%
+  mutate(burn_status = "dead burn")
+
+#parsing into zone dataframes
+pers_full_15min_db_dt <- full_15min_db_dt %>%
+  filter(zone == "PSZ")
+
+#have to filter individually to add p-value to boxes
+feb_pers_db <- pers_full_15min_db_dt %>%
+  filter(month == "2")
+
+march_pers_db <- pers_full_15min_db_dt %>%
+  filter(month == "3")
+
+april_pers_db <- pers_full_15min_db_dt %>%
+  filter(month == "4")
+
+may_pers_db <- pers_full_15min_db_dt %>%
+  filter(month == "5")
+  
+
+trans_full_15min_db_dt <- full_15min_db_dt %>%
+  filter(zone == "TSZ")
+
+#have to filter individually to add p-value to boxes
+feb_trans_db <- trans_full_15min_db_dt %>%
+  filter(month == "2")
+
+march_trans_db <- trans_full_15min_db_dt %>%
+  filter(month == "3")
+
+april_trans_db <- trans_full_15min_db_dt %>%
+  filter(month == "4")
+
+may_trans_db <- trans_full_15min_db_dt %>%
+  filter(month == "5")
+```
+
+\*\* keep on working on the boxplot below! The data is stacking isntead of going next to each other. 2024-10-23
+
+```{r}
+
+full_15min_db_dt_plot <- ggplot(full_15min_db_dt) +
+  # Solid boxplots for 'persistent' zone
+  geom_boxplot(data = full_15min_db_dt[full_15min_db_dt$zone == "PSZ", ],
+               aes(x = aspect, y = db_temp, fill = aspect),
+               position = position_dodge(width = 0.8),  # Side-by-side
+               width = 0.4) +  # Adjust width for better spacing
+  # Patterned boxplots for 'transitional' zone
+  geom_boxplot_pattern(data = full_15min_db_dt[full_15min_db_dt$zone == "TSZ", ],
+                       aes(x = aspect, y = db_temp, fill = aspect, pattern = zone),
+                       position = position_dodge(width = 0.8),  # Match the position
+                       pattern = "stripe",
+                       pattern_density = 0.1,
+                       pattern_fill = NA,
+                       width = 0.4) +  # Adjust width for better spacing
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02"),
+    name = "Aspect of Temp Sensor"
+  ) + 
+  labs(x = "Aspect", y = "Temperature (°C)") +
+  facet_wrap(~ burn_status + month) + 
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+# Print the final plot
+print(full_15min_db_dt_plot)
+```
+
+```{r}
+#PSZ
+pers_dt_db_aspect_comparison <- ggplot(pers_full_15min_db_dt) + 
+  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect)) + 
+  facet_wrap(~ zone + burn_status + month) + 
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect", y = "Temperature (°C)") +
+  theme_bw()
+
+pers_dt_db_aspect_comparison <- pers_dt_db_aspect_comparison + annotate("text", x = 5, y = 30, label = "p = 0.01586", size = 2, color = "black")
+
+pers_dt_db_aspect_comparison
+```
+
+```{r}
+#individual month plots
+feb_pers_db_plot <- ggplot(feb_pers_db) + 
+  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect)) + 
+  facet_wrap(~ zone + burn_status + month) + 
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect", y = "Temperature (°C)") +
+  ylim(NA, 40) +
+  theme_bw()
+
+#adding p-value
+feb_pers_db_plot <- feb_pers_db_plot + 
+  annotate("text", x = 1, y = 35, label = "p = 0.01586", size = 3, color = "red3", fontface = "bold") + 
+  theme(legend.position = "none") + 
+  labs(x = NULL, y = NULL)
+
+feb_pers_db_plot
+```
+
+```{r}
+#individual month plots
+march_pers_db_plot <- ggplot(march_pers_db) + 
+  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect)) + 
+  facet_wrap(~ zone + burn_status + month) + 
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect", y = "Temperature (°C)") +
+  ylim(NA, 40) +
+  theme_bw()
+
+#adding p-value
+march_pers_db_plot <- march_pers_db_plot + 
+  annotate("text", x = 1, y = 35, label = "p = 0.00683", size = 3, color = "red3", fontface = "bold") + 
+  theme(legend.position = "none") + 
+  labs(x = NULL, y = NULL)
+
+march_pers_db_plot
+```
+
+```{r}
+#individual month plots
+april_pers_db_plot <- ggplot(april_pers_db) + 
+  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect)) + 
+  facet_wrap(~ zone + burn_status + month) + 
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect", y = "Temperature (°C)") +
+  ylim(NA, 40) +
+  theme_bw() + 
+  theme(legend.position = "none")
+
+#adding p-value
+april_pers_db_plot <- april_pers_db_plot + 
+  annotate("text", x = 1, y = 35, label = "p = 0.1671", size = 3, color = "black", fontface = "bold") + 
+  labs(x = NULL, y = NULL)
+
+april_pers_db_plot
+```
+
+```{r}
+#individual month plots
+may_pers_db_plot <- ggplot(may_pers_db) + 
+  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect)) + 
+  facet_wrap(~ zone + burn_status + month) + 
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect", y = "Temperature (°C)") +
+  ylim(NA, 40) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+#adding p-value
+may_pers_db_plot <- may_pers_db_plot + 
+  annotate("text", x = 1, y = 35, label = "p = 0.5876", size = 3, color = "black", fontface = "bold") + 
+  labs(x = NULL, y = NULL)
+
+may_pers_db_plot
+```
+
+```{r}
+#combining individual month PSZ plots
+full_pers_db_plots <- ggarrange(feb_pers_db_plot, march_pers_db_plot, april_pers_db_plot, may_pers_db_plot, nrow = 2, ncol = 2)
+
+full_pers_db_plots
+```
+
+```{r}
+#TSZ
+trans_dt_db_aspect_comparison <- ggplot(trans_full_15min_db_dt) + 
+  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect)) + 
+  facet_wrap(~ zone + burn_status + month) + 
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect", y = "Temperature (°C)") +
+  theme_bw()
+
+trans_dt_db_aspect_comparison
+```
+
+```{r}
+#individual month plots
+feb_trans_db_plot <- ggplot(feb_trans_db) + 
+  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect), alpha = 0.7) + 
+  facet_wrap(~ zone + burn_status + month) + 
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect", y = "Temperature (°C)") +
+  ylim(NA, 40) +
+  theme_bw()
+
+#adding p-value
+feb_trans_db_plot <- feb_trans_db_plot + 
+  annotate("text", x = 1, y = 35, label = " p = 0.000004", size = 3, color = "red3", fontface = "bold") + 
+  theme(legend.position = "none") + 
+  labs(x = NULL, y = NULL)
+
+feb_trans_db_plot
+```
+
+```{r}
+march_trans_db_plot <- ggplot(march_trans_db) + 
+  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect), alpha = 0.7) + 
+  facet_wrap(~ zone + burn_status + month) + 
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect", y = "Temperature (°C)") +
+  ylim(NA, 40) +
+  theme_bw()
+
+#adding p-value
+march_trans_db_plot <- march_trans_db_plot + 
+  annotate("text", x = 1, y = 35, label = " p = 0.000001", size = 3, color = "red3", fontface = "bold") + 
+  theme(legend.position = "none") + 
+  labs(x = NULL, y = NULL)
+
+march_trans_db_plot
+```
+
+```{r}
+april_trans_db_plot <- ggplot(april_trans_db) + 
+  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect), alpha = 0.7) + 
+  facet_wrap(~ zone + burn_status + month) + 
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect", y = "Temperature (°C)") +
+  ylim(NA, 40) +
+  theme_bw()
+
+#adding p-value
+april_trans_db_plot <- april_trans_db_plot + 
+  annotate("text", x = 1, y = 35, label = " p = 0.000323", size = 3, color = "red3", fontface = "bold") + 
+  theme(legend.position = "none") + 
+  labs(x = NULL, y = NULL)
+
+april_trans_db_plot
+```
+
+```{r}
+may_trans_db_plot <- ggplot(may_trans_db) + 
+  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect), alpha = 0.7) + 
+  facet_wrap(~ zone + burn_status + month) + 
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(x = "Aspect", y = "Temperature (°C)") +
+  ylim(NA, 40) +
+  theme_bw()
+
+#adding p-value
+may_trans_db_plot <- may_trans_db_plot + 
+  annotate("text", x = 1, y = 35, label = "p = 0.5082", size = 3, color = "black", fontface = "bold") + 
+  theme(legend.position = "none") +
+  labs(x = NULL, y = NULL)
+
+may_trans_db_plot
+```
+
+```{r}
+#combining individual month PSZ plots
+full_trans_db_plots <- ggarrange(feb_trans_db_plot, march_trans_db_plot, april_trans_db_plot, may_trans_db_plot, nrow = 2, ncol = 2)
+
+full_trans_db_plots
+```
+
+```{r}
+library(grid)
+
+full_db_plots <- ggarrange(full_pers_db_plots, full_trans_db_plots, nrow = 1, ncol = 2)
+
+full_db_plots <- annotate_figure(full_db_plots,
+                                  left = textGrob("Temperature (°C)", gp = gpar(fontsize = 10), rot = 90),
+                                  bottom = textGrob("Aspect", gp = gpar(fontsize = 10)))
+
+
+full_db_plots
+```
+
+\*\* Instead, I could do patterened plots by snow zone and have both snow zones on each months plot? Would that make more sense?
