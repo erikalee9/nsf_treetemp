@@ -349,6 +349,31 @@ cum_dt_gbdbub_plot <- ggplot(data = accu_dt_gbdbub_LWout) +
 cum_dt_gbdbub_plot
 ```
 
+```{r}
+#trying to figure out flatline in march in trans data
+trans_accu_dt_gbdbub_LWout <- accu_dt_gbdbub_LWout %>%
+  filter(zone == "TSZ", month == "2")
+
+trans_cum_gbdbub_plot <- ggplot(data = trans_accu_dt_gbdbub_LWout) +
+  geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd, color = "green burn", linetype = aspect), linewidth = 0.6) +  
+  geom_line(aes(x = day, y = accu_daily_db_LWout_MJperd, color = "dead burn", linetype = aspect), linewidth = 0.6) +
+  geom_line(aes(x = day, y = accu_daily_ub_LWout_MJperd, color = "live", linetype = aspect), linewidth = 0.6) +
+  facet_wrap(~zone + aspect, dir = "v") +
+  theme_bw() +
+  labs(
+    x = "Date",
+    y = "Daily Cumulative LWout (MJ/day)",
+    color = "Burn Status", 
+    linetype = "Aspect"
+  ) +
+  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid"))
+
+trans_cum_gbdbub_plot 
+```
+
+\*\* I cannot figure out why there is a flatline in this plot for the transitional snow zone. When I plot individual months, they all show normal increases, as does the data, but the plot shows a flat line through march!
+
 # Boxplots of Char Pattern Comparisons
 
 ## GB Trees
@@ -408,6 +433,7 @@ trans_dt_gb_aspect_comparison
 
 ```{r}
 #making a daytime dataframe 
+##gb
 full_15min_gb_dt <- full_15min_gbdbub %>%
   filter(phase == "day") %>%
   select(datetime, day, month, phase, zone, aspect, gb_temp) %>%
@@ -416,6 +442,29 @@ full_15min_gb_dt <- full_15min_gbdbub %>%
     TRUE ~ zone  # This line ensures other zones are preserved
   )) %>%
   mutate(burn_status = "green burn")
+
+##db
+full_15min_db_dt <- full_15min_gbdbub %>%
+  filter(phase == "day") %>%
+  select(datetime, day, month, phase, zone, aspect, db_temp) %>%
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ", zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # This line ensures other zones are preserved
+  )) %>%
+  mutate(burn_status = "dead burn")
+
+##db
+full_15min_ub_dt <- full_15min_gbdbub %>%
+  filter(phase == "day") %>%
+  select(datetime, day, month, phase, zone, aspect, ub_temp) %>%
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ", zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # This line ensures other zones are preserved
+  )) %>%
+  mutate(burn_status = "live")
+```
+
+```{r}
 
 #parsing into zone dataframes
 pers_full_15min_gb_dt <- full_15min_gb_dt %>%
@@ -450,6 +499,107 @@ april_trans_gb <- trans_full_15min_gb_dt %>%
 
 may_trans_gb <- trans_full_15min_gb_dt %>%
   filter(month == "5")
+```
+
+Combined Simple Plot with PSZ and TSZ on the same plots!
+
+```{r}
+#GB N/S Trees
+# Create a combined variable for x-axis (interaction of zone and aspect)
+full_15min_gb_dt$gb_interaction_zone_aspect <- interaction(full_15min_gb_dt$zone, full_15min_gb_dt$aspect)
+
+# Create the plot
+full_ns_boxplots_gb_inter <- ggplot(full_15min_gb_dt, 
+                                  aes(x = gb_interaction_zone_aspect, y = gb_temp, fill = aspect, pattern = zone)) +
+  geom_boxplot_pattern(
+    aes(pattern = zone), 
+    pattern_density = 0.3,  # Adjust density for stripes
+    pattern_fill = NA,  # No fill for pattern
+    color = "black"  # Outline color
+  ) + 
+  labs(title = "a) Green Burn", x = "Aspect and Zone", y = "Temperature (°C)") +
+  scale_x_discrete(labels = c("PSZ-N", "TSZ-N", "PSZ-S", "TSZ-S")) +  # Custom labels
+  facet_wrap(~month, nrow = 1) +
+  theme_bw() +
+  scale_fill_manual(values = c("north" = "#2166AC", "south" = "#D95F02")) +  # Solid fill colors
+  scale_pattern_manual(values = c("PSZ" = NA, "TSZ" = "stripe")) +  # Solid for PSZ, stripes for TSZ
+  guides(fill = guide_legend(title = "Aspect"), 
+         pattern = guide_legend(title = "Zone")) # Separate legend titles
+
+# Display the plot
+full_ns_boxplots_gb_inter
+```
+
+```{r}
+#DB N/S Trees
+# Create a combined variable for x-axis (interaction of zone and aspect)
+full_15min_db_dt$db_interaction_zone_aspect <- interaction(full_15min_db_dt$zone, full_15min_db_dt$aspect)
+
+# Create the plot
+full_ns_boxplots_db_inter <- ggplot(full_15min_db_dt, 
+                                  aes(x = db_interaction_zone_aspect, y = db_temp, fill = aspect, pattern = zone)) +
+  geom_boxplot_pattern(
+    aes(pattern = zone), 
+    pattern_density = 0.3,  # Adjust density for stripes
+    pattern_fill = NA,  # No fill for pattern
+    color = "black"  # Outline color
+  ) + 
+  labs(title = "b) Dead Burn", x = "Aspect and Zone", y = "Temperature (°C)") +
+  scale_x_discrete(labels = c("PSZ-N", "TSZ-N", "PSZ-S", "TSZ-S")) +  # Custom labels
+  facet_wrap(~month, nrow = 1) +
+  theme_bw() +
+  scale_fill_manual(values = c("north" = "#2166AC", "south" = "#D95F02")) +  # Solid fill colors
+  scale_pattern_manual(values = c("PSZ" = NA, "TSZ" = "stripe")) +  # Solid for PSZ, stripes for TSZ
+  guides(fill = guide_legend(title = "Aspect"), 
+         pattern = guide_legend(title = "Zone")) # Separate legend titles
+
+# Display the plot
+full_ns_boxplots_db_inter
+```
+
+```{r}
+#DB N/S Trees
+# Create a combined variable for x-axis (interaction of zone and aspect)
+full_15min_ub_dt$ub_interaction_zone_aspect <- interaction(full_15min_ub_dt$zone, full_15min_ub_dt$aspect)
+
+# Create the plot
+full_ns_boxplots_ub_inter <- ggplot(full_15min_ub_dt, 
+                                  aes(x = ub_interaction_zone_aspect, y = ub_temp, fill = aspect, pattern = zone)) +
+  geom_boxplot_pattern(
+    aes(pattern = zone), 
+    pattern_density = 0.3,  # Adjust density for stripes
+    pattern_fill = NA,  # No fill for pattern
+    color = "black"  # Outline color
+  ) + 
+  labs(title = "c) Live", x = "Aspect and Zone", y = "Temperature (°C)") +
+  scale_x_discrete(labels = c("PSZ-N", "TSZ-N", "PSZ-S", "TSZ-S")) +  # Custom labels
+  facet_wrap(~month, nrow = 1) +
+  theme_bw() +
+  scale_fill_manual(values = c("north" = "#2166AC", "south" = "#D95F02")) +  # Solid fill colors
+  scale_pattern_manual(values = c("PSZ" = NA, "TSZ" = "stripe")) +  # Solid for PSZ, stripes for TSZ
+  guides(fill = guide_legend(title = "Aspect"), 
+         pattern = guide_legend(title = "Zone")) + # Separate legend titles
+  scale_y_continuous(limits = c(0, 40))  # Force y-scale to go to 40
+
+# Display the plot
+full_ns_boxplots_ub_inter
+```
+
+```{r}
+#combinging all of the above plots into one plot
+#vertical stack version
+gbdbub_full_ns_inter_plots <- ggarrange(full_ns_boxplots_gb_inter, full_ns_boxplots_db_inter, full_ns_boxplots_ub_inter, nrow = 1, ncol = 3, common.legend = TRUE, legend = "bottom")
+
+gbdbub_full_ns_inter_plots
+```
+
+\*\* USE THE VERSION BELOW FOR COMBINED N/S PLOT, FACET WRAPPED BY MONTH!
+
+```{r}
+#horizontal stack version
+gbdbub_full_ns_inter_plots_h <- ggarrange(full_ns_boxplots_gb_inter, full_ns_boxplots_db_inter, full_ns_boxplots_ub_inter, nrow = 3, ncol = 1, common.legend = TRUE, legend = "bottom")
+
+gbdbub_full_ns_inter_plots_h
 ```
 
 \*\* as of 2024-10-23 - don't have monthly zone p-values for green burned yet. Need to get these to finalize plots!
