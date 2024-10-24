@@ -1125,23 +1125,167 @@ p_feb_gb_data <- feb_gb_data %>%
 t_feb_gb_data <- feb_gb_data %>%
   filter(zone == "transitional")
 
-p_march_gb_data <- feb_gb_data %>%
+p_march_gb_data <- march_gb_data %>%
   filter(zone == "persistent")
 
-t_march_gb_data <- feb_gb_data %>%
+t_march_gb_data <- march_gb_data %>%
   filter(zone == "transitional")
 
-p_april_gb_data <- feb_gb_data %>%
+p_april_gb_data <- april_gb_data %>%
   filter(zone == "persistent")
 
-t_april_gb_data <- feb_gb_data %>%
+t_april_gb_data <- april_gb_data %>%
   filter(zone == "transitional")
 
-p_may_gb_data <- feb_gb_data %>%
+p_may_gb_data <- may_gb_data %>%
   filter(zone == "persistent")
 
-t_may_gb_data <- feb_gb_data %>%
+t_may_gb_data <- may_gb_data %>%
   filter(zone == "transitional")
+```
+
+Monthly GB by zone
+
+```{r}
+#persistent monthly - N/S
+p_t_test_feb_gb_s_n_result <- t.test(p_feb_gb_data$mean_south_temp, p_feb_gb_data$mean_north_temp)
+
+print(p_t_test_feb_gb_s_n_result)
+## above is not significant
+
+p_t_test_march_gb_s_n_result <- t.test(p_march_gb_data$mean_south_temp, p_march_gb_data$mean_north_temp)
+
+print(p_t_test_march_gb_s_n_result)
+##above is not significant
+
+p_t_test_april_gb_s_n_result <- t.test(p_april_gb_data$mean_south_temp, p_april_gb_data$mean_north_temp)
+
+print(p_t_test_april_gb_s_n_result)
+## above is not significant
+
+p_t_test_may_gb_s_n_result <- t.test(p_may_gb_data$mean_south_temp, p_may_gb_data$mean_north_temp)
+
+print(p_t_test_may_gb_s_n_result)
+##above is not significant
+```
+
+```{r}
+#transitional monthly - N/S
+t_t_test_feb_gb_s_n_result <- t.test(t_feb_gb_data$mean_south_temp, t_feb_gb_data$mean_north_temp)
+
+print(t_t_test_feb_gb_s_n_result)
+## above is significant
+
+t_t_test_march_gb_s_n_result <- t.test(t_march_gb_data$mean_south_temp, t_march_gb_data$mean_north_temp)
+
+print(t_t_test_march_gb_s_n_result)
+##above is significant
+
+t_t_test_april_gb_s_n_result <- t.test(t_april_gb_data$mean_south_temp, t_april_gb_data$mean_north_temp)
+
+print(t_t_test_april_gb_s_n_result)
+## above is significant
+
+t_t_test_may_gb_s_n_result <- t.test(t_may_gb_data$mean_south_temp, t_may_gb_data$mean_north_temp)
+
+print(t_t_test_may_gb_s_n_result)
+## above is not significant
+```
+
+Monthly S/C
+
+```{r}
+#persistent monthly - s/charred 
+p_t_test_feb_gb_s_c_result <- t.test(p_feb_gb_data$mean_south_temp, p_feb_gb_data$mean_charred_temp)
+
+print(p_t_test_feb_gb_s_c_result)
+## above is not significant
+
+p_t_test_march_gb_s_c_result <- t.test(p_march_gb_data$mean_south_temp, p_march_gb_data$mean_charred_temp)
+
+print(p_t_test_march_gb_s_c_result)
+## above is not significant
+
+p_t_test_april_gb_s_c_result <- t.test(p_april_gb_data$mean_south_temp, p_april_gb_data$mean_charred_temp)
+
+print(p_t_test_april_gb_s_c_result)
+## above is significant
+
+p_t_test_may_gb_s_c_result <- t.test(p_may_gb_data$mean_south_temp, p_may_gb_data$mean_charred_temp)
+
+print(p_t_test_may_gb_s_c_result)
+## above is significant
+```
+
+```{r}
+#transitional monthly - s/charred 
+t_t_test_feb_gb_s_c_result <- t.test(t_feb_gb_data$mean_south_temp, t_feb_gb_data$mean_charred_temp)
+
+print(t_t_test_feb_gb_s_c_result)
+## above is significant
+
+t_t_test_march_gb_s_c_result <- t.test(t_march_gb_data$mean_south_temp, t_march_gb_data$mean_charred_temp)
+
+print(t_t_test_march_gb_s_c_result)
+## above is not significant
+
+t_t_test_april_gb_s_c_result <- t.test(t_april_gb_data$mean_south_temp, t_april_gb_data$mean_charred_temp)
+
+print(t_t_test_april_gb_s_c_result)
+## above is not significant
+
+t_t_test_may_gb_s_c_result <- t.test(t_may_gb_data$mean_south_temp, t_may_gb_data$mean_charred_temp)
+
+print(t_t_test_may_gb_s_c_result)
+## above is not significant
+```
+
+Monthly S/Uncharred
+
+```{r}
+#persistent monthly - s/charred 
+p_t_test_feb_gb_s_uc_result <- t.test(p_feb_gb_data$mean_south_temp, p_feb_gb_data$mean_uncharred_temp)
+
+print(p_t_test_feb_gb_s_uc_result)
+## above is not significant
+
+p_t_test_march_gb_s_uc_result <- t.test(p_march_gb_data$mean_south_temp, p_march_gb_data$mean_uncharred_temp)
+
+print(p_t_test_march_gb_s_uc_result)
+## above is not significant
+
+p_t_test_april_gb_s_uc_result <- t.test(p_april_gb_data$mean_south_temp, p_april_gb_data$mean_uncharred_temp)
+
+print(p_t_test_april_gb_s_uc_result)
+## above is not significant
+
+p_t_test_may_gb_s_uc_result <- t.test(p_may_gb_data$mean_south_temp, p_may_gb_data$mean_uncharred_temp)
+
+print(p_t_test_may_gb_s_uc_result)
+## above is not significant
+```
+
+```{r}
+#transitional monthly - s/charred 
+t_t_test_feb_gb_s_uc_result <- t.test(t_feb_gb_data$mean_south_temp, t_feb_gb_data$mean_uncharred_temp)
+
+print(t_t_test_feb_gb_s_uc_result)
+## above is not significant
+
+t_t_test_march_gb_s_uc_result <- t.test(t_march_gb_data$mean_south_temp, t_march_gb_data$mean_uncharred_temp)
+
+print(t_t_test_march_gb_s_uc_result)
+## above is not significant
+
+t_t_test_april_gb_s_uc_result <- t.test(t_april_gb_data$mean_south_temp, t_april_gb_data$mean_uncharred_temp)
+
+print(t_t_test_april_gb_s_uc_result)
+## above is not significant
+
+t_t_test_may_gb_s_uc_result <- t.test(t_may_gb_data$mean_south_temp, t_may_gb_data$mean_uncharred_temp)
+
+print(t_t_test_may_gb_s_uc_result)
+## above is not significant
 ```
 
 ### Dead Burned
@@ -1325,7 +1469,7 @@ print(t_t_test_march_ub_s_n_result)
 
 t_t_test_april_ub_s_n_result <- t.test(t_april_ub_data$south_temp, t_april_ub_data$north_temp)
 
-print(p_t_test_april_ub_s_n_result)
+print(t_t_test_april_ub_s_n_result)
 ## above is significant
 
 t_t_test_may_ub_s_n_result <- t.test(t_may_ub_data$south_temp, t_may_ub_data$north_temp)
