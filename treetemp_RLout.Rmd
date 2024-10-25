@@ -222,6 +222,13 @@ uc_W =  uc_LWout_wperm2 * (gb_m2/2),
 s_LWout_MJperd = s_W * 86400 / 1e6, c_LWout_MJperd = c_W * 86400 / 1e6, uc_LWout_MJperd = uc_W * 86400 / 1e6)
 ```
 
+```{r}
+#exporting above tree_LWout datasets to nsf/treetemp folder
+write.csv(full_15min_gbdbub_LWout, "nsf/treetemp_data/full_15min_gbdbub_LWout.csv")
+
+write.csv(full_15min_ns_LWout, "nsf/treetemp_data/full_ns_gbdbub_LWout.csv")
+```
+
 # Daily Mean Datasets
 
 -   taking the 15-minute datasets and making daily mean datasets with day/night phase means
@@ -347,6 +354,11 @@ cum_dt_gbdbub_plot <- ggplot(data = accu_dt_gbdbub_LWout) +
   scale_linetype_manual(values = c("north" = "dashed", "south" = "solid"))
 
 cum_dt_gbdbub_plot
+```
+
+```{r}
+#exporting accumulation data to use in other plots!
+write.csv(accu_full_daily_ns_LWout, "nsf/treetemp_data/cum_full_daily_treeLWout.csv")
 ```
 
 # Boxplots of Char Pattern Comparisons
