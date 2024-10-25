@@ -1,0 +1,141 @@
+---
+title: "treetemp_finalplots"
+output: html_document
+date: "2024-10-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(openxlsx)
+library(plotly)
+library(rstatix)
+library(htmlwidgets)
+library(RColorBrewer)
+library(patchwork)
+library(ggpubr)
+library(suncalc)
+library(ggpattern)
+
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
+
+# Loading in Data
+
+```{r}
+#new full dataframes to load - including burned and unburned/ all burn_status types together
+full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  select(-1)
+
+full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
+   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+  select(-1)
+
+full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST'))  %>%
+  select(-1)
+
+full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv") %>%
+  mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+  select(-1)
+
+full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
+  mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+  select(-1)
+```
+
+# Plotting
+
+## Daytime vs Nighttime Tree Temp Plot - GB/DB/UB with aspects
+
+```{r}
+#creating dataframe for this that has renamed zones - mean daily value!!
+dt_full_daily_gbdbub_plot_dataframe <- full_15min_gbdbub %>%
+  #selecting data that we neex
+  select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
+  filter(phase == "day") %>%
+  #summarizing for one daily value
+  group_by(day, month, phase, zone, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+  
+
+nt_full_daily_gbdbub_plot_dataframe <- full_15min_gbdbub %>%
+  #selecting data that we neex
+  select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
+  filter(phase == "night") %>%
+  #summarizing for one daily value
+  group_by(day, month, phase, zone, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+```
+
+```{r}
+#daytime plot
+dt_treetemp_daily_gbdbub_lineplot <- ggplot(data = dt_full_daily_gbdbub_plot_dataframe) +
+  geom_line(aes(x = day, y = gb_temp, color = "green burn", linetype = aspect)) + 
+  geom_line(aes(x = day, y = db_temp, color = "dead burn", linetype = aspect)) +
+  geom_line(aes(x = day, y = ub_temp, color = "live", linetype = aspect), alpha = 0.8) +
+  facet_wrap(~zone) +
+  labs(title = "a) Day Temps", x = NULL, y = "Temperature (°C)") +
+  scale_color_manual(
+    name = "burn status",
+    values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = "#2166AC")
+  ) +
+  scale_linetype_manual(
+    name = "aspect", 
+    values = c("north" = "dashed", "south" = "solid"),
+    labels = c("north" = "North", "south" = "South")
+  ) +
+  scale_y_continuous(limits = c(-20, 20)) +  # Set the y-axis limits here
+  theme_bw()
+
+dt_treetemp_daily_gbdbub_lineplot
+```
+
+```{r}
+#daytime plot
+nt_treetemp_daily_gbdbub_lineplot <- ggplot(data = nt_full_daily_gbdbub_plot_dataframe) +
+  geom_line(aes(x = day, y = gb_temp, color = "green burn", linetype = aspect)) + 
+  geom_line(aes(x = day, y = db_temp, color = "dead burn", linetype = aspect)) +
+  geom_line(aes(x = day, y = ub_temp, color = "live", linetype = aspect), alpha = 0.8) +
+  facet_wrap(~zone) +
+  labs(title = "b) Night Temps", x = "Date", y = "Temperature (°C)") +
+  scale_color_manual(
+    name = "burn status",
+    values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = "#2166AC")
+  ) +
+  scale_linetype_manual(
+    name = "aspect", 
+    values = c("north" = "dashed", "south" = "solid"),
+    labels = c("north" = "North", "south" = "South")
+  ) +
+  #setting y-axis to match that of the daytime axis
+ scale_y_continuous(limits = c(-20, 20)) +  # Set the y-axis limits here
+  theme_bw()
+
+nt_treetemp_daily_gbdbub_lineplot
+```
+
+```{r}
+#combining day and night plots
+dtnt_treetemp_lineplot <- ggarrange(dt_treetemp_daily_gbdbub_lineplot, nt_treetemp_daily_gbdbub_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+dtnt_treetemp_lineplot
+```
+
+## Cumulative Tree LWout Plot
