@@ -133,7 +133,7 @@ filtered_pers_b_aspects <- filtered_pers_b_aspects %>%
     TRUE ~ NA_character_  # Optional: handle other cases if needed
   )) %>%
   #adding a zone column
-  mutate(zone = "persistent") %>%
+  mutate(zone = "PSZ") %>%
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
          month = as.numeric(format(datetime, "%m"))) %>%
   select(datetime, day, month, zone, burn_status, sensor_id, tree_name, everything()) %>%
@@ -145,7 +145,7 @@ filtered_pers_ub_aspects <- filtered_pers_ub_aspects %>%
     TRUE ~ NA_character_  # Optional: handle other cases if needed
   )) %>%
   #adding a zone column
-  mutate(zone = "persistent") %>%
+  mutate(zone = "PSZ") %>%
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
          month = as.numeric(format(datetime, "%m"))) %>%
   select(datetime, day, month, zone, burn_status, sensor_id, tree_name, everything()) %>%
@@ -158,7 +158,7 @@ filtered_trans_b_aspects <- filtered_trans_b_aspects %>%
     TRUE ~ NA_character_  # Optional: handle other cases if needed
   )) %>%
   #adding a zone column
-  mutate(zone = "transitional") %>%
+  mutate(zone = "TSZ") %>%
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
          month = as.numeric(format(datetime, "%m"))) %>%
   select(datetime, day, month, zone, burn_status, sensor_id, tree_name, everything()) %>%
@@ -169,7 +169,7 @@ filtered_trans_ub_aspects <- filtered_trans_ub_aspects %>%
     startsWith(tree_name, "ub") ~ "live",
     TRUE ~ NA_character_  # Optional: handle other cases if needed
   )) %>%
-  mutate(zone = "transitional") %>%
+  mutate(zone = "TSZ") %>%
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
          month = as.numeric(format(datetime, "%m"))) %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST"))
@@ -619,13 +619,6 @@ final_hourly_gb_temps <-final_gb_temps %>%
 ```
 
 ```{r}
-#creating full dataframe with charred/uncharred/n/s comparison data for stats later
-
-full_hourly_gb <- final_hourly_gb_temps %>%
-  rename(north_temp = mean_north)
-```
-
-```{r}
 #writing this gb csv to use in stats calculations!
 
 ##hourly
@@ -643,7 +636,7 @@ Creating a clean dataframe with columns for north and south temps, instead of ro
 #persistent burned 
 full_pers_ns_data <- full_burned_combined_data %>%
   filter(!(aspect %in% c("charred", "uncharred"))) %>%
-  filter(zone == "persistent") %>%
+  filter(zone == "PSZ") %>%
   #remove gb_w tree, so there is two gb and two db
   filter(!(tree_name == "gb_w")) %>%
   #getting mean temperature of all trees, instead of having individual trees identified
@@ -664,7 +657,7 @@ final_persb_ns_temps <- full_pers_ns_data %>%
 #persistent unburned final dataset
 full_pers_ub_ns_data <- full_unburned_combined_data %>%
   mutate(burn_status = "live") %>%
-  filter(zone == "persistent") %>%
+  filter(zone == "PSZ") %>%
   #getting mean temperature of all trees, instead of having individual trees identified
   group_by(datetime, day, month, aspect, zone, burn_status) %>%
   # Calculate the mean temperature for each aspect
@@ -690,7 +683,7 @@ full_pers_ns_data <- final_persb_ns_temps %>%
 #transitional burned 
 full_trans_ns_data <- full_burned_combined_data %>%
   filter(!(aspect %in% c("charred", "uncharred"))) %>%
-  filter(zone == "transitional") %>%
+  filter(zone == "TSZ") %>%
   #getting mean temperature of all trees, instead of having individual trees identified
   group_by(datetime, day, month, aspect, zone, burn_status) %>%
   # Calculate the mean temperature for each aspect
@@ -709,7 +702,7 @@ final_transb_ns_temps <- full_trans_ns_data %>%
 #tranitional unburned final dataset
 full_trans_ub_ns_data <- full_unburned_combined_data %>%
   mutate(burn_status = "live") %>%
-  filter(zone == "transitional") %>%
+  filter(zone == "TSZ") %>%
   #getting mean temperature of all trees, instead of having individual trees identified
   group_by(datetime, day, month, aspect, zone, burn_status) %>%
   # Calculate the mean temperature for each aspect
@@ -1180,7 +1173,7 @@ full_15min_gbdbub <- full_15min_gbdbub %>%
 
 Exporting full 15-minute gbdbub and n/s comparison dataframes
 
-\*\*
+\*\* don't use the following export
 
 ```{r}
 write_csv(full_15min_ns, "nsf/treetemp_data/full_15min_ns.csv")
@@ -1237,6 +1230,14 @@ write_csv(full_hourly_gbdbub, "nsf/treetemp_data/full_hourly_gbdbub.csv")
 As of 2024-10-18 -\> I've cleaned up everything above this!
 
 ## Plotting charred/uncharred comparisons
+
+```{r}
+#loading in finalized dataframe 
+full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
+  mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+  select(-1)
+```
 
 ```{r}
 #making a daily dt/nt dataset
@@ -1301,36 +1302,97 @@ hourly_gb_aspect_comparison
 
 ### Box Plot of hourly data
 
-```{r}
-## have to make a new, long, dataframe first
-final_hourly_gb_temps_long <- final_hourly_gb_temps %>%
-  #renaming aspect variables so it only says "south" not "mean_south_temp"
-  rename_with(~ gsub("_temp", "", gsub("mean_", "", .)), starts_with("mean_")) %>%
-  pivot_longer(cols = c(north, south, charred, uncharred),
-               names_to = "temp_type", values_to = "temperature")
-```
+\*\* USE THIS FINAL COMBINED PLOT (dt_hourly_gb_comb_plots) IN THESIS!
 
 ```{r}
+## have to make a new, long, dataframe first
+final_hourly_gb_temps_long <- full_hourly_gb %>%
+  select(datetime_hour, day, month, phase, zone, burn_status, north_temp, south_temp, charred_temp, uncharred_temp) %>%
+  #renameing zones with appreviations
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ"
+  )) %>%
+  #renaming temp columns for long pivot
+  rename(north = "north_temp", south = "south_temp", charred = "charred_temp", uncharred = "uncharred_temp" ) %>%
+  pivot_longer(cols = c(north, south, charred, uncharred),
+               names_to = "aspect", values_to = "temperature")
+```
+
+```{r}\}
+##use this!
 #creating a daytime dataframe and a night time dataframe to make the facet_wrapped plots more easy to see
 ##persistent
 dt_p_final_hourly_gb_temps_long <- final_hourly_gb_temps_long %>%
-  filter(phase == "day", zone == "persistent")
+  filter(phase == "day", zone == "PSZ")
 
 nt_p_final_hourly_gb_temps_long <- final_hourly_gb_temps_long %>%
-  filter(phase == "night", zone == "persistent")
+  filter(phase == "night", zone == "PSZ")
 
 ##transitional
 dt_t_final_hourly_gb_temps_long <- final_hourly_gb_temps_long %>%
-  filter(phase == "day", zone == "transitional")
+  filter(phase == "day", zone == "TSZ")
 
 nt_t_final_hourly_gb_temps_long <- final_hourly_gb_temps_long %>%
-  filter(phase == "night", zone == "transitional")
+  filter(phase == "night", zone == "TSZ")
+```
+
+```{r}
+##use this plot!
+#dt hourly boxplot - persistent
+dt_p_hourly_gb_aspect_comparison_boxplot <- ggplot(data = dt_p_final_hourly_gb_temps_long) +
+  geom_boxplot(aes(x = aspect, y = temperature, fill = aspect)) + 
+  facet_wrap(~ month, nrow = 1) + 
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey30", "uncharred" = "grey"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
+  theme_bw()
+
+# Display the plot
+print(dt_p_hourly_gb_aspect_comparison_boxplot)
+```
+
+```{r}
+##use this plot!
+dt_t_hourly_gb_aspect_comparison_boxplot <- ggplot(data = dt_t_final_hourly_gb_temps_long) +
+  geom_boxplot(aes(x = aspect, y = temperature, fill = aspect)) + 
+  facet_wrap(~ month, nrow = 1) + 
+  scale_fill_manual(
+    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey30", "uncharred" = "grey"),
+    name = "Aspect of Temp Sensor"  # Legend title
+  ) + 
+  labs(title = "b) TSZ", x = "Aspect", y = "Temperature (°C)") +
+  theme_bw()
+
+# Display the plot
+print(dt_t_hourly_gb_aspect_comparison_boxplot)
+```
+
+```{r}
+#arranging dt hourly mean plots next to each other
+dt_hourly_gb_comb_plots <- ggarrange(
+  dt_p_hourly_gb_aspect_comparison_boxplot,
+  dt_t_hourly_gb_aspect_comparison_boxplot,
+  nrow = 2,
+  common.legend = TRUE,
+  legend = "right")
+
+# adding a title to combined plot
+#dt_hourly_gb_comb_plots <- annotate_figure(
+  #dt_hourly_gb_comb_plots,
+  #top = text_grob("Daytime Hourly Mean Temps", size = 14)
+#)
+
+# Display the combined plot
+dt_hourly_gb_comb_plots
 ```
 
 ```{r}
 #hourly boxplot
 hourly_gb_aspect_comparison_boxplot <- ggplot(data = final_hourly_gb_temps_long) +
-  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
+  geom_boxplot(aes(x = aspect, y = temperature, fill = aspect)) + 
   facet_wrap(~ zone + phase + month, scales = "free") + 
   scale_fill_manual(
     values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
@@ -1341,56 +1403,6 @@ hourly_gb_aspect_comparison_boxplot <- ggplot(data = final_hourly_gb_temps_long)
 
 # Display the plot
 print(hourly_gb_aspect_comparison_boxplot)
-```
-
-```{r}
-#dt hourly boxplot - persistent
-dt_p_hourly_gb_aspect_comparison_boxplot <- ggplot(data = dt_p_final_hourly_gb_temps_long) +
-  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
-  facet_wrap(~ zone + phase + month, scales = "free") + 
-  scale_fill_manual(
-    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
-  theme_bw()
-
-# Display the plot
-print(dt_p_hourly_gb_aspect_comparison_boxplot)
-```
-
-```{r}
-dt_t_hourly_gb_aspect_comparison_boxplot <- ggplot(data = dt_t_final_hourly_gb_temps_long) +
-  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
-  facet_wrap(~ zone + phase + month, scales = "free") + 
-  scale_fill_manual(
-    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
-  theme_bw()
-
-# Display the plot
-print(dt_t_hourly_gb_aspect_comparison_boxplot)
-```
-
-```{r}
-#arranging dt plots next to each other
-dt_hourly_gb_comb_plots <- ggarrange(
-  dt_p_hourly_gb_aspect_comparison_boxplot,
-  dt_t_hourly_gb_aspect_comparison_boxplot,
-  nrow = 1,
-  common.legend = TRUE,
-  legend = "right")
-
-# adding a title to combined plot
-dt_hourly_gb_comb_plots <- annotate_figure(
-  dt_hourly_gb_comb_plots,
-  top = text_grob("Daytime Hourly Mean Temps", size = 14)
-)
-
-# Display the combined plot
-dt_hourly_gb_comb_plots
 ```
 
 Night Time Plots by zone
@@ -1519,11 +1531,6 @@ dt_daily_gb_comb_plots <- annotate_figure(
 # Display the combined plot
 dt_daily_gb_comb_plots
 ```
-
-\
-\
-\
-\
 
 # Display the combined plot
 
@@ -1668,9 +1675,7 @@ full_hourly_ns_dtnt <- full_hourly_ns %>%
 ```{r}
 #15-minute dbgbub dataframe
 #hourly NS data
-full_15min_gbdbub_dtnt <- full_15min_gbdbub 
-
-%>%
+full_15min_gbdbub_dtnt <- full_15min_gbdbub %>%
   #adjusting TZ for datetime and day columns
   mutate(
     day = as.Date.POSIXct(datetime, tz = "MST"),
