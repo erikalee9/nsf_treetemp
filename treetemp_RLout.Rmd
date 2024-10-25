@@ -288,8 +288,8 @@ accu_dt_ns_LWout <- accu_full_daily_ns_LWout %>%
 ```{r}
 ##use this plot!
 accu_dt_ns_plot <- ggplot(data = accu_dt_ns_LWout) +
-  geom_line(aes(x = day, y = accu_daily_n_LWout_MJperd, color = "north"), alpha = 0.9) +  # First line labeled "No Snow"
-  geom_line(aes(x = day, y = accu_daily_s_LWout_MJperd, color = "south")) +     # Second line labeled "Snow"
+  geom_line(aes(x = day, y = accu_daily_n_LWout_MJperd, color = "north"), alpha = 0.9) + 
+  geom_line(aes(x = day, y = accu_daily_s_LWout_MJperd, color = "south")) +
   facet_wrap(~zone + burn_status) +
   theme_bw() +
   labs(
@@ -335,7 +335,7 @@ cum_dt_gbdbub_plot <- ggplot(data = accu_dt_gbdbub_LWout) +
   geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd, color = "green burn", linetype = aspect), linewidth = 0.6) +  
   geom_line(aes(x = day, y = accu_daily_db_LWout_MJperd, color = "dead burn", linetype = aspect), linewidth = 0.6) +
   geom_line(aes(x = day, y = accu_daily_ub_LWout_MJperd, color = "live", linetype = aspect), linewidth = 0.6) +
-  facet_wrap(~zone + aspect, dir = "v") +
+  facet_wrap(~zone + aspect, dir = "h") +
   theme_bw() +
   labs(
     x = "Date",
@@ -348,31 +348,6 @@ cum_dt_gbdbub_plot <- ggplot(data = accu_dt_gbdbub_LWout) +
 
 cum_dt_gbdbub_plot
 ```
-
-```{r}
-#trying to figure out flatline in march in trans data
-trans_accu_dt_gbdbub_LWout <- accu_dt_gbdbub_LWout %>%
-  filter(zone == "TSZ", month == "2")
-
-trans_cum_gbdbub_plot <- ggplot(data = trans_accu_dt_gbdbub_LWout) +
-  geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd, color = "green burn", linetype = aspect), linewidth = 0.6) +  
-  geom_line(aes(x = day, y = accu_daily_db_LWout_MJperd, color = "dead burn", linetype = aspect), linewidth = 0.6) +
-  geom_line(aes(x = day, y = accu_daily_ub_LWout_MJperd, color = "live", linetype = aspect), linewidth = 0.6) +
-  facet_wrap(~zone + aspect, dir = "v") +
-  theme_bw() +
-  labs(
-    x = "Date",
-    y = "Daily Cumulative LWout (MJ/day)",
-    color = "Burn Status", 
-    linetype = "Aspect"
-  ) +
-  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
-  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid"))
-
-trans_cum_gbdbub_plot 
-```
-
-\*\* I cannot figure out why there is a flatline in this plot for the transitional snow zone. When I plot individual months, they all show normal increases, as does the data, but the plot shows a flat line through march!
 
 # Boxplots of Char Pattern Comparisons
 
