@@ -60,6 +60,56 @@ full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
   select(-1)
 ```
 
+```{r}
+#weather station data for tree well/snow depth plots
+transb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transb_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "maximum_depth(cm)") %>%
+  mutate(date = as.Date(date)) %>%
+  #adjusting the treewell developed column to just yes/no
+  mutate(treewell_developed = case_when(
+    treewell_developed == "maybe" ~ "yes",
+    treewell_developed == "no snow" ~ "no",
+    TRUE ~ treewell_developed  # keep other values unchanged
+  )) %>%
+  #filtering to timerange for these plots
+  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23"))
+
+transb_wx_15min <- read_csv("nsf/trans_burned/trans_burned_wx_15min_r.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:15:00", tz = "MST") & 
+         datetime <= as.POSIXct("2024-05-23 23:45:00", tz = "MST"))
+
+transub_wx_15min <- read_csv("nsf/trans_unburned/trans_unburned_wx_15min_r.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST'))
+
+persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_east_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "max_depth_cm") %>%
+  mutate(date = as.Date(date)) %>%
+  rename(treewell_developed = treewell_developement) %>%
+  mutate(treewell_developed = case_when(
+    treewell_developed == "maybe" ~ "yes",
+    treewell_developed == "no snow" ~ "no",
+    TRUE ~ treewell_developed  # keep other values unchanged
+  )) %>%
+  #filtering to timerange for these plots
+  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23"))
+
+persb_wx_hourly <- read_csv("nsf/pers_burned/pers_burned_wx_hourly_r.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST')) %>%
+   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime <= as.POSIXct("2024-05-23 23:00:00", tz = "MST"))
+```
+
+```{r}
+#tree LWout and treeLWout cumulative datasets
+full_15min_gbdbub_LWout <- read_csv("nsf/treetemp_data/full_15min_gbdbub_LWout.csv")
+
+full_15min_ns_LWout<- read_csv("nsf/treetemp_data/full_15min_ns_LWout.csv")
+
+cum_full_daily_LWout<- read_csv("nsf/treetemp_data/cum_full_daily_treeLWout.csv")
+```
+
 # Plotting
 
 ## Daytime vs Nighttime Tree Temp Plot - GB/DB/UB with aspects
@@ -139,3 +189,61 @@ dtnt_treetemp_lineplot
 ```
 
 ## Cumulative Tree LWout Plot
+
+## Snow Depth & Tree Well Plots
+
+Making plots by zone / burned & unburned because then I can have snow depths at burned/unburned sites...
+
+-   as of 2024-10-24, just starting with burned, cause I don't have unburned data loaded yet
+
+```{r}
+#making daily average tree_LWout datasets
+full_daily_gbdbub_LWout <- full_15min_gbdbub_LWout %>%
+  group_by(day, month, phase, zone, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp), gb_LWout_MJperd = mean(gb_LWout_MJperd), db_LWout_MJperd = mean(db_LWout_MJperd), ub_LWout_MJperd = mean(ub_LWout_MJperd))
+
+full_daily_ns_LWout <- full_15min_ns_LWout %>%
+  group_by(day, month, phase, zone, burn_status) %>%
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), n_LWout_MJperd = mean(n_LWout_MJperd), s_LWout_MJperd = mean(s_LWout_MJperd))
+```
+
+\*\* keep working on the below plot using the dataframes from right above this!
+
+```{r}
+p_b_snow_treewell_plot <- ggplot() +
+  geom_line(aes(x = date, y = accu_treeLWout_MJd, color = "Tree LWout", linetype = "Tree LWout"), linewidth = 0.8) +
+  geom_line(aes(x = date, y = accu_netLW_wotree_MJd, color = "Net LW", linetype = "Net LW"), linewidth = 0.8) +
+  geom_line(aes(x = date, y = accu_netSW_MJd, color = "Net SW", linetype = "Net SW"), linewidth = 0.8) + 
+  geom_line(aes(x = date, y = accu_netRad_wotree_MJd, color = "Total Net Radiation", linetype = "Total Net Radiation"), linewidth = 0.8) +
+  geom_point(data = accu_treewell_data, aes(x = date, y = accu_treeLWout_MJd, 
+             shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  facet_wrap(~zone + burn_status) +
+  labs(
+    title = "Without Tree LWout in Net Rad",
+    x = "Date",
+    y = "Cumulative Radiation Component (MJ/d)"
+  ) +
+   scale_color_manual(
+   values = c("Tree LWout" = "#D95F02", 
+               "Net LW" = "#1B7837", 
+               "Net SW" = "#2166AC", 
+               "Total Net Radiation" = "black")) +
+  scale_linetype_manual(
+    values = c("Tree LWout" = "solid", 
+               "Net LW" = "solid", 
+               "Net SW" = "solid", "Total Net Radiation" = "dashed")
+  ) +
+  scale_shape_manual(
+    values = c("Dates that treewells developed" = 16)  # Set shape for points
+  ) +
+  scale_y_continuous(labels = scales::label_number(accuracy = 1)) + 
+  guides(
+    color = guide_legend(title = NULL),  # Remove the legend title for color
+    linetype = guide_legend(title = NULL),  # Remove the legend title for linetype
+    shape = guide_legend(title = NULL)  # Remove the legend title for shape
+  ) +
+  theme_bw()
+
+print(mean_NR_acc_wotree_plot)
+```
