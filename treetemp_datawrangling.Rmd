@@ -1325,7 +1325,7 @@ final_hourly_gb_temps_long <- full_hourly_gb %>%
                names_to = "aspect", values_to = "temperature")
 ```
 
-```{r}\}
+```{r}
 ##use this!
 #creating a daytime dataframe and a night time dataframe to make the facet_wrapped plots more easy to see
 ##persistent
@@ -1354,6 +1354,7 @@ dt_p_hourly_gb_aspect_comparison_boxplot <- ggplot(data = dt_p_final_hourly_gb_t
     name = "Aspect of Temp Sensor"  # Legend title
   ) + 
   labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
+  scale_y_continuous(limits = c(-20, 30)) +  # Set the y-axis limits here
   theme_bw()
 
 # Display the plot
@@ -1370,6 +1371,7 @@ dt_t_hourly_gb_aspect_comparison_boxplot <- ggplot(data = dt_t_final_hourly_gb_t
     name = "Aspect of Temp Sensor"  # Legend title
   ) + 
   labs(title = "b) TSZ", x = "Aspect", y = "Temperature (°C)") +
+  scale_y_continuous(limits = c(-20, 30)) +  # Set the y-axis limits here
   theme_bw()
 
 # Display the plot
