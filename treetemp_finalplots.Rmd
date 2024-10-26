@@ -71,8 +71,10 @@ transb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transb_snowd
     treewell_developed == "no snow" ~ "no",
     TRUE ~ treewell_developed  # keep other values unchanged
   )) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
   #filtering to timerange for these plots
-  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23"))
+  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23")) %>%
+  mutate(zone = "TSZ")
 
 transb_wx_15min <- read_csv("nsf/trans_burned/trans_burned_wx_15min_r.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST')) %>%
@@ -91,8 +93,10 @@ persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_
     treewell_developed == "no snow" ~ "no",
     TRUE ~ treewell_developed  # keep other values unchanged
   )) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
   #filtering to timerange for these plots
-  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23"))
+  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23")) %>%
+  mutate(zone = "PSZ")
 
 persb_wx_hourly <- read_csv("nsf/pers_burned/pers_burned_wx_hourly_r.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST')) %>%
@@ -105,9 +109,11 @@ persb_wx_hourly <- read_csv("nsf/pers_burned/pers_burned_wx_hourly_r.csv") %>%
 #tree LWout and treeLWout cumulative datasets
 full_15min_gbdbub_LWout <- read_csv("nsf/treetemp_data/full_15min_gbdbub_LWout.csv")
 
-full_15min_ns_LWout<- read_csv("nsf/treetemp_data/full_15min_ns_LWout.csv")
+full_15min_ns_LWout <- read_csv("nsf/treetemp_data/full_15min_ns_LWout.csv")
 
-cum_full_daily_LWout<- read_csv("nsf/treetemp_data/cum_full_daily_treeLWout.csv")
+cum_full_daily_LWout <- read_csv("nsf/treetemp_data/cum_full_daily_treeLWout.csv")
+
+cum_dt_gbdbub_LWout <- read_csv("nsf/treetemp_data/cum_dt_gbdbub_LWout.csv")
 ```
 
 # Plotting
@@ -202,48 +208,192 @@ full_daily_gbdbub_LWout <- full_15min_gbdbub_LWout %>%
   group_by(day, month, phase, zone, aspect) %>%
   summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp), gb_LWout_MJperd = mean(gb_LWout_MJperd), db_LWout_MJperd = mean(db_LWout_MJperd), ub_LWout_MJperd = mean(ub_LWout_MJperd))
 
+p_full_dt_gbdbub_LWout <- full_daily_gbdbub_LWout %>%
+  filter(zone == "PSZ", phase == "day")
+
+t_full_dt_gbdbub_LWout <- full_daily_gbdbub_LWout %>%
+  filter(zone == "TSZ", phase == "day")
+
 full_daily_ns_LWout <- full_15min_ns_LWout %>%
   group_by(day, month, phase, zone, burn_status) %>%
   summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), n_LWout_MJperd = mean(n_LWout_MJperd), s_LWout_MJperd = mean(s_LWout_MJperd))
+
+persb_treewell_dates <- persb_snowcamera_data %>%
+  filter(treewell_developed == "yes")
+
+transb_treewell_dates <- transb_snowcamera_data %>%
+  filter(treewell_developed == "yes")
 ```
 
-\*\* keep working on the below plot using the dataframes from right above this!
+```{r}
+p_cum_full_daily_LWout <- cum_full_daily_LWout %>%
+  filter(zone == "persistent", phase == "day") %>%
+  mutate(zone = "PSZ")
+```
+
+```{r}
+#filtered transb weather to get a daily average
+transb_daily_wx <- transb_wx_15min %>%
+  filter(
+    hour(datetime) >= 8 & hour(datetime) <= 16
+  ) %>%
+  mutate(
+    day = as.Date(datetime),
+    month = month(datetime), 
+    zone = "TSZ"
+  ) %>%
+  select(datetime, day, month, zone, SnowDepth_m, AirTC_Avg) %>%
+  group_by(day, month, zone) %>%
+  summarize(SnowDepth_m = mean(SnowDepth_m), AirTC_Avg = mean(AirTC_Avg))
+```
+
+```{r}
+#filtered transb weather to get a daily average
+persb_daily_wx <- persb_wx_hourly %>%
+  filter(
+    hour(datetime) >= 8 & hour(datetime) <= 16
+  ) %>%
+  mutate(
+    day = as.Date(datetime),
+    month = month(datetime), 
+    zone = "PSZ"
+  ) %>%
+  select(datetime, day, month, zone, SnowDepth_m, AirTC_Avg) %>%
+  group_by(day, month, zone) %>%
+  summarize(SnowDepth_m = mean(SnowDepth_m), AirTC_Avg = mean(AirTC_Avg))
+```
+
+```{r}
+#combining the above daily_dt_weather
+daily_burned_dt_wx <- persb_daily_wx %>%
+  full_join(transb_daily_wx)
+```
+
+\*\* Probably won't use the plot below
 
 ```{r}
 p_b_snow_treewell_plot <- ggplot() +
-  geom_line(aes(x = date, y = accu_treeLWout_MJd, color = "Tree LWout", linetype = "Tree LWout"), linewidth = 0.8) +
-  geom_line(aes(x = date, y = accu_netLW_wotree_MJd, color = "Net LW", linetype = "Net LW"), linewidth = 0.8) +
-  geom_line(aes(x = date, y = accu_netSW_MJd, color = "Net SW", linetype = "Net SW"), linewidth = 0.8) + 
-  geom_line(aes(x = date, y = accu_netRad_wotree_MJd, color = "Total Net Radiation", linetype = "Total Net Radiation"), linewidth = 0.8) +
-  geom_point(data = accu_treewell_data, aes(x = date, y = accu_treeLWout_MJd, 
+  geom_line(data = p_full_dt_gbdbub_LWout, aes(x = day, y = gb_LWout_MJperd, color = "green burn"), linewidth = 0.8) +
+ geom_line(data = p_full_dt_gbdbub_LWout, aes(x = day, y = db_LWout_MJperd, color = "dead burn"), linewidth = 0.8) +
+  geom_line(data =p_full_dt_gbdbub_LWout, aes(x = day, y = ub_LWout_MJperd, color = "live"), linewidth = 0.8) +
+  geom_line(data = persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*10, color = "snow depth"), linewidth = 0.8) +
+  geom_point(data = persb_treewell_dates, aes(x = date, y = snowcam_max_depth_m*10, 
              shape = "Dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
-  facet_wrap(~zone + burn_status) +
+  facet_wrap(~zone + aspect) +
   labs(
     title = "Without Tree LWout in Net Rad",
     x = "Date",
     y = "Cumulative Radiation Component (MJ/d)"
   ) +
    scale_color_manual(
-   values = c("Tree LWout" = "#D95F02", 
-               "Net LW" = "#1B7837", 
-               "Net SW" = "#2166AC", 
-               "Total Net Radiation" = "black")) +
-  scale_linetype_manual(
-    values = c("Tree LWout" = "solid", 
-               "Net LW" = "solid", 
-               "Net SW" = "solid", "Total Net Radiation" = "dashed")
-  ) +
+   values = c("dead burn" = "#D95F02", 
+               "green burn" = "#1B7837", 
+               "live" = "#2166AC", 
+               "snow depth" = "black")) +
   scale_shape_manual(
     values = c("Dates that treewells developed" = 16)  # Set shape for points
   ) +
-  scale_y_continuous(labels = scales::label_number(accuracy = 1)) + 
+  # Primary y-axis and secondary y-axis for snow depth
+  scale_y_continuous(
+    labels = scales::label_number(accuracy = 1),
+    sec.axis = sec_axis(~./10, name = "Snow Depth (m)")
+  ) +
+  # Remove legend titles
   guides(
-    color = guide_legend(title = NULL),  # Remove the legend title for color
-    linetype = guide_legend(title = NULL),  # Remove the legend title for linetype
-    shape = guide_legend(title = NULL)  # Remove the legend title for shape
+    color = guide_legend(title = NULL),  
+    linetype = guide_legend(title = NULL),
+    shape = guide_legend(title = NULL)
   ) +
   theme_bw()
 
-print(mean_NR_acc_wotree_plot)
+print(p_b_snow_treewell_plot)
+```
+
+Snow depth plot with tree temp + air temp!
+
+```{r}
+#creating daily average tree temp plot for dt only
+full_dt_daily_gbdbub <- full_15min_gbdbub %>%
+  filter(phase == "day", aspect == "south") %>%
+  group_by(day, month, phase, zone, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+```
+
+```{r}
+p_b_snow_treewell_plot_V2 <- ggplot() +
+  geom_line(data = full_dt_daily_gbdbub, aes(x = day, y = gb_temp, color = "green burn"), linewidth = 0.8) +
+ geom_line(data = full_dt_daily_gbdbub, aes(x = day, y = db_temp, color = "dead burn"), linewidth = 0.8) +
+  geom_line(data =full_dt_daily_gbdbub, aes(x = day, y = ub_temp, color = "live"), linewidth = 0.8, alpha = 0.8) +
+  #persistent snow depths + tree wells
+  geom_line(data = persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*15, color = "snow depth"), linewidth = 0.8) +
+  geom_point(data = persb_treewell_dates, aes(x = date, y = snowcam_max_depth_m*15, 
+             shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+    #transitional snow depths + tree wells
+  geom_line(data = transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*15, color = "snow depth"), linewidth = 0.8) +
+  geom_point(data = transb_treewell_dates, aes(x = date, y = snowcam_max_depth_m*15, 
+             shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  #air temp
+  geom_line(data = daily_burned_dt_wx, aes(x = day, y = AirTC_Avg, color = "air temp", linetype = "dasehd")) + 
+  facet_wrap(~zone + aspect) +
+  labs(
+    title = "Without Tree LWout in Net Rad",
+    x = "Date",
+    y = "Cumulative Radiation Component (MJ/d)"
+  ) +
+  scale_color_manual(values = c("dead burn" = "#D95F02", 
+               "green burn" = "#1B7837", 
+               "live" = "#2166AC", 
+               "snow depth" = "black", "air temp" = "red")) +
+  scale_shape_manual(
+    values = c("Dates that treewells developed" = 16)  # Set shape for points
+  ) +
+  # Primary y-axis and secondary y-axis for snow depth
+  scale_y_continuous(
+    labels = scales::label_number(accuracy = 1),
+    sec.axis = sec_axis(~./15, name = "Snow Depth (m)")
+  ) +
+  # Remove legend titles
+  guides(
+    color = guide_legend(title = NULL),  
+    linetype = guide_legend(title = NULL),
+    shape = guide_legend(title = NULL)
+  ) +
+  theme_bw()
+
+p_b_snow_treewell_plot_V2
+```
+
+```{r}
+accu_dt_ns_LWout <- accu_full_daily_ns_LWout %>%
+  filter(phase == "day") %>%
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Keep the original value if it's neither "persistent" nor "transitional"
+  ))
+
+cum_dt_daily_LWout <- cum_full_daily_LWout %>%
+  filter(phase == "day")
+```
+
+```{r}
+cum_dt_gbdbub_plot <- ggplot(data = cum_dt_daily_LWout) +
+  geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd, color = "green burn", linetype = aspect), linewidth = 0.6) +  
+  geom_line(aes(x = day, y = accu_daily_db_LWout_MJperd, color = "dead burn", linetype = aspect), linewidth = 0.6) +
+  geom_line(aes(x = day, y = accu_daily_ub_LWout_MJperd, color = "live", linetype = aspect), linewidth = 0.6) +
+  facet_wrap(~zone + aspect, dir = "h") +
+  theme_bw() +
+  labs(
+    x = "Date",
+    y = "Daily Cumulative LWout (MJ/day)",
+    color = "Burn Status", 
+    linetype = "Aspect"
+  ) +
+  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid"))
+
+cum_dt_gbdbub_plot
 ```
