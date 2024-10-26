@@ -537,13 +537,13 @@ Plotting
 ```{r}
 p_snowtreewell_NR_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_persb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.8) +
+  geom_col(data = mean_dt_persb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.7) +
   #air temp line
   geom_line(data = mean_dt_persb_wx, aes(x = day, y = AirTC_Avg, color = "air temp"), linewidth = 0.8) +
   # Line plot for snow cam max depth on a secondary y-axis
   #transitional snow depths + tree wells
-  geom_line(data = persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*15, color = "daily max snow depth"), linewidth = 0.8) +
-  geom_point(data = persb_treewell_dates, aes(x = date, y = snowcam_max_depth_m*15, 
+  geom_line(data = persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*5, color = "daily max snow depth"), linewidth = 0.8) +
+  geom_point(data = persb_treewell_dates, aes(x = date, y = snowcam_max_depth_m*5, 
              shape = "dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
   facet_wrap(~burn_status) +
@@ -559,10 +559,14 @@ p_snowtreewell_NR_plot <- ggplot() +
   scale_shape_manual(values = c("dates that treewells developed" = 21)) +
   guides(color = guide_legend(title = NULL),  # Remove title for color legend
          fill = guide_legend(title = NULL), #Remove fill legend
-         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+         shape = guide_legend(title = NULL)) +
+  scale_x_date(
+    limits = c(as.Date("2024-02-02"), as.Date("2024-05-23")), 
+    expand = c(0.02, 0.02)  # Remove extra space on the x-axis
+  ) +# Remove title for shape legend
   scale_y_continuous(
-    limits = c(-20, 25),
-    sec.axis = sec_axis(~./15, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+    limits = c(-18, 10),
+    sec.axis = sec_axis(~./4, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
   theme_bw() + 
   theme(
@@ -580,13 +584,13 @@ p_snowtreewell_NR_plot
 ```{r}
 t_snowtreewell_NR_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_transb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.8) +
+  geom_col(data = mean_dt_transb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.7) +
   #air temp line
   geom_line(data = mean_dt_transb_wx, aes(x = day, y = AirTC_Avg, color = "air temp"), linewidth = 0.8) +
   # Line plot for snow cam max depth on a secondary y-axis
   #transitional snow depths + tree wells
-  geom_line(data = transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*15, color = "daily max snow depth"), linewidth = 0.8) +
-  geom_point(data = transb_treewell_dates, aes(x = date, y = snowcam_max_depth_m*15, 
+  geom_line(data = transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*5, color = "daily max snow depth"), linewidth = 0.8) +
+  geom_point(data = transb_treewell_dates, aes(x = date, y = snowcam_max_depth_m*5, 
              shape = "dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
   facet_wrap(~burn_status) +
@@ -603,10 +607,14 @@ t_snowtreewell_NR_plot <- ggplot() +
   scale_shape_manual(values = c("dates that treewells developed" = 21)) +
   guides(color = guide_legend(title = NULL),  # Remove title for color legend
          fill = guide_legend(title = NULL), #Remove fill legend
-         shape = guide_legend(title = NULL)) +  # Remove title for shape legend
+         shape = guide_legend(title = NULL)) +
+  scale_x_date(
+    limits = c(as.Date("2024-02-02"), as.Date("2024-05-23")), 
+    expand = c(0.02, 0.02)  # Remove extra space on the x-axis
+  ) +# Remove title for shape legend
   scale_y_continuous(
-    limits = c(-20, 25),
-    sec.axis = sec_axis(~./15, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+    limits = c(-18, 10),
+    sec.axis = sec_axis(~./4, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
   theme_bw() + 
   theme(
