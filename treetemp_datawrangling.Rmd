@@ -62,17 +62,17 @@ Weather station data:
 NOTE - I need to rerun the wx_datawrangling Rmarkdown before calling in these dataframes if I change the range of dates I am looking for!
 
 ```{r}
-transb_wx_15min_r <- read_excel('nsf/trans_burned/trans_burned_wx_15min_r.xlsx') %>%
+transb_wx_15min_r <- read_csv('nsf/trans_burned/trans_burned_wx_15min_r.csv') %>%
   #have to force the MST otherwise it recognizes it as UTC
   mutate(datetime = force_tz(datetime, tz = 'MST'))
 
-transub_wx_15min_r <- read_excel('nsf/trans_unburned/trans_unburned_wx_15min_r.xlsx') %>%
+transub_wx_15min_r <- read_csv('nsf/trans_unburned/trans_unburned_wx_15min_r.csv') %>%
   mutate(datetime = force_tz(datetime, tz = 'MST'))
 
-persb_wx_15min_r <- read_excel('nsf/pers_burned/pers_burned_wx_15min_r.xlsx') %>%
+persb_wx_hourly_r <- read_csv('nsf/pers_burned/pers_burned_wx_hourly_r.csv') %>%
   mutate(datetime = force_tz(datetime, tz = 'MST'))
 
-persub_wx_15min_r <- read_excel('nsf/pers_unburned/pers_unburned_wx_15min_r.xlsx') %>%
+persub_wx_15min_r <- read_csv('nsf/pers_unburned/pers_unburned_wx_15min_r.csv') %>%
   mutate(datetime = force_tz(datetime, tz = 'MST'))
 ```
 
@@ -1765,3 +1765,5 @@ write.csv(full_hourly_gbdbub_dtnt, "nsf/treetemp_data/full_hourly_gbdbub.csv")
 
 write.csv(full_hourly_gb_dtnt, "nsf/treetemp_data/full_hourly_gb.csv")
 ```
+
+### Weather Station Data with Phase
