@@ -1096,51 +1096,55 @@ print(dt_transb_gbdb_diff_plot)
 
 # Day vs Night Stats Dataframes
 
-### Calling in Data
+Data Wrangling V2 - with proper solar sunrise/sunset applied
 
-\*\* don't think I need this section!
-
-The single_avg temps are where a single tree was chosen, then the north/south aspects were averaged
+\*\* Using final full_15min_ns data that is from the end of this rmd! Important to note! Because it has the correct phases on it based on sunrise/sunset
 
 ```{r}
-#dataframe with single mean daily values calculated for daytime and nighttime, averaging not between N/S but for all trees.
-single_avg_all_treetemps <- read_excel("nsf/single_avg_all_treetemps.xlsx")
+dtnt_full_15min_ns <- full_15min_ns %>%
+  pivot_wider(
+    names_from = phase,
+    values_from = c(north_temp, south_temp))
+
+dt_alltemps <- dtnt_full_15min_ns %>%
+  select(-c(north_temp_night, south_temp_night)) %>%
+  filter(!is.na(north_temp_day) & !is.na(south_temp_day)) %>%
+  select(datetime, day, month, zone, burn_status, north_temp_day, south_temp_day) %>%
+  rename(dt_north_temp = "north_temp_day", dt_south_temp = "south_temp_day") %>%
+  group_by(day, month, zone , burn_status) %>%
+  summarize(dt_north_temp = mean(dt_north_temp), dt_south_temp = mean(dt_south_temp))
+
+nt_alltemps <- dtnt_full_15min_ns %>%
+  select(-c(north_temp_day, south_temp_day)) %>%
+  filter(!is.na(north_temp_night) & !is.na(south_temp_night)) %>%
+  select(datetime, day, month, zone, burn_status, north_temp_night, south_temp_night) %>%
+  rename(nt_north_temp = "north_temp_night", nt_south_temp = "south_temp_night") %>%
+  group_by(day, month, zone , burn_status) %>%
+  summarize(nt_north_temp = mean(nt_north_temp), nt_south_temp = mean(nt_south_temp))
 ```
 
-Data Wrangling
-
 ```{r}
-#manipulating dataframe to run stats on
-stats_single_avg_all_treetemps <- single_avg_all_treetemps %>%
-  group_by(date, phase, burn_status, zone) %>%
-  pivot_wider(names_from = phase, values_from = avg_temp) %>%
-  rename(avg_day_temp = day, avg_night_temp = night) %>%
-  reframe(avg_day_temp, avg_night_temp)
-  
-##creatinging individual dataframes for day and night temps, then going to rebind them to get rid of the NA issues
-day_all_temps <- stats_single_avg_all_treetemps %>%
-  select(-avg_night_temp) %>%
-  filter(!is.na(avg_day_temp))# Filter out rows with NA
-
-night_all_temps <- stats_single_avg_all_treetemps %>%
-  select(-avg_day_temp) %>%
-  filter(!is.na(avg_night_temp))
-
-##joining north/south dataframes
-final_daynight_singleavg_temps <- day_all_temps %>%
-  inner_join(night_all_temps) %>%
-  #adding in week and month columns
-  mutate(
-    month = format(date, "%Y-%m"),
-    week = week(date)  # Extract week number from datetime
-  ) %>%
-  mutate(avg_temp = (avg_day_temp + avg_night_temp) / 2)
+final_dtnt_ns_temps <- dt_alltemps %>%
+  full_join(nt_alltemps) %>%
+  mutate(dt_avg_temp = ((dt_north_temp + dt_south_temp) / 2), nt_avg_temp = ((nt_north_temp + nt_south_temp) / 2), n_avg_temp = ((dt_north_temp + nt_north_temp) / 2), s_avg_temp = ((dt_south_temp + nt_south_temp) / 2)) %>%
+  #changing zone names to be PSZ and TSZ
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone))
 ```
 
-Exporting final daynight single_avg dataset
+```{r}
+#calculating stats for these! Parsed at a daily mean timestep to compare day/night temps
+
+full_dtnt_ns_temps <- final_dtnt_ns_temps %>%
+  mutate(n_dtnt_temp_diff = (dt_north_temp - nt_north_temp), s_dtnt_temp_diff = (dt_south_temp - nt_south_temp))
+```
 
 ```{r}
-write_csv(final_daynight_singleavg_temps, "nsf/treetemp_data/final_daynight_singleavg_temps.csv")
+#exporting this csv - it has the correct sunset/sunrise based on date already!
+
+write.csv(full_dtnt_ns_temps, "nsf/treetemp_data/full_dtnt_ns_temps.csv")
 ```
 
 # Creating a single comparison dataframe for N/S and GB/DB/UB comparisons and stats
@@ -1750,6 +1754,11 @@ full_hourly_gb_dtnt <- final_hourly_gb_temps %>%
       datetime_hour >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
   select(datetime_hour, day, month, phase, zone, burn_status, north_temp, south_temp, charred_temp, uncharred_temp, ns_avg_temp, cuc_avg_temp, sc_avg_temp, suc_avg_temp, nc_avg_temp, nuc_avg_temp, ns_temp_diff, cuc_temp_diff, sc_temp_diff, suc_temp_diff, nc_temp_diff, nuc_temp_diff, sunrise, sunset, solarNoon)
+```
+
+```{r}
+#day/nigth comparison dataframe 
+final_daynight_singleavg_temps
 ```
 
 Exporting final dataframes
