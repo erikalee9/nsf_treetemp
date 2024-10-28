@@ -97,6 +97,10 @@ full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
                                datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
   select(-1)
+
+#day/night comparisons
+full_dtnt_ns_temps <- read_csv("nsf/treetemp_data/full_dtnt_ns_temps.csv") %>%
+  select(-1)
 ```
 
 ## Calculating Stats
@@ -108,58 +112,61 @@ Based on meeting w/ Stephanie on 7/17/24 - I already calculated avg_temp for 15m
 ```{r}
 ## don't use this one!
 #burned n/s stats
-stats_monthly_ns_b <- final_15min_ns_b %>%
-  #calculating temp_diff for 15-minute interval
-  mutate(temp_diff = south_temp - north_temp) %>%
-  #calculating monthly stats
+stats_monthly_ns <- full_15min_ns %>%
+  filter(phase == "day") %>%
+  #changing zone names to be PSZ and TSZ
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Keep other values unchanged
+  )) %>%
+  # calculating monthly stats
   group_by(month, zone, burn_status) %>%
-  summarize(mean_north_temp = mean(north_temp), mean_south_temp = mean(south_temp), mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
-  #rounding numeric columns to 3 decimals
+  summarize(
+    mean_north_temp = mean(north_temp),
+    mean_south_temp = mean(south_temp),
+    mean_temp = mean(ns_avg_temp),
+    mean_temp_diff = mean(ns_temp_diff),
+    sd = sd(ns_temp_diff, na.rm = TRUE),
+    coeff_var = (sd(ns_temp_diff, na.rm = TRUE) / abs(mean(ns_temp_diff, na.rm = TRUE)))
+  ) %>%
+  # rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
 
 ```{r}
-## don't use this once! Use the one lower down with combined burned/ub
-#unburned n/s stats
-stats_monthly_ns_ub <- final_15min_ns_ub %>%
-  #calculating temp_diff for 15-minute interval
-  mutate(temp_diff = south_temp - north_temp) %>%
-  #calculating monthly stats
-  group_by(month, zone, burn_status) %>%
-  summarize(mean_north_temp = mean(north_temp), mean_south_temp = mean(south_temp), mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
-  #rounding numeric columns to 3 decimals
-  mutate_if(is.numeric, round, 3)
-```
-
-#### Creating N/S differencing tables that are organized by burn status (gb, db, ub)
-
-```{r}
-#green burned n/s differences
-stats_monthly_ns_gb <- stats_monthly_ns_b %>%
+##GB N/S differences
+stats_monthly_ns_gb <- stats_monthly_ns %>%
   filter(burn_status == "green burn")
-
-#dead burned n/s differences
-stats_monthly_ns_db <- stats_monthly_ns_b %>%
-  filter(burn_status == "dead burn")
-
-##don't need to do for ub because I already have that
 ```
 
-### North/South Differenced Data
-
-\*\* differenced in the same way as the charred/uncharred below!
+```{r}
+##DB N/S differences
+stats_monthly_ns_db <- stats_monthly_ns %>%
+  filter(burn_status == "dead burn")
+```
 
 ```{r}
-stats_monthly_s_n <- final_15min_gb_temps %>%
-  mutate(datetime = as.POSIXct(datetime), month = format(datetime, "%m")) %>%
-  #calculating temp_diff for 15-minute interval of charred/uncharred
-  mutate(temp_diff = south_temp - north_temp) %>%
-  #calculating monthly stats
+##Live N/S differences
+stats_monthly_ns_ub <- stats_monthly_ns %>%
+  filter(burn_status == "live")
+```
+
+### GB Differenced Data Only
+
+```{r}
+#GB N/S difference
+stats_monthly_gb_ns <- full_hourly_gb %>%
+  filter(phase == "day") %>%
+  #changing zone names to be PSZ and TSZ
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Keep other values unchanged
+  )) %>%
   group_by(month, zone, burn_status) %>%
-  summarize(mean_south_temp = mean(south_temp), mean_north_temp = mean(north_temp), mean_temp = mean((south_temp + north_temp)/2), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  summarize(mean_south_temp = mean(south_temp), mean_north_temp = mean(north_temp), ns_mean_temp = mean(ns_avg_temp), mean_temp_diff = mean(ns_temp_diff), sd = sd(ns_temp_diff, na.rm = TRUE),
+    coeff_var = (sd(ns_temp_diff, na.rm = TRUE) / abs(mean(ns_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -167,15 +174,18 @@ stats_monthly_s_n <- final_15min_gb_temps %>%
 ### Charred/Uncharred Differenced Data
 
 ```{r}
-#burned n/s stats
-stats_monthly_c_uc <- final_15min_gb_temps %>%
-  mutate(datetime = as.POSIXct(datetime), month = format(datetime, "%m")) %>%
-  #calculating temp_diff for 15-minute interval of charred/uncharred
-  mutate(temp_diff = charred_temp - uncharred_temp) %>%
-  #calculating monthly stats
+#GB C/UC difference
+stats_monthly_gb_cuc <- full_hourly_gb %>%
+  filter(phase == "day") %>%
+  #changing zone names to be PSZ and TSZ
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Keep other values unchanged
+  )) %>%
   group_by(month, zone, burn_status) %>%
-  summarize(mean_charred_temp = mean(charred_temp), mean_uncharred_temp = mean(uncharred_temp), mean_temp = mean((charred_temp + uncharred_temp)/2), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  summarize(mean_charred_temp = mean(charred_temp), mean_uncharred_temp = mean(uncharred_temp), cuc_mean_temp = mean(cuc_avg_temp), mean_temp_diff = mean(ns_temp_diff), sd = sd(ns_temp_diff, na.rm = TRUE),
+    coeff_var = (sd(ns_temp_diff, na.rm = TRUE) / abs(mean(ns_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -183,14 +193,18 @@ stats_monthly_c_uc <- final_15min_gb_temps %>%
 ### South / Uncharred Differenced Data
 
 ```{r}
-# to compare noth/south with charred/uncharred, I need to make new n/s_gb only datasets
-stats_monthly_s_uc <- final_hourly_gb_temps %>%
-  select(datetime_hour, month, zone, burn_status, mean_south_temp, mean_uncharred_temp) %>%
-  mutate(temp_diff = mean_south_temp - mean_uncharred_temp) %>%
-  #calculating monthly stats
+#GB S/UC Difference
+stats_monthly_gb_suc <- full_hourly_gb %>%
+  filter(phase == "day") %>%
+  #changing zone names to be PSZ and TSZ
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Keep other values unchanged
+  )) %>%
   group_by(month, zone, burn_status) %>%
-  summarize(mean_south_temp = mean(mean_south_temp), mean_uncharred_temp = mean(mean_uncharred_temp), mean_temp = mean((mean_south_temp + mean_uncharred_temp)/2), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  summarize(mean_south_temp = mean(south_temp), mean_uncharred_temp = mean(uncharred_temp), suc_mean_temp = mean(suc_avg_temp), mean_temp_diff = mean(suc_temp_diff), sd = sd(suc_temp_diff, na.rm = TRUE),
+    coeff_var = (sd(suc_temp_diff, na.rm = TRUE) / abs(mean(suc_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -198,13 +212,18 @@ stats_monthly_s_uc <- final_hourly_gb_temps %>%
 ### South / Charred Differenced Data
 
 ```{r}
-stats_monthly_s_c <- final_hourly_gb_temps %>%
-  select(datetime_hour, month, zone, burn_status, mean_south_temp, mean_charred_temp) %>%
-  mutate(temp_diff = mean_south_temp - mean_charred_temp) %>%
-  #calculating monthly stats
+#GB S/C Difference
+stats_monthly_gb_sc <- full_hourly_gb %>%
+  filter(phase == "day") %>%
+  #changing zone names to be PSZ and TSZ
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Keep other values unchanged
+  )) %>%
   group_by(month, zone, burn_status) %>%
-  summarize(mean_south_temp = mean(mean_south_temp), mean_charred_temp = mean(mean_charred_temp), mean_temp = mean((mean_south_temp + mean_charred_temp)/2), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  summarize(mean_south_temp = mean(south_temp), mean_charred_temp = mean(charred_temp), sc_mean_temp = mean(sc_avg_temp), mean_temp_diff = mean(sc_temp_diff), sd = sd(sc_temp_diff, na.rm = TRUE),
+    coeff_var = (sd(sc_temp_diff, na.rm = TRUE) / abs(mean(sc_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -212,13 +231,18 @@ stats_monthly_s_c <- final_hourly_gb_temps %>%
 ### North / Uncharred Differenced Data
 
 ```{r}
-stats_monthly_n_uc <- final_hourly_gb_temps %>%
-  select(datetime_hour, month, zone, burn_status, mean_north_temp, mean_uncharred_temp) %>%
-  mutate(temp_diff = mean_north_temp - mean_uncharred_temp) %>%
-  #calculating monthly stats
+#GB N/UC Difference
+stats_monthly_gb_nuc <- full_hourly_gb %>%
+  filter(phase == "day") %>%
+  #changing zone names to be PSZ and TSZ
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Keep other values unchanged
+  )) %>%
   group_by(month, zone, burn_status) %>%
-  summarize(mean_north_temp = mean(mean_north_temp), mean_uncharred_temp = mean(mean_uncharred_temp), mean_temp = mean((mean_north_temp + mean_uncharred_temp)/2), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  summarize(mean_north_temp = mean(north_temp), mean_uncharred_temp = mean(uncharred_temp), nuc_mean_temp = mean(nuc_avg_temp), mean_temp_diff = mean(nuc_temp_diff), sd = sd(nuc_temp_diff, na.rm = TRUE),
+    coeff_var = (sd(nuc_temp_diff, na.rm = TRUE) / abs(mean(nuc_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -226,13 +250,18 @@ stats_monthly_n_uc <- final_hourly_gb_temps %>%
 ### North / Charred Differenced Data
 
 ```{r}
-stats_monthly_n_c <- final_hourly_gb_temps %>%
-  select(datetime_hour, month, zone, burn_status, mean_north_temp, mean_charred_temp) %>%
-  mutate(temp_diff = mean_north_temp - mean_charred_temp) %>%
-  #calculating monthly stats
+#GB N/C Difference
+stats_monthly_gb_nc <- full_hourly_gb %>%
+  filter(phase == "day") %>%
+  #changing zone names to be PSZ and TSZ
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Keep other values unchanged
+  )) %>%
   group_by(month, zone, burn_status) %>%
-  summarize(mean_north_temp = mean(mean_north_temp), mean_charred_temp = mean(mean_charred_temp), mean_temp = mean((mean_north_temp + mean_charred_temp)/2), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  summarize(mean_north_temp = mean(north_temp), mean_charred_temp = mean(charred_temp), nc_mean_temp = mean(nc_avg_temp), mean_temp_diff = mean(nc_temp_diff), sd = sd(nc_temp_diff, na.rm = TRUE),
+    coeff_var = (sd(nc_temp_diff, na.rm = TRUE) / abs(mean(nc_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -241,13 +270,12 @@ stats_monthly_n_c <- final_hourly_gb_temps %>%
 
 ```{r}
 #gb/db stats - db minus gb! 
-stats_monthly_gbdb <- final_15min_gbdb %>%
-  #calculating temp_diff for 15-minute interval
-  mutate(temp_diff = db_temp - gb_temp)%>%
+stats_monthly_gbdb <- full_15min_gbdbub %>%
+  filter(phase == "day") %>%
   #calculating monthly stats
   group_by(month, zone) %>%
-  summarize(mean_gb_temp = mean(gb_temp), mean_db_temp = mean(db_temp), mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
+  summarize(mean_gb_temp = mean(gb_temp), mean_db_temp = mean(db_temp), mean_temp = mean(gbdb_avg_temp), mean_diff = mean(gbdb_temp_diff), sd = sd(gbdb_temp_diff, na.rm = TRUE),
+    coeff_var = (sd(gbdb_temp_diff, na.rm = TRUE) / abs(mean(gbdb_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
@@ -255,99 +283,83 @@ stats_monthly_gbdb <- final_15min_gbdb %>%
 ### GB/UB Differenced Data
 
 ```{r}
-#stats calculations
-stats_monthly_gbub <- final_15min_gbub %>%
-  mutate(temp_diff = gb_temp - ub_temp) %>%
-  # Calculating monthly stats
+#gb/ub stats - gb minus ub! 
+stats_monthly_gbub <- full_15min_gbdbub %>%
+  filter(phase == "day") %>%
+  #calculating monthly stats
   group_by(month, zone) %>%
-  summarize(
-    mean_gb_temp = mean(gb_temp, na.rm = TRUE),
-    mean_ub_temp = mean(ub_temp, na.rm = TRUE),
-    mean_temp = mean(avg_temp, na.rm = TRUE),
-    mean_diff = mean(temp_diff, na.rm = TRUE),
-    sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))
-  ) %>%
-  # Rounding numeric columns to 3 decimals
+  summarize(mean_gb_temp = mean(gb_temp), mean_live_temp = mean(ub_temp), mean_temp = mean(gbub_avg_temp), mean_diff = mean(gbub_temp_diff), sd = sd(gbub_temp_diff, na.rm = TRUE),
+    coeff_var = (sd(gbub_temp_diff, na.rm = TRUE) / abs(mean(gbub_temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
-
 ```
 
 ### DB/UB Differenced Data
 
 ```{r}
-#stats calculations
-stats_monthly_dbub <- final_15min_dbub %>%
-  mutate(temp_diff = db_temp - ub_temp) %>%
-  # Removing rows with NAs
-  drop_na() %>%
+#db/ub stats - db minus ub! 
+stats_monthly_dbub <- full_15min_gbdbub %>%
+  filter(phase == "day") %>%
   #calculating monthly stats
   group_by(month, zone) %>%
-  summarize(mean_db_temp = mean(db_temp, na.rm = TRUE),
-    mean_ub_temp = mean(ub_temp, na.rm = TRUE),
-    mean_temp = mean(avg_temp, na.rm = TRUE),
-    mean_diff = mean(temp_diff, na.rm = TRUE),
-    sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))
-  ) %>%
-  # Rounding numeric columns to 3 decimals
+  summarize(mean_db_temp = mean(db_temp), mean_live_temp = mean(ub_temp), mean_temp = mean(dbub_avg_temp), mean_diff = mean(dbub_temp_diff), sd = sd(dbub_temp_diff, na.rm = TRUE),
+    coeff_var = (sd(dbub_temp_diff, na.rm = TRUE) / abs(mean(dbub_temp_diff, na.rm = TRUE)))) %>%
+  #rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
 
 ### Day/Night Differenced Data
 
+\*\* only comparing north/south differences for individual burn status, not between burn statuses
+
+\*\* KEEP WORKING ON THIS - the stats are not calculating on a monthly basis...
+
 ```{r}
 #monthly stats calculations by day/night zone & burn status
-stats_monthly_daynight <- final_daynight_singleavg_temps %>%
-  #calculating temp_diff for 15-minute interval
-  mutate(temp_diff = avg_day_temp - avg_night_temp) %>%
-  #calculating monthly stats
+stats_monthly_dtnt <- full_dtnt_ns_temps %>%
+  # Filtering out rows with NAs in critical columns before grouping
+  filter(!is.na(dt_north_temp) & !is.na(dt_south_temp) & !is.na(nt_north_temp) &
+         !is.na(nt_south_temp) & !is.na(n_avg_temp) & !is.na(s_avg_temp) &
+         !is.na(dt_avg_temp) & !is.na(nt_avg_temp) & !is.na(n_dtnt_temp_diff) &
+         !is.na(s_dtnt_temp_diff)) %>%
+  # Calculating monthly stats
   group_by(month, zone, burn_status) %>%
-  summarize(mean_temp = mean(avg_temp), mean_diff = mean(temp_diff), sd = sd(temp_diff, na.rm = TRUE),
-    coeff_var = (sd(temp_diff, na.rm = TRUE) / abs(mean(temp_diff, na.rm = TRUE)))) %>%
-  #rounding numeric columns to 3 decimals
+  summarize(
+    dt_north_temp = mean(dt_north_temp, na.rm = TRUE),
+    dt_south_temp = mean(dt_south_temp, na.rm = TRUE),
+    nt_north_temp = mean(nt_north_temp, na.rm = TRUE),
+    nt_south_temp = mean(nt_south_temp, na.rm = TRUE),
+    n_mean_temp = mean(n_avg_temp, na.rm = TRUE),
+    s_mean_temp = mean(s_avg_temp, na.rm = TRUE),
+    dt_mean_temp = mean(dt_avg_temp, na.rm = TRUE),
+    nt_mean_temp = mean(nt_avg_temp, na.rm = TRUE),
+    n_dtnt_temp_diff = mean(n_dtnt_temp_diff, na.rm = TRUE),
+    s_dtnt_temp_diff = mean(s_dtnt_temp_diff, na.rm = TRUE),
+    n_sd = sd(n_dtnt_temp_diff, na.rm = TRUE),
+    n_coeff_var = ifelse(
+      !is.na(n_sd) & abs(mean(n_dtnt_temp_diff, na.rm = TRUE)) > 0,
+      n_sd / abs(mean(n_dtnt_temp_diff, na.rm = TRUE)),
+      NA
+    ),
+    s_sd = sd(s_dtnt_temp_diff, na.rm = TRUE),
+    s_coeff_var = ifelse(
+      !is.na(s_sd) & abs(mean(s_dtnt_temp_diff, na.rm = TRUE)) > 0,
+      s_sd / abs(mean(s_dtnt_temp_diff, na.rm = TRUE)),
+      NA
+    )
+  ) %>%
+  # Rounding numeric columns to 3 decimals
   mutate_if(is.numeric, round, 3)
 ```
 
-### New Differenced Data from full datasets
-
-#### NS Comparison
+Creating tables by burn_status
 
 ```{r}
-#creating a monthly dataframe to carry over avg and temp_difference data into full stats dataframe - can't bind this with the stats because we need 15-minute numbers to get the correct stats
-monthly_ns_data <- full_15min_ns %>%
-  group_by(month, zone, burn_status) %>%
-  summarize(mean_north_temp = mean(north_temp, na.rm = TRUE), mean_south_temp = mean(south_temp, na.rm = TRUE), ns_avg_temp = mean(ns_avg_temp, na.rm = TRUE), ns_temp_diff = mean(ns_temp_diff, na.rm = TRUE), .groups = 'drop')
-```
-
-```{r}
-#n/s monthly stats
-stats_monthly_ns <- full_15min_ns %>%
-  #calculating monthly stats
-  group_by(month, zone, burn_status) %>%
-  summarize(mean_north_temp = mean(north_temp), mean_south_temp = mean(south_temp), ns_mean_temp = mean(ns_avg_temp), mean_diff = mean(ns_temp_diff), sd = sd(ns_temp_diff, na.rm = TRUE),
-    coeff_var = (sd(ns_temp_diff, na.rm = TRUE) / abs(mean(ns_temp_diff, na.rm = TRUE)))) %>%
-  #rounding numeric columns to 3 decimals
-  mutate_if(is.numeric, round, 3)
-```
-
-```{r}
-#splitting the above data into gb, db and live
-stats_monthly_ns <- stats_monthly_ns %>%
-  mutate(burn_status = case_when(
-    burn_status == "unburned" ~ "live",
-    TRUE ~ burn_status  # Keeps other values as they are
-  ))
-
-stats_monthly_ns_gb <- stats_monthly_ns %>%
+stats_monthly_dtnt_gb <- stats_monthly_dtnt %>%
   filter(burn_status == "green burn")
-
-stats_monthly_ns_db <- stats_monthly_ns %>%
-  filter(burn_status == "dead burn")
-
-stats_monthly_ns_live <- stats_monthly_ns %>%
-  filter(burn_status == "live")
 ```
+
+\*\* keep working on what's below this! - 10/28/24
 
 Formatting N/S Stats Monthly Tables and Exporting
 
@@ -680,8 +692,6 @@ In summary, these metrics together help you understand the magnitude, relative s
 ## My Understanding of the Data
 
 -   very high coefficient of variation and percent differences mean that there is a lot of variability of temperatures, even on a daily and monthly scale.
-
-\*\*Made edits to test git connection
 
 # T-Tests
 
