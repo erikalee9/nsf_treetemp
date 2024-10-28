@@ -1749,7 +1749,7 @@ full_hourly_gb_dtnt <- final_hourly_gb_temps %>%
       datetime_hour < sunrise ~ "night",
       datetime_hour >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  select(datetime_hour, day, month, phase, zone, burn_status, north_temp, south_temp, charred_temp, uncharred_temp, ns_avg_temp, sc_avg_temp, suc_avg_temp, nc_avg_temp, nuc_avg_temp, ns_temp_diff, sc_temp_diff, suc_temp_diff, nc_temp_diff, nuc_temp_diff, sunrise, sunset, solarNoon)
+  select(datetime_hour, day, month, phase, zone, burn_status, north_temp, south_temp, charred_temp, uncharred_temp, ns_avg_temp, cuc_avg_temp, sc_avg_temp, suc_avg_temp, nc_avg_temp, nuc_avg_temp, ns_temp_diff, cuc_temp_diff, sc_temp_diff, suc_temp_diff, nc_temp_diff, nuc_temp_diff, sunrise, sunset, solarNoon)
 ```
 
 Exporting final dataframes
