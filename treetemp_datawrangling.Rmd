@@ -615,7 +615,7 @@ final_hourly_gb_temps <-final_gb_temps %>%
   mutate(datetime_hour = floor_date(datetime, unit = "hour")) %>%  # Create an hourly datetime column
   group_by(datetime_hour, day, month, zone, burn_status) %>%  # Group by the hourly datetime
   #mean_hourly_treetemp is the mean of all the db/gb/live trees in the dataframe averaged by burn_status on an hourly timestep
-  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), charred_temp = mean(charred_temp), uncharred_temp = mean(uncharred_temp), ns_avg_temp = ((north_temp + south_temp)/2), sc_avg_temp = ((south_temp + charred_temp)/2), suc_avg_temp = ((south_temp + uncharred_temp)/2), nc_avg_temp = ((north_temp + charred_temp)/2), nuc_avg_temp = ((north_temp + uncharred_temp)/2), ns_temp_diff = (south_temp - north_temp), sc_temp_diff = (south_temp - charred_temp), suc_temp_diff = (south_temp - uncharred_temp), nc_temp_diff = (north_temp - charred_temp), nuc_temp_diff = (north_temp - uncharred_temp), .groups = 'drop')
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), charred_temp = mean(charred_temp), uncharred_temp = mean(uncharred_temp), ns_avg_temp = ((north_temp + south_temp)/2), cuc_avg_temp = ((charred_temp + uncharred_temp)/2), sc_avg_temp = ((south_temp + charred_temp)/2), suc_avg_temp = ((south_temp + uncharred_temp)/2), nc_avg_temp = ((north_temp + charred_temp)/2), nuc_avg_temp = ((north_temp + uncharred_temp)/2), ns_temp_diff = (south_temp - north_temp), cuc_temp_diff = (charred_temp - uncharred_temp), sc_temp_diff = (south_temp - charred_temp), suc_temp_diff = (south_temp - uncharred_temp), nc_temp_diff = (north_temp - charred_temp), nuc_temp_diff = (north_temp - uncharred_temp), .groups = 'drop')
 ```
 
 ```{r}
