@@ -137,19 +137,32 @@ stats_monthly_ns <- full_15min_ns %>%
 ```{r}
 ##GB N/S differences
 stats_monthly_ns_gb <- stats_monthly_ns %>%
-  filter(burn_status == "green burn")
+  filter(burn_status == "green burn") %>%
+  arrange(factor(zone, levels = c("PSZ", "TSZ")), month)
 ```
 
 ```{r}
 ##DB N/S differences
 stats_monthly_ns_db <- stats_monthly_ns %>%
-  filter(burn_status == "dead burn")
+  filter(burn_status == "dead burn") %>%
+  arrange(factor(zone, levels = c("PSZ", "TSZ")), month)
 ```
 
 ```{r}
 ##Live N/S differences
 stats_monthly_ns_ub <- stats_monthly_ns %>%
-  filter(burn_status == "live")
+  filter(burn_status == "live") %>%
+  arrange(factor(zone, levels = c("PSZ", "TSZ")), month)
+```
+
+Exporting N/S GB,DB,UB data
+
+```{r}
+write.csv(stats_monthly_ns_gb, "nsf/treetemp_data/final_stats_tables/stats_monthly_ns_gb.csv")
+
+write.csv(stats_monthly_ns_db, "nsf/treetemp_data/final_stats_tables/stats_monthly_ns_db.csv")
+
+write.csv(stats_monthly_ns_ub, "nsf/treetemp_data/final_stats_tables/stats_monthly_ns_ub.csv")
 ```
 
 ### GB Differenced Data Only
@@ -168,7 +181,8 @@ stats_monthly_gb_ns <- full_hourly_gb %>%
   summarize(mean_south_temp = mean(south_temp), mean_north_temp = mean(north_temp), ns_mean_temp = mean(ns_avg_temp), mean_temp_diff = mean(ns_temp_diff), sd = sd(ns_temp_diff, na.rm = TRUE),
     coeff_var = (sd(ns_temp_diff, na.rm = TRUE) / abs(mean(ns_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
-  mutate_if(is.numeric, round, 3)
+  mutate_if(is.numeric, round, 3) %>%
+  arrange(factor(zone, levels = c("PSZ", "TSZ")), month)
 ```
 
 ### Charred/Uncharred Differenced Data
@@ -187,7 +201,8 @@ stats_monthly_gb_cuc <- full_hourly_gb %>%
   summarize(mean_charred_temp = mean(charred_temp), mean_uncharred_temp = mean(uncharred_temp), cuc_mean_temp = mean(cuc_avg_temp), mean_temp_diff = mean(ns_temp_diff), sd = sd(ns_temp_diff, na.rm = TRUE),
     coeff_var = (sd(ns_temp_diff, na.rm = TRUE) / abs(mean(ns_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
-  mutate_if(is.numeric, round, 3)
+  mutate_if(is.numeric, round, 3) %>%
+  arrange(factor(zone, levels = c("PSZ", "TSZ")), month)
 ```
 
 ### South / Uncharred Differenced Data
@@ -206,7 +221,8 @@ stats_monthly_gb_suc <- full_hourly_gb %>%
   summarize(mean_south_temp = mean(south_temp), mean_uncharred_temp = mean(uncharred_temp), suc_mean_temp = mean(suc_avg_temp), mean_temp_diff = mean(suc_temp_diff), sd = sd(suc_temp_diff, na.rm = TRUE),
     coeff_var = (sd(suc_temp_diff, na.rm = TRUE) / abs(mean(suc_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
-  mutate_if(is.numeric, round, 3)
+  mutate_if(is.numeric, round, 3) %>%
+  arrange(factor(zone, levels = c("PSZ", "TSZ")), month)
 ```
 
 ### South / Charred Differenced Data
@@ -225,7 +241,8 @@ stats_monthly_gb_sc <- full_hourly_gb %>%
   summarize(mean_south_temp = mean(south_temp), mean_charred_temp = mean(charred_temp), sc_mean_temp = mean(sc_avg_temp), mean_temp_diff = mean(sc_temp_diff), sd = sd(sc_temp_diff, na.rm = TRUE),
     coeff_var = (sd(sc_temp_diff, na.rm = TRUE) / abs(mean(sc_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
-  mutate_if(is.numeric, round, 3)
+  mutate_if(is.numeric, round, 3) %>%
+  arrange(factor(zone, levels = c("PSZ", "TSZ")), month)
 ```
 
 ### North / Uncharred Differenced Data
@@ -244,7 +261,8 @@ stats_monthly_gb_nuc <- full_hourly_gb %>%
   summarize(mean_north_temp = mean(north_temp), mean_uncharred_temp = mean(uncharred_temp), nuc_mean_temp = mean(nuc_avg_temp), mean_temp_diff = mean(nuc_temp_diff), sd = sd(nuc_temp_diff, na.rm = TRUE),
     coeff_var = (sd(nuc_temp_diff, na.rm = TRUE) / abs(mean(nuc_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
-  mutate_if(is.numeric, round, 3)
+  mutate_if(is.numeric, round, 3) %>%
+  arrange(factor(zone, levels = c("PSZ", "TSZ")), month)
 ```
 
 ### North / Charred Differenced Data
@@ -263,7 +281,23 @@ stats_monthly_gb_nc <- full_hourly_gb %>%
   summarize(mean_north_temp = mean(north_temp), mean_charred_temp = mean(charred_temp), nc_mean_temp = mean(nc_avg_temp), mean_temp_diff = mean(nc_temp_diff), sd = sd(nc_temp_diff, na.rm = TRUE),
     coeff_var = (sd(nc_temp_diff, na.rm = TRUE) / abs(mean(nc_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
-  mutate_if(is.numeric, round, 3)
+  mutate_if(is.numeric, round, 3) %>%
+  arrange(factor(zone, levels = c("PSZ", "TSZ")), month)
+```
+
+```{r}
+#exporting final tables
+write.csv(stats_monthly_gb_ns, "nsf/treetemp_data/final_stats_tables/stats_monthly_gb_ns.csv")
+
+write.csv(stats_monthly_gb_cuc, "nsf/treetemp_data/final_stats_tables/stats_monthly_gb_cuc.csv")
+
+write.csv(stats_monthly_gb_suc, "nsf/treetemp_data/final_stats_tables/stats_monthly_gb_suc.csv")
+
+write.csv(stats_monthly_gb_sc, "nsf/treetemp_data/final_stats_tables/stats_monthly_gb_sc.csv")
+
+write.csv(stats_monthly_gb_nuc, "nsf/treetemp_data/final_stats_tables/stats_monthly_gb_nuc.csv")
+
+write.csv(stats_monthly_gb_nc, "nsf/treetemp_data/final_stats_tables/stats_monthly_gb_nc.csv")
 ```
 
 ### GB/DB Differenced Data
@@ -277,7 +311,8 @@ stats_monthly_gbdb <- full_15min_gbdbub %>%
   summarize(mean_gb_temp = mean(gb_temp), mean_db_temp = mean(db_temp), mean_temp = mean(gbdb_avg_temp), mean_diff = mean(gbdb_temp_diff), sd = sd(gbdb_temp_diff, na.rm = TRUE),
     coeff_var = (sd(gbdb_temp_diff, na.rm = TRUE) / abs(mean(gbdb_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
-  mutate_if(is.numeric, round, 3)
+  mutate_if(is.numeric, round, 3) %>%
+  arrange(factor(zone, levels = c("PSZ", "TSZ")), month)
 ```
 
 ### GB/UB Differenced Data
@@ -291,7 +326,8 @@ stats_monthly_gbub <- full_15min_gbdbub %>%
   summarize(mean_gb_temp = mean(gb_temp), mean_live_temp = mean(ub_temp), mean_temp = mean(gbub_avg_temp), mean_diff = mean(gbub_temp_diff), sd = sd(gbub_temp_diff, na.rm = TRUE),
     coeff_var = (sd(gbub_temp_diff, na.rm = TRUE) / abs(mean(gbub_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
-  mutate_if(is.numeric, round, 3)
+  mutate_if(is.numeric, round, 3) %>%
+  arrange(factor(zone, levels = c("PSZ", "TSZ")), month)
 ```
 
 ### DB/UB Differenced Data
@@ -305,7 +341,16 @@ stats_monthly_dbub <- full_15min_gbdbub %>%
   summarize(mean_db_temp = mean(db_temp), mean_live_temp = mean(ub_temp), mean_temp = mean(dbub_avg_temp), mean_diff = mean(dbub_temp_diff), sd = sd(dbub_temp_diff, na.rm = TRUE),
     coeff_var = (sd(dbub_temp_diff, na.rm = TRUE) / abs(mean(dbub_temp_diff, na.rm = TRUE)))) %>%
   #rounding numeric columns to 3 decimals
-  mutate_if(is.numeric, round, 3)
+  mutate_if(is.numeric, round, 3) %>%
+  arrange(factor(zone, levels = c("PSZ", "TSZ")), month)
+```
+
+```{r}
+write.csv(stats_monthly_gbdb, "nsf/treetemp_data/final_stats_tables/stats_monthly_gbdb.csv")
+
+write.csv(stats_monthly_gbub, "nsf/treetemp_data/final_stats_tables/stats_monthly_gbub.csv")
+
+write.csv(stats_monthly_dbub, "nsf/treetemp_data/final_stats_tables/stats_monthly_dbub.csv")
 ```
 
 ### Day/Night Differenced Data
@@ -366,60 +411,78 @@ Formatting N/S Stats Monthly Tables and Exporting
 \*\* this format for a table looks good and works. I just need to figure out what tables I want to use! (2024-10-22 note)
 
 ```{r}
-final_stats_monthly_ns_gb_table <- stats_monthly_ns_gb %>%
-  rename("burn status" = burn_status, "north temp" = mean_north_temp, "south temp" = mean_south_temp, "mean temp" = ns_mean_temp, "mean temp difference" = mean_diff, "coefficient of variance" = coeff_var) %>%
-  kbl() %>%
-  kable_styling(html_font = "Cambria") %>%
-  kable_material("striped")
+#GB N/S Comparison
+final_stats_gb_ns_table_P <- stats_monthly_ns_gb %>% 
+  filter(zone == "PSZ") 
+
+final_stats_gb_ns_table_T <- stats_monthly_ns_gb %>% 
+  filter(zone == "TSZ") 
+
+final_stats_monthly_ns_gb_table <- rbind(final_stats_gb_ns_table_P, final_stats_gb_ns_table_T)
+
+final_stats_monthly_ns_gb_table <- final_stats_monthly_ns_gb_table %>%
+  select(-burn_status) %>%
+  rename(
+    "north temp" = mean_north_temp,
+    "south temp" = mean_south_temp,
+    "mean temp" = mean_temp,
+    "temp difference" = mean_temp_diff,
+    "coefficient of variance" = coeff_var
+  ) %>%
+  kbl(caption = "Green Burn North/South") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  kable_material("striped") %>%
+  row_spec(0, hline_after = TRUE, extra_css = "border-bottom: 2px solid;") %>%
+  row_spec(4, hline_after = TRUE, extra_css = "border-bottom: 2px solid;")
 
 print(final_stats_monthly_ns_gb_table)
 ```
 
-#### Charred/Uncharred/N/S GB Comparisons
+```{r}
+#DB N/S Comparison
+final_stats_db_ns_table_P <- stats_monthly_ns_db %>% 
+  filter(zone == "PSZ") 
+
+final_stats_db_ns_table_T <- stats_monthly_ns_db %>% 
+  filter(zone == "TSZ") 
+
+final_stats_monthly_ns_db_table <- rbind(final_stats_db_ns_table_P, final_stats_db_ns_table_T)
+
+final_stats_monthly_ns_db_table <- final_stats_monthly_ns_db_table %>%
+  select(-burn_status) %>%
+  rename("north temp" = mean_north_temp, "south temp" = mean_south_temp, "mean temp" = mean_temp, "temp difference" = mean_temp_diff, "coefficient of variance" = coeff_var) %>%
+  kbl(caption = "Dead Burn North/South") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  kable_material("striped") %>%
+  row_spec(0, hline_after = TRUE, extra_css = "border-bottom: 2px solid;") %>%
+  row_spec(4, hline_after = TRUE, extra_css = "border-bottom: 2px solid;")
+
+print(final_stats_monthly_ns_db_table)
+```
 
 ```{r}
-monthly_gb_data <- final_15min_gb_temps %>%
-  mutate(
-    datetime = as.POSIXct(datetime),
-    month = format(datetime, "%m")
-  ) %>%
-  select(datetime, day, month, everything()) %>%
-  mutate(
-    ns_avg_temp = rowMeans(cbind(north_temp, south_temp)),
-    c_uc_avg_temp = rowMeans(cbind(charred_temp, uncharred_temp)),
-    s_c_avg_temp = rowMeans(cbind(south_temp, charred_temp)),
-    s_uc_avg_temp = rowMeans(cbind(south_temp, uncharred_temp)),
-    n_c_avg_temp = rowMeans(cbind(north_temp, charred_temp)),
-    n_uc_avg_temp = rowMeans(cbind(north_temp, uncharred_temp)),
-    ns_temp_diff = north_temp - south_temp,
-    c_uc_temp_diff = charred_temp - uncharred_temp,
-    s_c_temp_diff = south_temp - charred_temp,
-    s_uc_temp_diff = south_temp - uncharred_temp,
-    n_c_temp_diff = north_temp - charred_temp,
-    n_uc_temp_diff = north_temp - uncharred_temp
-  ) %>%
-  group_by(month, zone, burn_status) %>%
-  summarize(
-    mean_north_temp = mean(north_temp, na.rm = TRUE),
-    mean_south_temp = mean(south_temp, na.rm = TRUE),
-    mean_charred_temp = mean(charred_temp, na.rm = TRUE),
-    mean_uncharred_temp = mean(uncharred_temp, na.rm = TRUE),
-    ns_avg_temp = mean(ns_avg_temp, na.rm = TRUE),
-    c_uc_avg_temp = mean(c_uc_avg_temp, na.rm = TRUE),
-    s_c_avg_temp = mean(s_c_avg_temp, na.rm = TRUE),
-    s_uc_avg_temp = mean(s_uc_avg_temp, na.rm = TRUE),
-    n_c_avg_temp = mean(n_c_avg_temp, na.rm = TRUE),
-    n_uc_avg_temp = mean(n_uc_avg_temp, na.rm = TRUE),
-    ns_temp_diff = mean(ns_temp_diff, na.rm = TRUE),
-    c_uc_temp_diff = mean(c_uc_temp_diff, na.rm = TRUE),
-    s_c_temp_diff = mean(s_c_temp_diff, na.rm = TRUE),
-    s_uc_temp_diff = mean(s_uc_temp_diff, na.rm = TRUE),
-    n_c_temp_diff = mean(n_c_temp_diff, na.rm = TRUE),
-    n_uc_temp_diff = mean(n_uc_temp_diff, na.rm = TRUE),
-    .groups = 'drop'
-  )
+#UB N/S Comparison
+final_stats_ub_ns_table_P <- stats_monthly_ns_ub %>% 
+  filter(zone == "PSZ")
 
+final_stats_ub_ns_table_T <- stats_monthly_ns_ub %>% 
+  filter(zone == "TSZ") 
+
+final_stats_monthly_ns_ub_table <- rbind(final_stats_ub_ns_table_P, final_stats_ub_ns_table_T)
+
+final_stats_monthly_ns_ub_table <- final_stats_monthly_ns_ub_table %>%
+  select(-burn_status) %>%
+  rename("north temp" = mean_north_temp, "south temp" = mean_south_temp, "mean temp" = mean_temp, "temp difference" = mean_temp_diff, "coefficient of variance" = coeff_var) %>%
+  kbl(caption = "Live North/South") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  kable_material("striped") %>%
+  row_spec(0, hline_after = TRUE, extra_css = "border-bottom: 2px solid;") %>%
+  row_spec(4, hline_after = TRUE, extra_css = "border-bottom: 2px solid;")
+
+print(final_stats_monthly_ns_ub_table)
 ```
+
+#### Charred/Uncharred/N/S GB Comparisons
 
 Don't use the below code
 
