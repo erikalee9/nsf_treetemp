@@ -1550,3 +1550,91 @@ t_t_test_may_ub_s_n_result <- t.test(t_may_ub_data$south_temp, t_may_ub_data$nor
 print(t_t_test_may_ub_s_n_result)
 #above is not significant
 ```
+
+# Calculating Min and Max values & Day/Night comparison values for tables in thesis
+
+```{r}
+mean_dtnt_db_temps <- full_15min_gbdbub %>%
+  select(datetime, day, month, phase, zone, aspect, db_temp) %>%
+  group_by(datetime, day, month, phase, zone, aspect) %>%
+  summarise(db_temp = mean(db_temp, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = aspect, values_from = db_temp) %>%
+  mutate(mean_temp = (north + south) / 2) %>%
+  group_by(month, phase, zone) %>%
+  summarize(mean_temp = mean(mean_temp))
+
+#getting dtnt single average from original dataset for db trees
+mean_dtnt_single_db_temp <- full_15min_gbdbub %>%
+  select(datetime, day, month, phase, zone, aspect, db_temp) %>%
+  group_by(datetime, day, month, phase, zone, aspect) %>%
+  summarise(db_temp = mean(db_temp, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = aspect, values_from = db_temp) %>%
+  mutate(mean_temp = (north + south) / 2) %>%
+  group_by(phase, zone) %>%
+  summarize(mean_db_temp = mean(mean_temp))
+```
+
+```{r}
+mean_dtnt_gb_temps <- full_15min_gbdbub %>%
+  select(datetime, day, month, phase, zone, aspect, gb_temp) %>%
+  group_by(datetime, day, month, phase, zone, aspect) %>%
+  summarise(gb_temp = mean(gb_temp, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = aspect, values_from = gb_temp) %>%
+  mutate(mean_temp = (north + south) / 2) %>%
+  group_by(month, phase, zone) %>%
+  summarize(mean_temp = mean(mean_temp))
+
+#getting dtnt single average from original dataset for gb trees
+mean_dtnt_single_gb_temp <- full_15min_gbdbub %>%
+  select(datetime, day, month, phase, zone, aspect, gb_temp) %>%
+  group_by(datetime, day, month, phase, zone, aspect) %>%
+  summarise(gb_temp = mean(gb_temp, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = aspect, values_from = gb_temp) %>%
+  mutate(mean_temp = (north + south) / 2) %>%
+  group_by(phase, zone) %>%
+  summarize(mean_gb_temp = mean(mean_temp))
+```
+
+```{r}
+mean_dtnt_ub_temps <- full_15min_gbdbub %>%
+  select(datetime, day, month, phase, zone, aspect, ub_temp) %>%
+  group_by(datetime, day, month, phase, zone, aspect) %>%
+  summarise(ub_temp = mean(ub_temp, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = aspect, values_from = ub_temp) %>%
+  mutate(mean_temp = (north + south) / 2) %>%
+  group_by(month, phase, zone) %>%
+  summarize(mean_temp = mean(mean_temp))
+
+#getting dtnt single average from original dataset for ub trees
+mean_dtnt_single_ub_temp <- full_15min_gbdbub %>%
+  select(datetime, day, month, phase, zone, aspect, ub_temp) %>%
+  group_by(datetime, day, month, phase, zone, aspect) %>%
+  summarise(ub_temp = mean(ub_temp, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = aspect, values_from = ub_temp) %>%
+  mutate(mean_temp = (north + south) / 2) %>%
+  group_by(phase, zone) %>%
+  summarize(mean_ub_temp = mean(mean_temp))
+```
+
+```{r}
+#full single value comparison of dtnt tree temps by burn status
+full_singlevalue_treetemp_comp <- mean_dtnt_single_gb_temp %>%
+  left_join(mean_dtnt_single_db_temp) %>%
+  left_join(mean_dtnt_single_ub_temp)
+```
+
+Getting minimum and maximum total values for phase and zone
+
+```{r}
+max_gb_temp_per_phase <- full_15min_gbdbub %>%
+  group_by(zone, phase, aspect) %>%
+  summarise(max_gb_temp = max(gb_temp, na.rm = TRUE), .groups = "drop")
+
+max_db_temp_per_phase <- full_15min_gbdbub %>%
+  group_by(zone, phase, aspect) %>%
+  summarise(max_db_temp = max(db_temp, na.rm = TRUE), .groups = "drop")
+
+max_ub_temp_per_phase <- full_15min_gbdbub %>%
+  group_by(zone, phase, aspect) %>%
+  summarise(max_ub_temp = max(ub_temp, na.rm = TRUE), .groups = "drop")
+```
