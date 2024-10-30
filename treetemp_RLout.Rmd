@@ -334,26 +334,58 @@ accu_dt_gbdbub_LWout <- accu_full_daily_gbdbub_LWout %>%
     zone == "transitional" ~ "TSZ",
     TRUE ~ zone  # Keep the original value if it's neither "persistent" nor "transitional"
   ))
+
+p_accu_dr_gbdbub_LWout <- accu_dt_gbdbub_LWout %>%
+  filter(zone == "PSZ")
+
+t_accu_dr_gbdbub_LWout <- accu_dt_gbdbub_LWout %>%
+  filter(zone == "TSZ")
 ```
 
 ```{r}
-#
-cum_dt_gbdbub_plot <- ggplot(data = accu_dt_gbdbub_LWout) +
+#persistent 
+p_cum_dt_gbdbub_plot <- ggplot(data = p_accu_dr_gbdbub_LWout) +
   geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd, color = "green burn", linetype = aspect), linewidth = 0.6) +  
   geom_line(aes(x = day, y = accu_daily_db_LWout_MJperd, color = "dead burn", linetype = aspect), linewidth = 0.6) +
   geom_line(aes(x = day, y = accu_daily_ub_LWout_MJperd, color = "live", linetype = aspect), linewidth = 0.6) +
-  facet_wrap(~zone + aspect, dir = "h") +
+  facet_wrap(~aspect, dir = "h") +
   theme_bw() +
-  labs(
-    x = "Date",
-    y = "Daily Cumulative LWout (MJ/day)",
+  labs(title = "a) PSZ", 
+    x = NULL,
+    y = "Daily Cumulative LWout (MJ)",
     color = "Burn Status", 
     linetype = "Aspect"
   ) +
   scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
   scale_linetype_manual(values = c("north" = "dashed", "south" = "solid"))
 
-cum_dt_gbdbub_plot
+p_cum_dt_gbdbub_plot
+```
+
+```{r}
+#transitional
+t_cum_dt_gbdbub_plot <- ggplot(data = t_accu_dr_gbdbub_LWout) +
+  geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd, color = "green burn", linetype = aspect), linewidth = 0.6) +  
+  geom_line(aes(x = day, y = accu_daily_db_LWout_MJperd, color = "dead burn", linetype = aspect), linewidth = 0.6) +
+  geom_line(aes(x = day, y = accu_daily_ub_LWout_MJperd, color = "live", linetype = aspect), linewidth = 0.6) +
+  facet_wrap(~aspect, dir = "h") +
+  theme_bw() +
+  labs(title = "b) TSZ", 
+    x = "Date",
+    y = "Daily Cumulative LWout (MJ)",
+    color = "Burn Status", 
+    linetype = "Aspect"
+  ) +
+  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid"))
+
+t_cum_dt_gbdbub_plot
+```
+
+```{r}
+cum_full_daily_treeLWout <- ggarrange(p_cum_dt_gbdbub_plot, t_cum_dt_gbdbub_plot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+cum_full_daily_treeLWout
 ```
 
 ```{r}
