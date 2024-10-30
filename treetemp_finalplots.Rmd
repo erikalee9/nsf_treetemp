@@ -289,42 +289,141 @@ dtnt_treetemp_lineplot <- ggarrange(dt_treetemp_daily_gbdbub_lineplot, nt_treete
 dtnt_treetemp_lineplot
 ```
 
-## Cumulative Tree LWout Plot
+## GB Aspect/Char Pattern Comparison
 
-## Snow Depth & Tree Well Plots
+```{r}
+#dataframe
+##march
+march_dt_mean_gb_temps <- full_hourly_gb %>%
+  filter(phase == "day", month == "3") %>%
+  group_by(day, month, zone) %>%
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), charred_temp = mean(charred_temp), uncharred_temp = mean(uncharred_temp)) %>%
+  filter(day >= "2024-03-10" & day <= "2024-03-20")
+
+##april
+april_dt_mean_gb_temps <- full_hourly_gb %>%
+  filter(phase == "day", month == "4") %>%
+  group_by(day, month, zone) %>%
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), charred_temp = mean(charred_temp), uncharred_temp = mean(uncharred_temp))  %>%
+  filter(day >= "2024-04-05" & day <= "2024-04-15")
+```
+
+```{r}
+march_dt_mean_gb_temp_plot <- ggplot(data = march_dt_mean_gb_temps) +
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
+  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
+  facet_wrap(~zone) +
+  labs(title = "a) Accumulation", x = "Date", y = "Temperature (°C)") +
+  scale_color_manual(
+    name = "aspect",
+    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
+  ) +
+  theme_bw()
+
+march_dt_mean_gb_temp_plot
+```
+
+```{r}
+april_dt_mean_gb_temp_plot <- ggplot(data = april_dt_mean_gb_temps) +
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
+  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
+  facet_wrap(~zone) +
+  labs(title = "b) Ablation", x = "Date", y = "Temperature (°C)") +
+  scale_color_manual(
+    name = "aspect",
+    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
+  ) +
+  theme_bw()
+
+april_dt_mean_gb_temp_plot
+```
+
+```{r}
+example_gb_temps_lineplot <- ggarrange(
+  march_dt_mean_gb_temp_plot, 
+  april_dt_mean_gb_temp_plot, 
+  nrow = 2, 
+  ncol = 1, 
+  common.legend = TRUE,
+  legend = "right")
+
+example_gb_temps_lineplot
+```
+
+## Cumulative Tree LWout Plot
 
 Making plots by zone / burned & unburned because then I can have snow depths at burned/unburned sites...
 
 -   as of 2024-10-24, just starting with burned, cause I don't have unburned data loaded yet
 
+### Cumulative Burn Status LWout  Line Plot
+
+Data Wrangling
+
 ```{r}
-#making daily average tree_LWout datasets
-full_daily_gbdbub_LWout <- full_15min_gbdbub_LWout %>%
-  group_by(day, month, phase, zone, aspect) %>%
-  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp), gb_LWout_MJperd = mean(gb_LWout_MJperd), db_LWout_MJperd = mean(db_LWout_MJperd), ub_LWout_MJperd = mean(ub_LWout_MJperd))
+#data wrangling 
+p_accu_dr_gbdbub_LWout <- cum_dt_gbdbub_LWout %>%
+  filter(zone == "PSZ")
 
-p_full_dt_gbdbub_LWout <- full_daily_gbdbub_LWout %>%
-  filter(zone == "PSZ", phase == "day")
+t_accu_dr_gbdbub_LWout <- cum_dt_gbdbub_LWout %>%
+  filter(zone == "TSZ")
+```
 
-t_full_dt_gbdbub_LWout <- full_daily_gbdbub_LWout %>%
-  filter(zone == "TSZ", phase == "day")
+Plotting
 
-full_daily_ns_LWout <- full_15min_ns_LWout %>%
-  group_by(day, month, phase, zone, burn_status) %>%
-  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), n_LWout_MJperd = mean(n_LWout_MJperd), s_LWout_MJperd = mean(s_LWout_MJperd))
+\*\* Use this plot!
 
-persb_treewell_dates <- persb_snowcamera_data %>%
-  filter(treewell_developed == "yes")
+```{r}
+#persistent 
+p_cum_dt_gbdbub_plot <- ggplot(data = p_accu_dr_gbdbub_LWout) +
+  geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd, color = "green burn", linetype = aspect), linewidth = 0.6) +  
+  geom_line(aes(x = day, y = accu_daily_db_LWout_MJperd, color = "dead burn", linetype = aspect), linewidth = 0.6) +
+  geom_line(aes(x = day, y = accu_daily_ub_LWout_MJperd, color = "live", linetype = aspect), linewidth = 0.6) +
+  facet_wrap(~aspect, dir = "h") +
+  theme_bw() +
+  labs(title = "a) PSZ", 
+    x = NULL,
+    y = "Daily Cumulative LWout (MJ)",
+    color = "Burn Status", 
+    linetype = "Aspect"
+  ) +
+  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid"))
 
-transb_treewell_dates <- transb_snowcamera_data %>%
-  filter(treewell_developed == "yes")
+p_cum_dt_gbdbub_plot
 ```
 
 ```{r}
-p_cum_full_daily_LWout <- cum_full_daily_LWout %>%
-  filter(zone == "persistent", phase == "day") %>%
-  mutate(zone = "PSZ")
+#transitional
+t_cum_dt_gbdbub_plot <- ggplot(data = t_accu_dr_gbdbub_LWout) +
+  geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd, color = "green burn", linetype = aspect), linewidth = 0.6) +  
+  geom_line(aes(x = day, y = accu_daily_db_LWout_MJperd, color = "dead burn", linetype = aspect), linewidth = 0.6) +
+  geom_line(aes(x = day, y = accu_daily_ub_LWout_MJperd, color = "live", linetype = aspect), linewidth = 0.6) +
+  facet_wrap(~aspect, dir = "h") +
+  theme_bw() +
+  labs(title = "b) TSZ", 
+    x = "Date",
+    y = "Daily Cumulative LWout (MJ)",
+    color = "Burn Status", 
+    linetype = "Aspect"
+  ) +
+  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid"))
+
+t_cum_dt_gbdbub_plot
 ```
+
+```{r}
+cum_full_daily_treeLWout <- ggarrange(p_cum_dt_gbdbub_plot, t_cum_dt_gbdbub_plot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+cum_full_daily_treeLWout
+```
+
+### Snow Depth & Tree Well Plots
 
 ```{r}
 #filtered transb weather to get a daily average
