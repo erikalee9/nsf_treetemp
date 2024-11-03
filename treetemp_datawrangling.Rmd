@@ -1641,6 +1641,73 @@ p_b_solar_times <- getSunlightTimes(date = solex_dates, lat = p_b_lat, lon = p_b
 
 ## Adding Day/Night Phase to final CSVs
 
+Full aspect CSV's with all sensors, not an average
+
+```{r}
+filtered_pers_b_aspects_r <- filtered_pers_b_aspects %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, burn_status, aspect, sensor_id, tree_name, temp, solarNoon, sunrise, sunset, dawn, dusk)
+```
+
+```{r}
+filtered_pers_ub_aspects_r <- filtered_pers_ub_aspects %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, burn_status, aspect, sensor_id, tree_name, temp, solarNoon, sunrise, sunset, dawn, dusk)
+```
+
+```{r}
+filtered_trans_b_aspects_r <- filtered_trans_b_aspects %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, burn_status, aspect, sensor_id, tree_name, temp, solarNoon, sunrise, sunset, dawn, dusk)
+```
+
+```{r}
+filtered_trans_ub_aspects_r <- filtered_trans_ub_aspects %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, burn_status, aspect, sensor_id, tree_name, temp, solarNoon, sunrise, sunset, dawn, dusk)
+```
+
+```{r}
+#exporting above dataframes
+write.csv(filtered_pers_b_aspects_r, "nsf/treetemp_data/filtered_pers_b_aspects_r.csv")
+
+write.csv(filtered_pers_ub_aspects_r, "nsf/treetemp_data/filtered_pers_ub_aspects_r.csv")
+
+write.csv(filtered_trans_b_aspects_r, "nsf/treetemp_data/filtered_trans_b_aspects_r.csv")
+
+write.csv(filtered_trans_ub_aspects_r, "nsf/treetemp_data/filtered_trans_ub_aspects_r.csv")
+```
+
+Sensor-averaged dataframes
+
 ```{r}
 #15-minute NS data
 full_15min_ns_dtnt <- full_15min_ns %>%
