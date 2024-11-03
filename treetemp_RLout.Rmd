@@ -64,6 +64,70 @@ full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
   select(-1)
 ```
 
+Snow Camera Depth Data
+
+```{r}
+{r}
+transb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transb_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "maximum_depth(cm)") %>%
+  mutate(date = as.Date(date)) %>%
+  #adjusting the treewell developed column to just yes/no
+  mutate(treewell_developed = case_when(
+    treewell_developed == "maybe" ~ "yes",
+    treewell_developed == "no snow" ~ "no",
+    TRUE ~ treewell_developed  # keep other values unchanged
+  )) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
+  #filtering to timerange for these plots
+  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23")) %>%
+  mutate(zone = "TSZ")
+
+persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_east_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "max_depth_cm") %>%
+  mutate(date = as.Date(date)) %>%
+  rename(treewell_developed = treewell_developement) %>%
+  mutate(treewell_developed = case_when(
+    treewell_developed == "maybe" ~ "yes",
+    treewell_developed == "no snow" ~ "no",
+    TRUE ~ treewell_developed  # keep other values unchanged
+  )) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
+  #filtering to timerange for these plots
+  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23")) %>%
+  mutate(zone = "PSZ")
+
+persub_snowcamera_data_r <- read_csv("nsf/pers_unburned/pers_unburned_wx_15min_r.csv")
+
+#editing the pers_ub_snowcamera_data 
+persub_snowcamera_data <- persub_snowcamera_data_r %>%
+  mutate(datetime_MST = as.POSIXct(datetime, tz = "MST")) %>%
+  select(datetime_MST, AirTC_Avg, SnowDepth_m) %>%
+  rename(datetime = datetime_MST, snowcam_max_depth_m = SnowDepth_m) %>%
+  mutate(date = as.Date(datetime), zone = "PSZ") %>%
+  filter(datetime >= as.Date("2024-02-02 00:15:00") & datetime <= as.Date("2024-05-23 00:00:00"))
+
+transub_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transub_snowdepths.csv") %>%
+  mutate(snowcam_max_depth_m = max_depth_cm/100) %>%
+  #filtering to timerange for these plots
+  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23")) %>%
+  mutate(zone = "TSZ")
+```
+
+```{r}
+#datasets for only snowcamera depths, to join with below datasets
+filtered_transb_snowcamdepths <- transb_snowcamera_data %>%
+  select(date, snowcam_max_depth_m)
+
+filtered_persb_snowcamdepths <- persb_snowcamera_data %>%
+  select(date, snowcam_max_depth_m)
+
+filtered_transub_snowcamdepths <- transub_snowcamera_data %>%
+  select(date, snowcam_max_depth_m)
+
+filtered_persub_snowcamdepths <- persub_snowcamera_data %>%
+  select(datetime, date, snowcam_max_depth_m)
+```
+
 Full Aspect Datasets, with all trees
 
 ```{r}
@@ -71,6 +135,7 @@ filtered_pers_b_aspects_r <- read_csv("nsf/treetemp_data/filtered_pers_b_aspects
   select(-sensor_id) %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:15:00") %>%
   select(-1)
   
 
@@ -78,19 +143,37 @@ filtered_pers_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_pers_ub_aspec
   select(-sensor_id) %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:15:00") %>%
   select(-1)
 
 filtered_trans_b_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_b_aspects_r.csv") %>%
   select(-sensor_id) %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:15:00") %>%
   select(-1)
 
 filtered_trans_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_ub_aspects_r.csv") %>%
   select(-sensor_id) %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:15:00") %>%
   select(-1)
+```
+
+```{r}
+#adding in snow depth to 15-minute datetime columns of above dataset
+filtered_pers_b_aspects_r <- filtered_pers_b_aspects_r %>%
+  full_join(filtered_persb_snowcamdepths, by = c("day" = "date"))
+
+filtered_pers_ub_aspects_r <- filtered_pers_ub_aspects_r %>%
+  full_join(filtered_persub_snowcamdepths, by = c("datetime" = "datetime"))
+
+filtered_trans_b_aspects_r <- filtered_trans_b_aspects_r %>%
+  full_join(filtered_transb_snowcamdepths, by = c("day" = "date"))
+
+filtered_trans_ub_aspects_r <- filtered_trans_ub_aspects_r %>%
+  full_join(filtered_transub_snowcamdepths, by = c("day" = "date"))
 ```
 
 ```{r}
@@ -98,7 +181,8 @@ filtered_trans_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_ub_asp
 filtered_all_aspects <- filtered_pers_b_aspects_r %>%
   full_join(filtered_pers_ub_aspects_r) %>%
   full_join(filtered_trans_b_aspects_r) %>%
-  full_join(filtered_trans_ub_aspects_r)
+  full_join(filtered_trans_ub_aspects_r) %>%
+  select(-date)
 ```
 
 # LWout Calculations
@@ -1531,11 +1615,76 @@ gbdbub_combined_plot <- ggarrange(full_gb_plots, full_db_plots, full_ub_plots,
 gbdbub_combined_plot
 ```
 
-## LWout Scenarios
+# LWout Scenarios
 
-1.  Apply T_tree to whole snow depth
+\*\* keep working on these scenarios!
 
-1.  Linear to ground (GND = 0 C)
+1.  Apply T_tree to whole snow depth - snow depth is based on max snow depth from snow cameras at each burned/unburned site!
+
+```{r}
+#removing gb_w tree from persistent zone, and removing charred/uncharred temps, as this will just be N/S comparisons
+full_sd_treeLWout <- filtered_all_aspects %>%
+  #filtering out gb_w tree data
+  filter(tree_name != "gb_w") %>%
+  #filtering out charred/uncharred aspect
+  filter(!aspect %in% c("charred", "uncharred")) %>%
+  #adding in a Kelvin temp column
+  rename(temp_C = temp) %>%
+  mutate(temp_K = (temp_C + 273.15)) %>%
+  #calculating LWout in Wperm^2 by burn_status
+  mutate(LWout_wperm2 = emissivity * stefan_boltzmann_constant * (temp_K^4)) %>%
+   # Define circ of each tree based on burn status
+ mutate(tree_circ = case_when(
+  zone == "PSZ" & burn_status == "green burn" ~ 0.4006,
+  zone == "PSZ" & burn_status == "dead burn" ~ 0.5576,
+  zone == "PSZ" & burn_status == "live" ~ 0.5027,
+  zone == "TSZ" & burn_status == "green burn" ~ 0.5812,
+  zone == "TSZ" & burn_status == "dead burn" ~ 0.5655,
+  zone == "TSZ" & burn_status == "live" ~ 0.5341,
+  TRUE ~ 0.5576
+)) %>%
+  #Defining m2
+   mutate(m2 = snowcam_max_depth_m * tree_circ) %>%
+  #calcuating Watz (power) - dividing by 2 here so that the only half the value is applied to the north/south aspects!
+  mutate(
+    Watz = LWout_wperm2 * (m2/2),
+#converting from Wperm2 to MJ/day
+    LWout_MJperd = Watz * 86400 / 1e6) %>%
+  select(datetime, day, month, phase, zone, burn_status, aspect, tree_name, snowcam_max_depth_m, temp_C, temp_K, tree_circ, LWout_wperm2, m2, Watz, LWout_MJperd, everything())
+```
+
+1.  Linear to ground (GND = 0 C) - snow depth is based on max snow depth from snow cameras at each burned/unburned site!
+
+    \*\* or should I just do a total of 1 meter for snow depth so I can capture the entire gradient at each site? Because trans_ub doesn't have much snowpack
+
+```{r}
+#create a separate snow depth based on snow depth from cameras
+
+```
+
+```{r}
+# Constants
+stefan_boltzmann_constant <- 5.67e-8
+emissivity <- 0.97
+#snowdepth and circumference are in meters
+snowdepth <- 1
+# circumference is taken from diameter at breast height 
+p_db_circ <- 0.5576
+p_gb_circ <- 0.4006
+p_live_circ <- 0.5027
+t_db_circ <- 0.5655
+t_gb_circ <- 0.5812
+t_live_circ <- 0.5341
+
+#picking an average unit depth for snow depth of 1 meter
+#constant for m2 - can adjust this if I want to change the snowdepth!
+p_gb_m2 = snowdepth*p_gb_circ
+p_db_m2 = snowdepth*p_db_circ
+p_live_m2 = snowdepth*p_live_circ
+t_gb_m2 = snowdepth*t_gb_circ
+t_db_m2 = snowdepth*t_db_circ
+t_live_m2 = snowdepth*t_live_circ
+```
 
 1.  Based on snow pit temperature gradient of snow?
 
