@@ -779,19 +779,24 @@ Filtering dataframes for the purpose of temp comparisons
 ```{r}
 filtered_pers_b_aspects <- pers_b_aspects %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
+  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00") %>%
+  filter(tree_name != "gb_w")
 
 filtered_pers_ub_aspects <- pers_ub_aspects %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
+  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00")
 
 filtered_trans_b_aspects <- trans_b_aspects %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
+  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00")
 
 filtered_trans_ub_aspects <- trans_ub_aspects %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:00:00" & datetime <= "2024-05-24 00:00:00")
+  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00")
+```
+
+```{r}
+#making datasets for the 
 ```
 
 ## T-Test Dataframes
@@ -802,7 +807,7 @@ filtered_trans_ub_aspects <- trans_ub_aspects %>%
 #using earlier dataframes to compare on a hourly timestep 
 ##testing with the hourly gb dataset - final_hourly_gb_temps
 
-t_test_hourly_gb_s_n_result <- t.test(final_hourly_gb_temps$mean_south_temp, final_hourly_gb_temps$mean_north_temp)
+t_test_hourly_gb_s_n_result <- t.test(full_hourly_gb$south_temp, full_hourly_gb$north_temp)
 
 print(t_test_hourly_gb_s_n_result)
 ```
@@ -810,7 +815,7 @@ print(t_test_hourly_gb_s_n_result)
 -   above is statistically significant!
 
 ```{r}
-t_test_hourly_gb_c_uc_result <- t.test(final_hourly_gb_temps$mean_charred_temp, final_hourly_gb_temps$mean_uncharred_temp)
+t_test_hourly_gb_c_uc_result <- t.test(full_hourly_gb$charred_temp, full_hourly_gb$uncharred_temp)
 
 print(t_test_hourly_gb_c_uc_result )
 ```
@@ -1024,20 +1029,17 @@ print(t_test_may_gb_n_uc_result)
 
 ### Dead Burned Trees
 
+\*\*
+
 ```{r}
 #have to set up a new dataframe with pivoted wider values
-final_hourly_db_temps <- full_hourly_gbdbub %>%
-  # Pivot wider, creating separate columns for db_south_temp and db_north_temp
-  select(datetime_hour, day, month, zone, aspect, db_temp) %>%
-  pivot_wider(
-    names_from = aspect,      # The column to pivot by (north/south aspects)
-    values_from = db_temp,    # The values to populate the new columns
-    names_prefix = "db_"      # Prefix to add to the new column names
-  ) %>%
-  rename(
-    south_temp = db_south,
-    north_temp = db_north
-  )
+final_hourly_db_temps <- full_hourly_ns %>%
+  filter(burn_status == "dead burn") %>%
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Keep other values unchanged
+  ))
 ```
 
 ```{r}
@@ -1107,18 +1109,13 @@ print(t_test_may_db_s_n_result)
 
 ```{r}
 #have to set up a new dataframe with pivoted wider values
-final_hourly_ub_temps <- full_hourly_gbdbub %>%
-  # Pivot wider, creating separate columns for db_south_temp and db_north_temp
-  select(datetime_hour, day, month, zone, aspect, ub_temp) %>%
-  pivot_wider(
-    names_from = aspect,      # The column to pivot by (north/south aspects)
-    values_from = ub_temp,    # The values to populate the new columns
-    names_prefix = "ub_"      # Prefix to add to the new column names
-  ) %>%
-  rename(
-    south_temp = ub_south,
-    north_temp = ub_north
-  )
+final_hourly_ub_temps <- full_hourly_ns %>%
+  filter(burn_status == "live") %>%
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Keep other values unchanged
+  ))
 ```
 
 ```{r}
@@ -1174,69 +1171,125 @@ print(t_test_may_ub_s_n_result)
 
 ```{r}
 #setting up dataframes
-p_final_hourly_gb_temps <- final_hourly_gb_temps %>%
-  filter (zone == "persistent")
+p_final_hourly_gb_temps <- full_hourly_gb %>%
+  filter (zone == "PSZ")
 
-t_final_hourly_gb_temps <- final_hourly_gb_temps %>%
-  filter (zone == "transitional")
+t_final_hourly_gb_temps <- full_hourly_gb %>%
+  filter (zone == "TSZ")
 
-p_t_test_hourly_gb_s_n_result <- t.test(p_final_hourly_gb_temps$mean_south_temp, p_final_hourly_gb_temps$mean_north_temp)
+#N/S
+p_t_test_hourly_gb_s_n_result <- t.test(p_final_hourly_gb_temps$south_temp, p_final_hourly_gb_temps$north_temp)
 
-print(p_t_test_hourly_gb_s_n_result)
+print(p_t_test_hourly_gb_s_n_result) 
 
-t_t_test_hourly_gb_s_n_result <- t.test(t_final_hourly_gb_temps$mean_south_temp, t_final_hourly_gb_temps$mean_north_temp)
+t_t_test_hourly_gb_s_n_result <- t.test(t_final_hourly_gb_temps$south_temp, t_final_hourly_gb_temps$north_temp)
 
 print(t_t_test_hourly_gb_s_n_result)
+```
+
+```{r}
+#C/UC
+p_t_test_hourly_gb_c_un_result <- t.test(p_final_hourly_gb_temps$charred_temp, p_final_hourly_gb_temps$uncharred_temp)
+
+print(p_t_test_hourly_gb_c_un_result)
+
+t_t_test_hourly_gb_c_un_result <- t.test(t_final_hourly_gb_temps$charred_temp, t_final_hourly_gb_temps$uncharred_temp)
+
+print(t_t_test_hourly_gb_c_un_result)
+```
+
+```{r}
+#S/C
+p_t_test_hourly_gb_s_c_result <- t.test(p_final_hourly_gb_temps$south_temp, p_final_hourly_gb_temps$charred_temp)
+
+print(p_t_test_hourly_gb_s_c_result)
+
+t_t_test_hourly_gb_s_c_result <- t.test(t_final_hourly_gb_temps$south_temp, t_final_hourly_gb_temps$charred_temp)
+
+print(t_t_test_hourly_gb_s_c_result)
+```
+
+```{r}
+#S/UC
+p_t_test_hourly_gb_s_uc_result <- t.test(p_final_hourly_gb_temps$south_temp, p_final_hourly_gb_temps$uncharred_temp)
+
+print(p_t_test_hourly_gb_s_uc_result)
+
+t_t_test_hourly_gb_s_uc_result <- t.test(t_final_hourly_gb_temps$south_temp, t_final_hourly_gb_temps$uncharred_temp)
+
+print(t_t_test_hourly_gb_s_uc_result)
+```
+
+```{r}
+#N/C
+p_t_test_hourly_gb_n_c_result <- t.test(p_final_hourly_gb_temps$north_temp, p_final_hourly_gb_temps$charred_temp)
+
+print(p_t_test_hourly_gb_n_c_result)
+
+t_t_test_hourly_gb_n_c_result <- t.test(t_final_hourly_gb_temps$north_temp, t_final_hourly_gb_temps$charred_temp)
+
+print(t_t_test_hourly_gb_n_c_result)
+```
+
+```{r}
+#N/UC
+p_t_test_hourly_gb_n_uc_result <- t.test(p_final_hourly_gb_temps$north_temp, p_final_hourly_gb_temps$uncharred_temp)
+
+print(p_t_test_hourly_gb_n_uc_result)
+
+t_t_test_hourly_gb_n_uc_result <- t.test(t_final_hourly_gb_temps$north_temp, t_final_hourly_gb_temps$uncharred_temp)
+
+print(t_t_test_hourly_gb_n_uc_result)
 ```
 
 Monthly GB S-N Comparison - by zone
 
 ```{r}
-p_feb_gb_data <- feb_gb_data %>%
-  filter(zone == "persistent")
+p_feb_gb_data <- full_hourly_gb %>%
+  filter(zone == "PSZ", month == "2")
 
-t_feb_gb_data <- feb_gb_data %>%
-  filter(zone == "transitional")
+t_feb_gb_data <- full_hourly_gb %>%
+  filter(zone == "TSZ", month == "2")
 
-p_march_gb_data <- march_gb_data %>%
-  filter(zone == "persistent")
+p_march_gb_data <- full_hourly_gb %>%
+  filter(zone == "PSZ", month == "3")
 
-t_march_gb_data <- march_gb_data %>%
-  filter(zone == "transitional")
+t_march_gb_data <- full_hourly_gb %>%
+  filter(zone == "TSZ", month == "3")
 
-p_april_gb_data <- april_gb_data %>%
-  filter(zone == "persistent")
+p_april_gb_data <- full_hourly_gb %>%
+  filter(zone == "PSZ", month == "4")
 
-t_april_gb_data <- april_gb_data %>%
-  filter(zone == "transitional")
+t_april_gb_data <- full_hourly_gb %>%
+  filter(zone == "TSZ", month == "4")
 
-p_may_gb_data <- may_gb_data %>%
-  filter(zone == "persistent")
+p_may_gb_data <- full_hourly_gb %>%
+  filter(zone == "PSZ", month == "5")
 
-t_may_gb_data <- may_gb_data %>%
-  filter(zone == "transitional")
+t_may_gb_data <- full_hourly_gb %>%
+  filter(zone == "TSZ", month == "5")
 ```
 
 Monthly GB by zone
 
 ```{r}
 #persistent monthly - N/S
-p_t_test_feb_gb_s_n_result <- t.test(p_feb_gb_data$mean_south_temp, p_feb_gb_data$mean_north_temp)
+p_t_test_feb_gb_s_n_result <- t.test(p_feb_gb_data$south_temp, p_feb_gb_data$north_temp)
 
 print(p_t_test_feb_gb_s_n_result)
 ## above is not significant
 
-p_t_test_march_gb_s_n_result <- t.test(p_march_gb_data$mean_south_temp, p_march_gb_data$mean_north_temp)
+p_t_test_march_gb_s_n_result <- t.test(p_march_gb_data$south_temp, p_march_gb_data$north_temp)
 
 print(p_t_test_march_gb_s_n_result)
 ##above is not significant
 
-p_t_test_april_gb_s_n_result <- t.test(p_april_gb_data$mean_south_temp, p_april_gb_data$mean_north_temp)
+p_t_test_april_gb_s_n_result <- t.test(p_april_gb_data$south_temp, p_april_gb_data$north_temp)
 
 print(p_t_test_april_gb_s_n_result)
 ## above is not significant
 
-p_t_test_may_gb_s_n_result <- t.test(p_may_gb_data$mean_south_temp, p_may_gb_data$mean_north_temp)
+p_t_test_may_gb_s_n_result <- t.test(p_may_gb_data$south_temp, p_may_gb_data$north_temp)
 
 print(p_t_test_may_gb_s_n_result)
 ##above is not significant
@@ -1244,22 +1297,22 @@ print(p_t_test_may_gb_s_n_result)
 
 ```{r}
 #transitional monthly - N/S
-t_t_test_feb_gb_s_n_result <- t.test(t_feb_gb_data$mean_south_temp, t_feb_gb_data$mean_north_temp)
+t_t_test_feb_gb_s_n_result <- t.test(t_feb_gb_data$south_temp, t_feb_gb_data$north_temp)
 
 print(t_t_test_feb_gb_s_n_result)
 ## above is significant
 
-t_t_test_march_gb_s_n_result <- t.test(t_march_gb_data$mean_south_temp, t_march_gb_data$mean_north_temp)
+t_t_test_march_gb_s_n_result <- t.test(t_march_gb_data$south_temp, t_march_gb_data$north_temp)
 
 print(t_t_test_march_gb_s_n_result)
 ##above is significant
 
-t_t_test_april_gb_s_n_result <- t.test(t_april_gb_data$mean_south_temp, t_april_gb_data$mean_north_temp)
+t_t_test_april_gb_s_n_result <- t.test(t_april_gb_data$south_temp, t_april_gb_data$north_temp)
 
 print(t_t_test_april_gb_s_n_result)
 ## above is significant
 
-t_t_test_may_gb_s_n_result <- t.test(t_may_gb_data$mean_south_temp, t_may_gb_data$mean_north_temp)
+t_t_test_may_gb_s_n_result <- t.test(t_may_gb_data$south_temp, t_may_gb_data$north_temp)
 
 print(t_t_test_may_gb_s_n_result)
 ## above is not significant
@@ -1269,22 +1322,22 @@ Monthly S/C
 
 ```{r}
 #persistent monthly - s/charred 
-p_t_test_feb_gb_s_c_result <- t.test(p_feb_gb_data$mean_south_temp, p_feb_gb_data$mean_charred_temp)
+p_t_test_feb_gb_s_c_result <- t.test(p_feb_gb_data$south_temp, p_feb_gb_data$charred_temp)
 
 print(p_t_test_feb_gb_s_c_result)
 ## above is not significant
 
-p_t_test_march_gb_s_c_result <- t.test(p_march_gb_data$mean_south_temp, p_march_gb_data$mean_charred_temp)
+p_t_test_march_gb_s_c_result <- t.test(p_march_gb_data$south_temp, p_march_gb_data$charred_temp)
 
 print(p_t_test_march_gb_s_c_result)
 ## above is not significant
 
-p_t_test_april_gb_s_c_result <- t.test(p_april_gb_data$mean_south_temp, p_april_gb_data$mean_charred_temp)
+p_t_test_april_gb_s_c_result <- t.test(p_april_gb_data$south_temp, p_april_gb_data$charred_temp)
 
 print(p_t_test_april_gb_s_c_result)
 ## above is significant
 
-p_t_test_may_gb_s_c_result <- t.test(p_may_gb_data$mean_south_temp, p_may_gb_data$mean_charred_temp)
+p_t_test_may_gb_s_c_result <- t.test(p_may_gb_data$south_temp, p_may_gb_data$charred_temp)
 
 print(p_t_test_may_gb_s_c_result)
 ## above is significant
@@ -1292,22 +1345,22 @@ print(p_t_test_may_gb_s_c_result)
 
 ```{r}
 #transitional monthly - s/charred 
-t_t_test_feb_gb_s_c_result <- t.test(t_feb_gb_data$mean_south_temp, t_feb_gb_data$mean_charred_temp)
+t_t_test_feb_gb_s_c_result <- t.test(t_feb_gb_data$south_temp, t_feb_gb_data$charred_temp)
 
 print(t_t_test_feb_gb_s_c_result)
 ## above is significant
 
-t_t_test_march_gb_s_c_result <- t.test(t_march_gb_data$mean_south_temp, t_march_gb_data$mean_charred_temp)
+t_t_test_march_gb_s_c_result <- t.test(t_march_gb_data$south_temp, t_march_gb_data$charred_temp)
 
 print(t_t_test_march_gb_s_c_result)
 ## above is not significant
 
-t_t_test_april_gb_s_c_result <- t.test(t_april_gb_data$mean_south_temp, t_april_gb_data$mean_charred_temp)
+t_t_test_april_gb_s_c_result <- t.test(t_april_gb_data$south_temp, t_april_gb_data$charred_temp)
 
 print(t_t_test_april_gb_s_c_result)
 ## above is not significant
 
-t_t_test_may_gb_s_c_result <- t.test(t_may_gb_data$mean_south_temp, t_may_gb_data$mean_charred_temp)
+t_t_test_may_gb_s_c_result <- t.test(t_may_gb_data$south_temp, t_may_gb_data$charred_temp)
 
 print(t_t_test_may_gb_s_c_result)
 ## above is not significant
@@ -1365,10 +1418,10 @@ print(t_t_test_may_gb_s_uc_result)
 
 ```{r}
 p_final_hourly_db_temps <- final_hourly_db_temps %>%
-  filter (zone == "persistent")
+  filter (zone == "PSZ")
 
 t_final_hourly_db_temps <- final_hourly_db_temps %>%
-  filter (zone == "transitional")
+  filter (zone == "TSZ")
 
 p_t_test_hourly_db_s_n_result <- t.test(p_final_hourly_db_temps$south_temp, p_final_hourly_db_temps$north_temp)
 
@@ -1460,10 +1513,10 @@ print(t_t_test_may_db_s_n_result)
 
 ```{r}
 p_final_hourly_ub_temps <- final_hourly_ub_temps %>%
-  filter (zone == "persistent")
+  filter (zone == "PSZ")
 
 t_final_hourly_ub_temps <- final_hourly_ub_temps %>%
-  filter (zone == "transitional")
+  filter (zone == "TSZ")
 
 p_t_test_hourly_ub_s_n_result <- t.test(p_final_hourly_ub_temps$south_temp, p_final_hourly_ub_temps$north_temp)
 
@@ -1549,6 +1602,251 @@ t_t_test_may_ub_s_n_result <- t.test(t_may_ub_data$south_temp, t_may_ub_data$nor
 
 print(t_t_test_may_ub_s_n_result)
 #above is not significant
+```
+
+### DB vs GB vs UB N/S test
+
+\*\* need to run these tests
+
+```{r}
+#zone-specific tests
+p_n_full_hourly_gbdbub <- full_hourly_gbdbub %>%
+  filter(zone == "PSZ", aspect == "north")
+
+p_s_full_hourly_gbdbub <- full_hourly_gbdbub %>%
+  filter(zone == "PSZ", aspect == "south")
+
+t_n_full_hourly_gbdbub <- full_hourly_gbdbub %>%
+  filter(zone == "TSZ", aspect == "north")
+
+t_s_full_hourly_gbdbub <- full_hourly_gbdbub %>%
+  filter(zone == "TSZ", aspect == "south")
+```
+
+```{r}
+#GB/DB T-test
+## north
+p_t_test_hourly_n_gbdb_result <- t.test(p_n_full_hourly_gbdbub$gb_temp, p_n_full_hourly_gbdbub$db_temp)
+
+print(p_t_test_hourly_n_gbdb_result)
+
+t_t_test_hourly_n_gbdb_result <- t.test(t_n_full_hourly_gbdbub$gb_temp, t_n_full_hourly_gbdbub$db_temp)
+
+print(t_t_test_hourly_n_gbdb_result)
+
+##south
+p_t_test_hourly_s_gbdb_result <- t.test(p_s_full_hourly_gbdbub$gb_temp, p_s_full_hourly_gbdbub$db_temp)
+
+print(p_t_test_hourly_s_gbdb_result)
+
+t_t_test_hourly_s_gbdb_result <- t.test(t_s_full_hourly_gbdbub$gb_temp, t_s_full_hourly_gbdbub$db_temp)
+
+print(t_t_test_hourly_s_gbdb_result)
+```
+
+```{r}
+#GB/live T-test
+## north
+p_t_test_hourly_n_gbub_result <- t.test(p_n_full_hourly_gbdbub$gb_temp, p_n_full_hourly_gbdbub$ub_temp)
+
+print(p_t_test_hourly_n_gbub_result)
+
+t_t_test_hourly_n_gbub_result <- t.test(t_n_full_hourly_gbdbub$gb_temp, t_n_full_hourly_gbdbub$ub_temp)
+
+print(t_t_test_hourly_n_gbub_result)
+
+##south
+p_t_test_hourly_s_gbub_result <- t.test(p_s_full_hourly_gbdbub$gb_temp, p_s_full_hourly_gbdbub$ub_temp)
+
+print(p_t_test_hourly_s_gbub_result)
+
+t_t_test_hourly_s_gbub_result <- t.test(t_s_full_hourly_gbdbub$gb_temp, t_s_full_hourly_gbdbub$ub_temp)
+
+print(t_t_test_hourly_s_gbub_result)
+```
+
+```{r}
+#DB/live T-test
+## north
+p_t_test_hourly_n_dbub_result <- t.test(p_n_full_hourly_gbdbub$db_temp, p_n_full_hourly_gbdbub$ub_temp)
+
+print(p_t_test_hourly_n_dbub_result)
+
+t_t_test_hourly_n_dbub_result <- t.test(t_n_full_hourly_gbdbub$db_temp, t_n_full_hourly_gbdbub$ub_temp)
+
+print(t_t_test_hourly_n_dbub_result)
+
+##south
+p_t_test_hourly_s_dbub_result <- t.test(p_s_full_hourly_gbdbub$db_temp, p_s_full_hourly_gbdbub$ub_temp)
+
+print(p_t_test_hourly_s_dbub_result)
+
+t_t_test_hourly_s_dbub_result <- t.test(t_s_full_hourly_gbdbub$db_temp, t_s_full_hourly_gbdbub$ub_temp)
+
+print(t_t_test_hourly_s_dbub_result)
+```
+
+## Day/Night T-Tests
+
+-   Don't actually need to do t-tests on these because it's already known that there is a significant difference!
+
+```{r}
+#GB dataframe with daily averaged day and night temperatures
+gb_daynight_ns_temps <- full_hourly_gbdbub %>%
+  select(1:7) %>%
+  rename(date = day) %>%
+  group_by(date, month, phase, zone, aspect) %>%
+  summarize(gb_temp = mean(gb_temp)) %>%
+  pivot_wider(names_from = phase, values_from = gb_temp) %>%
+  rename(day_temp = day, night_temp = night)
+
+#PSZ
+p_gb_daynight_ns_temps <- gb_daynight_ns_temps %>%
+  filter(zone == "PSZ")
+
+p_n_gb_daynight_temps <- p_gb_daynight_ns_temps %>%
+  filter(aspect == "north")
+
+p_s_gb_daynight_temps <- p_gb_daynight_ns_temps %>%
+  filter(aspect == "south")
+
+#TSZ
+t_gb_daynight_ns_temps <- gb_daynight_ns_temps %>%
+  filter(zone == "TSZ")
+
+t_n_gb_daynight_temps <- t_gb_daynight_ns_temps %>%
+  filter(aspect == "north")
+
+t_s_gb_daynight_temps <- t_gb_daynight_ns_temps %>%
+  filter(aspect == "south")
+```
+
+```{r}
+#DB dataframe with daily averaged day and night temperatures
+db_daynight_ns_temps <- full_hourly_gbdbub %>%
+  select(1:6, 8) %>%
+  rename(date = day) %>%
+  group_by(date, month, phase, zone, aspect) %>%
+  summarize(db_temp = mean(db_temp)) %>%
+  pivot_wider(names_from = phase, values_from = db_temp) %>%
+  rename(day_temp = day, night_temp = night)
+
+#PSZ
+p_db_daynight_ns_temps <- db_daynight_ns_temps %>%
+  filter(zone == "PSZ")
+
+p_n_db_daynight_temps <- p_db_daynight_ns_temps %>%
+  filter(aspect == "north")
+
+p_s_db_daynight_temps <- p_db_daynight_ns_temps %>%
+  filter(aspect == "south")
+
+#TSZ
+t_db_daynight_ns_temps <- db_daynight_ns_temps %>%
+  filter(zone == "TSZ")
+
+t_n_db_daynight_temps <- t_db_daynight_ns_temps %>%
+  filter(aspect == "north")
+
+
+t_s_db_daynight_temps <- t_db_daynight_ns_temps %>%
+  filter(aspect == "south")
+```
+
+```{r}
+#UB dataframe with daily averaged day and night temperatures
+ub_daynight_ns_temps <- full_hourly_gbdbub %>%
+  select(1:6, 9) %>%
+  rename(date = day) %>%
+  group_by(date, month, phase, zone, aspect) %>%
+  summarize(ub_temp = mean(ub_temp)) %>%
+  pivot_wider(names_from = phase, values_from = ub_temp) %>%
+  rename(day_temp = day, night_temp = night)
+
+#PSZ
+p_ub_daynight_ns_temps <- ub_daynight_ns_temps %>%
+  filter(zone == "PSZ")
+
+p_n_ub_daynight_temps <- p_ub_daynight_ns_temps %>%
+  filter(aspect == "north")
+
+p_s_ub_daynight_temps <- p_ub_daynight_ns_temps %>%
+  filter(aspect == "south")
+
+#TSZ
+t_ub_daynight_ns_temps <- ub_daynight_ns_temps %>%
+  filter(zone == "TSZ")
+
+t_n_ub_daynight_temps <- t_ub_daynight_ns_temps %>%
+  filter(aspect == "north")
+
+t_s_ub_daynight_temps <- t_ub_daynight_ns_temps %>%
+  filter(aspect == "south")
+```
+
+Welch's T-Tests
+
+```{r}
+#GB
+##north
+p_t_test_n_gb_daynight_temps <- t.test(p_n_gb_daynight_temps$day_temp, p_n_gb_daynight_temps$night_temp)
+
+print(p_t_test_n_gb_daynight_temps)
+
+t_t_test_n_gb_daynight_temps <- t.test(t_n_gb_daynight_temps$day_temp, t_n_gb_daynight_temps$night_temp)
+
+print(t_t_test_n_gb_daynight_temps)
+
+##south
+p_t_test_s_gb_daynight_temps <- t.test(p_s_gb_daynight_temps$day_temp, p_s_gb_daynight_temps$night_temp)
+
+print(p_t_test_s_gb_daynight_temps)
+
+t_t_test_s_gb_daynight_temps <- t.test(t_s_gb_daynight_temps$day_temp, t_s_gb_daynight_temps$night_temp)
+
+print(t_t_test_s_gb_daynight_temps)
+```
+
+```{r}
+#DB
+##north
+p_t_test_n_db_daynight_temps <- t.test(p_n_db_daynight_temps$day_temp, p_n_db_daynight_temps$night_temp)
+
+print(p_t_test_n_db_daynight_temps)
+
+t_t_test_n_db_daynight_temps <- t.test(t_n_db_daynight_temps$day_temp, t_n_db_daynight_temps$night_temp)
+
+print(t_t_test_n_db_daynight_temps)
+
+##south
+p_t_test_s_db_daynight_temps <- t.test(p_s_db_daynight_temps$day_temp, p_s_db_daynight_temps$night_temp)
+
+print(p_t_test_s_db_daynight_temps)
+
+t_t_test_s_db_daynight_temps <- t.test(t_s_db_daynight_temps$day_temp, t_s_db_daynight_temps$night_temp)
+
+print(t_t_test_s_db_daynight_temps)
+```
+
+```{r}
+#UB
+##north
+p_t_test_n_ub_daynight_temps <- t.test(p_n_ub_daynight_temps$day_temp, p_n_ub_daynight_temps$night_temp)
+
+print(p_t_test_n_ub_daynight_temps)
+
+t_t_test_n_ub_daynight_temps <- t.test(t_n_ub_daynight_temps$day_temp, t_n_ub_daynight_temps$night_temp)
+
+print(t_t_test_n_ub_daynight_temps)
+
+##south
+p_t_test_s_ub_daynight_temps <- t.test(p_s_ub_daynight_temps$day_temp, p_s_ub_daynight_temps$night_temp)
+
+print(p_t_test_s_ub_daynight_temps)
+
+t_t_test_s_ub_daynight_temps <- t.test(t_s_ub_daynight_temps$day_temp, t_s_ub_daynight_temps$night_temp)
+
+print(t_t_test_s_ub_daynight_temps)
 ```
 
 # Calculating Min and Max values & Day/Night comparison values for tables in thesis
