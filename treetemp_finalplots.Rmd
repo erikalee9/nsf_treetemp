@@ -291,6 +291,47 @@ dtnt_treetemp_lineplot <- ggarrange(dt_treetemp_daily_gbdbub_lineplot, nt_treete
 dtnt_treetemp_lineplot
 ```
 
+Box plot of the above data
+
+```{r}
+#making a new dataframe
+dt_full_daily_gbdbub_boxplot_dataframe <- dt_full_daily_gbdbub_plot_dataframe %>%
+  pivot_longer(cols = c(gb_temp, db_temp, ub_temp),   # Specify the columns to pivot
+               names_to = "burn_status",              # New column for burn status
+               values_to = "temperature") %>%
+  mutate(burn_status = case_when(
+    burn_status == "gb_temp" ~ "green burn",
+    burn_status == "db_temp" ~ "dead burn",
+    burn_status == "ub_temp" ~ "live",
+    TRUE ~ burn_status  # This handles any unexpected values, if any
+  )) %>%
+  filter(!is.na(temperature))
+```
+
+```{r}
+t_treetemp_daily_gbdbub_boxplot <- ggplot(data = dt_full_daily_gbdbub_boxplot_dataframe) +
+  geom_boxplot(aes(x = factor(day), y = temperature, fill = "burn_status", linetype = aspect), 
+               position = position_dodge(width = 0.8)) +
+  facet_wrap(~ zone + month) +
+  labs(title = "a) Day Temps", x = "Day", y = "Temperature (°C)") +
+  scale_fill_manual(
+    name = "burn status",
+    values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = "#2166AC"),
+    labels = c("green burn" = "Green Burn", "dead burn" = "Dead Burn", "live" = "Live")
+  ) +
+  scale_linetype_manual(
+    name = "aspect", 
+    values = c("north" = "dashed", "south" = "solid"),
+    labels = c("north" = "North", "south" = "South")
+  ) +
+  scale_y_continuous(limits = c(-20, 20)) +
+  theme_bw()
+
+dt_treetemp_daily_gbdbub_boxplot
+```
+
+\*\* the above plot is not working. Not sure why, need to work on the box plot if I want to use this.
+
 ## GB Aspect/Char Pattern Comparison
 
 ```{r}
@@ -523,12 +564,12 @@ p_b_snow_treewell_plot_V2 <- ggplot() +
   geom_line(data =full_dt_daily_gbdbub, aes(x = day, y = ub_temp, color = "live"), linewidth = 0.8, alpha = 0.8) +
   #persistent snow depths + tree wells
   geom_line(data = persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*15, color = "snow depth"), linewidth = 0.8) +
-  geom_point(data = persb_treewell_dates, aes(x = date, y = snowcam_max_depth_m*15, 
+  geom_point(data = persb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*15, 
              shape = "Dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
     #transitional snow depths + tree wells
   geom_line(data = transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*15, color = "snow depth"), linewidth = 0.8) +
-  geom_point(data = transb_treewell_dates, aes(x = date, y = snowcam_max_depth_m*15, 
+  geom_point(data = transb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*15, 
              shape = "Dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
   #air temp
@@ -594,7 +635,7 @@ cum_dt_gbdbub_plot <- ggplot(data = cum_dt_daily_LWout) +
 cum_dt_gbdbub_plot
 ```
 
-Net Rad, Snow Depth, Treewell, AirTemp Plots
+#### Net Rad, Snow Depth, Treewell, AirTemp Plots
 
 ```{r}
 #creating mean dt average values for the weather station data
@@ -602,6 +643,16 @@ mean_dt_transb_wx <- filtered_transb_wx_15min %>%
   filter(phase == "day") %>%
   group_by(day, month, phase, zone, burn_status) %>%
   summarize(SnowDepth_m = mean(SnowDepth_m), AirTC_Avg = mean(AirTC_Avg), SWin_Avg = mean(SWin_Avg), SWout_Avg = mean(SWout_Avg), LWin_Avg = mean(LWin_Avg), LWout_Avg = mean(LWout_Avg), NR_Avg_wperm2 = mean(NR_Avg_new)) %>%
+  #creating a MJ/day mean value column for NR
+  mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000)
+```
+
+```{r}
+## doing a maximum weather version
+max_dt_transb_wx <- filtered_transb_wx_15min %>%
+  filter(phase == "day") %>%
+  group_by(day, month, phase, zone, burn_status) %>%
+  summarize(SnowDepth_m = mean(SnowDepth_m), AirTC_Avg = max(AirTC_Avg), SWin_Avg = max(SWin_Avg), SWout_Avg = max(SWout_Avg), LWin_Avg = max(LWin_Avg), LWout_Avg = max(LWout_Avg), NR_Avg_wperm2 = max(NR_Avg_new)) %>%
   #creating a MJ/day mean value column for NR
   mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000)
 ```
@@ -760,7 +811,7 @@ p_snowtreewell_NR_plot
 ```{r}
 t_snowtreewell_NR_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_transb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.6) +
+  geom_col(data = max_dt_transb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.6) +
   #air temp line
   geom_line(data = mean_dt_transb_wx, aes(x = day, y = AirTC_Avg, color = "air temp"), linewidth = 0.8) +
   geom_line(data = t_b_dt_avg_temp, aes(x = day, y = mean_temp, color = "tree temp"), alpha = 0.8, linewidth = 0.8) +
@@ -866,4 +917,91 @@ p_snowtreewell_treeLWout_plot <- ggplot() +
     strip.text = element_text(size = 12))
 
 p_snowtreewell_treeLWout_plot
+```
+
+Air Temp Compared to Tree Temp
+
+\*\* Not using these, but just wanted to see what the correlations were
+
+```{r}
+# making a joined dataset with daily mean weather and tree temps
+
+#pers_b
+pers_b_dt_mean_alldata <- mean_dt_persb_wx %>%
+  left_join(p_b_dt_avg_temp) %>%
+  rename(mean_tree_temp = mean_temp)
+#trans_b
+trans_b_dt_mean_alldata <- mean_dt_transb_wx %>%
+  left_join(t_b_dt_avg_temp) %>%
+  rename(mean_tree_temp = mean_temp)
+
+#combined_burned dataframe
+```
+
+```{r}
+##tree/air temp
+# getting R^2 for the following comparisons
+persb_treeair_lm_fit <- lm(mean_tree_temp ~ AirTC_Avg, data = pers_b_dt_mean_alldata)
+
+# Extract the R^2 value
+persb_treeair_r_squared <- summary(persb_treeair_lm_fit)$r.squared
+```
+
+```{r}
+##tree/air temp
+# getting R^2 for the following comparisons
+transb_treeair_lm_fit <- lm(mean_tree_temp ~ AirTC_Avg, data = trans_b_dt_mean_alldata)
+
+# Extract the R^2 value
+transb_treeair_r_squared <- summary(transb_treeair_lm_fit)$r.squared
+```
+
+```{r}
+#plotting comparisons & correlations
+persb_dt_mean_treeair_comp <- ggplot(data = pers_b_dt_mean_alldata) +
+  geom_point(aes(x = AirTC_Avg, y = mean_tree_temp, color = zone)) + 
+  geom_smooth(aes(x = AirTC_Avg, y = mean_tree_temp), method = 'lm', se = TRUE, color = "grey") + 
+  scale_color_manual(values = c(
+    "PSZ" = "#2166AC",
+    "TSZ" = "#D95F02")) +
+  theme(legend.position = "right") +
+  labs(title = "Air Temp vs Tree Surface Temp", 
+       x = "Air Temp (°C)", 
+       y = "Tree Surface Temp (°C)") +
+  theme_bw() +
+  #adding r^2 value to plot
+  annotate("text", x = Inf, y = Inf, label = paste("R² =", round(persb_treeair_r_squared , 3)), 
+           hjust = 1.1, vjust = 2, size = 5, color = "black")
+
+persb_dt_mean_treeair_comp
+```
+
+```{r}
+transb_dt_mean_treeair_comp <- ggplot(data = trans_b_dt_mean_alldata) +
+  geom_point(aes(x = AirTC_Avg, y = mean_tree_temp, color = zone)) + 
+  geom_smooth(aes(x = AirTC_Avg, y = mean_tree_temp), method = 'lm', se = TRUE, color = "grey") + 
+  scale_color_manual(values = c(
+    "PSZ" = "#2166AC",
+    "TSZ" = "#D95F02")) +
+  theme(legend.position = "right") +
+  labs(title = "Air Temp vs Tree Surface Temp", 
+       x = "Air Temp (°C)", 
+       y = "Tree Surface Temp (°C)") +
+  theme_bw() +
+  #adding r^2 value to plot
+  annotate("text", x = Inf, y = Inf, label = paste("R² =", round(transb_treeair_r_squared , 3)), 
+           hjust = 1.1, vjust = 2, size = 5, color = "black")
+
+transb_dt_mean_treeair_comp
+```
+
+Comparing tree surface temp to NR_Avg
+
+```{r}
+##tree/air temp
+# getting R^2 for the following comparisons
+persb_treetempNR_lm_fit <- lm(mean_tree_temp ~ LWout_Avg, data = pers_b_dt_mean_alldata)
+
+# Extract the R^2 value
+persb_treetempNR_r_squared <- summary(persb_treetempNR_lm_fit)$r.squared
 ```
