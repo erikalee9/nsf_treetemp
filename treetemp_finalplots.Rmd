@@ -358,7 +358,7 @@ example_gb_temps_lineplot
 
 ## Cumulative Tree LWout Plot
 
-### Cumulative Burn Status LWout  Line Plot
+### Cumulative Burn Status LWout Line Plot
 
 Data Wrangling
 
@@ -687,6 +687,23 @@ t_b_dt_avg_temp <- full_15min_ns %>%
   summarize(mean_temp = mean(ns_avg_temp))
 ```
 
+```{r}
+#creating a new dataframe with snow depths and treewell development, as well as tree_LWout so that I can put points on snowdepths instead of total treeLWout line in plots
+persb_treewell_dates <- persb_snowcamera_data %>%
+  select(zone, burn_status, date, conditions, treewell_developed, snowcam_max_depth_m) %>%
+  rename(day = date) %>%
+  inner_join(p_b_dt_avg_temp) %>%
+  filter(treewell_developed == "yes")
+```
+
+```{r}
+transb_treewell_dates <- transb_snowcamera_data %>%
+  select(zone, date, conditions, treewell_developed, snowcam_max_depth_m) %>%
+  rename(day = date) %>%
+  inner_join(t_b_dt_avg_temp) %>%
+  filter(treewell_developed == "yes")
+```
+
 Plotting
 
 \*\* USING THIS PLOT!
@@ -694,14 +711,14 @@ Plotting
 ```{r}
 p_snowtreewell_NR_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_persb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.7) +
+  geom_col(data = mean_dt_persb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.6) +
   #air temp line
   geom_line(data = mean_dt_persb_wx, aes(x = day, y = AirTC_Avg, color = "air temp"), linewidth = 0.8) +
   geom_line(data = p_b_dt_avg_temp, aes(x = day, y = mean_temp, color = "tree temp"), alpha = 0.8, linewidth = 0.8) +
   # Line plot for snow cam max depth on a secondary y-axis
   #transitional snow depths + tree wells
-  geom_line(data = persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*5, color = "daily max snow depth"), linewidth = 0.8) +
-  geom_point(data = persb_treewell_dates, aes(x = date, y = snowcam_max_depth_m*5, 
+  geom_line(data = persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*5, color = "snow depth"), linewidth = 0.8) +
+  geom_point(data = persb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*5, 
              shape = "dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
   facet_wrap(~burn_status) +
@@ -712,7 +729,7 @@ p_snowtreewell_NR_plot <- ggplot() +
   ) +
   # Customizing colors and shapes
   scale_color_manual(name = "Radiation Data", 
-                     values = c("air temp" = "#D95F02", "tree temp" = "#1B7837", "daily max snow depth" = "#2166AC")) +
+                     values = c("air temp" = "#D95F02", "tree temp" = "#1B7837", "snow depth" = "#2166AC")) +
   scale_fill_manual(name = "Radiation Data", 
                     values = c("net radiation" = "#666666")) +
   scale_shape_manual(values = c("dates that treewells developed" = 21)) +
@@ -743,14 +760,14 @@ p_snowtreewell_NR_plot
 ```{r}
 t_snowtreewell_NR_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_transb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.7) +
+  geom_col(data = mean_dt_transb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.6) +
   #air temp line
   geom_line(data = mean_dt_transb_wx, aes(x = day, y = AirTC_Avg, color = "air temp"), linewidth = 0.8) +
   geom_line(data = t_b_dt_avg_temp, aes(x = day, y = mean_temp, color = "tree temp"), alpha = 0.8, linewidth = 0.8) +
   # Line plot for snow cam max depth on a secondary y-axis
   #transitional snow depths + tree wells
   geom_line(data = transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*5, color = "daily max snow depth"), linewidth = 0.8) +
-  geom_point(data = transb_treewell_dates, aes(x = date, y = snowcam_max_depth_m*5, 
+  geom_point(data = transb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*5, 
              shape = "dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
   facet_wrap(~burn_status) +
@@ -788,6 +805,8 @@ t_snowtreewell_NR_plot <- ggplot() +
 
 t_snowtreewell_NR_plot
 ```
+
+\*\* 2024-11-7 - figure out why the above plots are now showing all negative NR, then fix this before exporting new plots!
 
 ```{r}
 #combining above plots
