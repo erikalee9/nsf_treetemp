@@ -205,6 +205,8 @@ filtered_ns_aspects <- filtered_all_aspects %>%
 
 # LWout Calculations
 
+\*\* when applying the actual snow depths to these equations, it makes the m2 value be zero if there is no snow, which is not technically accurate. what to do about this?
+
 ## Setting Constants
 
 ```{r}
