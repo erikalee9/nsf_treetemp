@@ -67,7 +67,6 @@ full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
 Snow Camera Depth Data
 
 ```{r}
-{r}
 transb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transb_snowdepths.csv") %>%
   rename(snowcam_max_depth_cm = "maximum_depth(cm)") %>%
   mutate(date = as.Date(date)) %>%
@@ -116,16 +115,31 @@ transub_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transub_sno
 ```{r}
 #datasets for only snowcamera depths, to join with below datasets
 filtered_transb_snowcamdepths <- transb_snowcamera_data %>%
-  select(date, snowcam_max_depth_m)
+  select(date, snowcam_max_depth_m) %>%
+  mutate(zone = "TSZ") %>%
+  expand_grid(burn_status = c("green burn", "dead burn"))
 
 filtered_persb_snowcamdepths <- persb_snowcamera_data %>%
-  select(date, snowcam_max_depth_m)
+  select(date, snowcam_max_depth_m) %>%
+  mutate(zone = "PSZ") %>%
+  expand_grid(burn_status = c("green burn", "dead burn"))
 
 filtered_transub_snowcamdepths <- transub_snowcamera_data %>%
-  select(date, snowcam_max_depth_m)
+  select(date, snowcam_max_depth_m) %>%
+  mutate(zone = "TSZ", burn_status = "live")
 
 filtered_persub_snowcamdepths <- persub_snowcamera_data %>%
-  select(datetime, date, snowcam_max_depth_m)
+  #because I am pulling this data from the weather station, I have to calculate an average daily value for snow depth
+  group_by(date) %>%
+  summarize(snowcam_max_depth_m = mean(snowcam_max_depth_m)) %>%
+  select(date, snowcam_max_depth_m) %>%
+  mutate(zone = "PSZ", burn_status = "live")
+```
+
+```{r}
+#making a combined snowcamera depths dataframe
+full_snowcamdepths <- rbind(filtered_persb_snowcamdepths, filtered_transb_snowcamdepths, filtered_persub_snowcamdepths, filtered_transub_snowcamdepths) %>%
+  rename(day = "date")
 ```
 
 Full Aspect Datasets, with all trees
@@ -183,6 +197,10 @@ filtered_all_aspects <- filtered_pers_b_aspects_r %>%
   full_join(filtered_trans_b_aspects_r) %>%
   full_join(filtered_trans_ub_aspects_r) %>%
   select(-date)
+
+#crearing a north/south only so that I can join the snow depths with other data for scenarios
+filtered_ns_aspects <- filtered_all_aspects %>%
+  filter(aspect %in% c("north", "south"))
 ```
 
 # LWout Calculations
@@ -237,7 +255,7 @@ filtered_all_ns_LWout <- filtered_all_aspects %>%
   #calculating LWout in Wperm^2 by burn_status
   mutate(LWout_wperm2 = emissivity * stefan_boltzmann_constant * (temp_K^4)) %>%
   # Define m2 based on zone
- mutate(m2 = case_when(
+ mutate(tree_circ = case_when(
   zone == "PSZ" & burn_status == "green burn" ~ 0.4006,
   zone == "PSZ" & burn_status == "dead burn" ~ 0.5576,
   zone == "PSZ" & burn_status == "live" ~ 0.5027,
@@ -248,10 +266,10 @@ filtered_all_ns_LWout <- filtered_all_aspects %>%
 )) %>%
   #calcuating Watz (power) - dividing by 2 here so that the only half the value is applied to the north/south aspects!
   mutate(
-    Watz = LWout_wperm2 * (m2/2),
+    Watz = LWout_wperm2 * ((tree_circ*snowcam_max_depth_m)/2),
 #converting from Wperm2 to MJ/day
     LWout_MJperd = Watz * 86400 / 1e6) %>%
-  select(datetime, day, month, phase, zone, burn_status, aspect, tree_name, temp_C, temp_K, LWout_wperm2, m2, Watz, LWout_MJperd, everything())
+  select(datetime, day, month, phase, zone, burn_status, aspect, tree_name, temp_C, temp_K, LWout_wperm2, tree_circ, snowcam_max_depth_m, Watz, LWout_MJperd, everything())
 ```
 
 Full_15min_NS
@@ -260,7 +278,13 @@ Full_15min_NS
 #full_15min_ns
 ##converting temps in OG dataset to K from C
 full_15min_ns_K <- full_15min_ns %>%
-  mutate(north_temp_k = (north_temp + 273.15), south_temp_k = (south_temp + 273.15), ns_avg_temp_k = (ns_avg_temp + 273.15))
+  mutate(north_temp_k = (north_temp + 273.15), south_temp_k = (south_temp + 273.15), ns_avg_temp_k = (ns_avg_temp + 273.15)) %>%
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Retain original value if no match
+  )) %>%
+  left_join(full_snowcamdepths, by = c("day", "zone", "burn_status"))
 ```
 
 ```{r}
@@ -271,7 +295,7 @@ full_15min_ns_LWout <- full_15min_ns_K %>%
     n_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (north_temp_k^4), s_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (south_temp_k^4)
   ) %>%
   #setting a case_when to vary the circumference/snow depth measurement by tree burn status and zone
-  mutate(m2 = case_when(
+  mutate(tree_circ = case_when(
       burn_status == "green burn" & zone == "persistent" ~ 0.4006,   # Example value for burned in north zone
       burn_status == "dead burn" & zone == "persistent" ~ 0.5576,   # Example value for burned in south zone
       burn_status == "live" & zone == "persistent" ~ 0.5027,
@@ -280,9 +304,9 @@ full_15min_ns_LWout <- full_15min_ns_K %>%
       burn_status == "live" & zone == "transitional" ~ 0.5341,
       TRUE ~ 0.4006  # Default value if neither of the conditions match
     ),
-#calcuating Watz (power) - dividing m2 by 2 for the north/south aspect differences as we assume that the area is only 1/2 the tree by aspect
-    n_W =  n_LWout_wperm2 * (m2/2),
-    s_W =  s_LWout_wperm2 * (m2/2),
+#calcuating Watz (power) - dividing tree circ/snowcam depths by 2 for the north/south aspect differences as we assume that the area is only 1/2 the tree by aspect
+    n_W =  n_LWout_wperm2 * ((tree_circ*snowcam_max_depth_m)/2),
+    s_W =  s_LWout_wperm2 * ((tree_circ*snowcam_max_depth_m)/2),
 #converting from Wperm2 to MJ/day
     n_LWout_MJperd = n_W * 86400 / 1e6, 
 s_LWout_MJperd = s_W * 86400 / 1e6) 
@@ -293,7 +317,8 @@ Full_Hourly_NS
 ```{r}
 #full_15min_ns
 full_hourly_ns_K <- full_hourly_ns %>%
-  mutate(north_temp_k = (north_temp + 273.15), south_temp_k = (south_temp + 273.15), ns_avg_temp_k = (ns_avg_temp + 273.15))
+  mutate(north_temp_k = (north_temp + 273.15), south_temp_k = (south_temp + 273.15), ns_avg_temp_k = (ns_avg_temp + 273.15)) %>%
+  left_join(full_snowcamdepths, by = c("day", "zone", "burn_status"))
 ```
 
 ```{r}
@@ -304,7 +329,7 @@ full_hourly_ns_LWout <- full_hourly_ns_K %>%
     n_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (north_temp_k^4), s_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (south_temp_k^4)
   ) %>%
   #setting a case_when to vary the circumference/snow depth measurement by tree burn status and zone
-  mutate(m2 = case_when(
+  mutate(tree_circ = case_when(
       burn_status == "green burn" & zone == "persistent" ~ 0.4006,   # Example value for burned in north zone
       burn_status == "dead burn" & zone == "persistent" ~ 0.5576,   # Example value for burned in south zone
       burn_status == "live" & zone == "persistent" ~ 0.5027,
@@ -313,9 +338,9 @@ full_hourly_ns_LWout <- full_hourly_ns_K %>%
       burn_status == "live" & zone == "persistent" ~ 0.5341,
       TRUE ~ 0.4006  # Default value if neither of the conditions match
     ),
-#calcuating Watz (power) - dividing m2 by 2 for the north/south aspect differences as we assume that the area is only 1/2 the tree by aspect
-    n_W =  n_LWout_wperm2 * (m2/2),
-    s_W =  s_LWout_wperm2 * (m2/2),
+#calcuating Watz (power) - dividing tree circ/snow depths by 2 for the north/south aspect differences as we assume that the area is only 1/2 the tree by aspect
+     n_W =  n_LWout_wperm2 * ((tree_circ*snowcam_max_depth_m)/2),
+    s_W =  s_LWout_wperm2 * ((tree_circ*snowcam_max_depth_m)/2),
 #converting from Wperm2 to MJ/day
     n_LWout_MJperd = n_W * 86400 / 1e6, 
 s_LWout_MJperd = s_W * 86400 / 1e6)
@@ -324,8 +349,17 @@ s_LWout_MJperd = s_W * 86400 / 1e6)
 Full 15min GBDBUB
 
 ```{r}
+#making a different dataframe that has gb_snowdepth, db_snowdepth & ub_snowdepths - pivoted wide, not long
+gbdbub_snowcamdepths <- full_snowcamdepths %>%
+  pivot_wider(names_from = burn_status, values_from = snowcam_max_depth_m) %>%
+  rename(gb_snowdepth_m = "green burn", db_snowdepth_m = "dead burn", live_snowdepth_m = "live")
+```
+
+```{r}
 full_15min_gbdbub_K <- full_15min_gbdbub %>%
-  mutate(gb_temp_k = (gb_temp + 273.15), db_temp_k = (db_temp + 273.15), ub_temp_k = (ub_temp + 273.15))
+  mutate(gb_temp_k = (gb_temp + 273.15), db_temp_k = (db_temp + 273.15), ub_temp_k = (ub_temp + 273.15)) %>%
+  #adding snowdepths
+  left_join(gbdbub_snowcamdepths, by = c("day", "zone"))
 ```
 
 ```{r}
@@ -334,13 +368,13 @@ full_15min_gbdbub_LWout <- full_15min_gbdbub_K %>%
   #calculating LWout in Wperm^2 by burn_status
   mutate(gb_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (gb_temp_k^4), db_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (db_temp_k^4), ub_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (ub_temp_k^4)) %>%
   # Define m2 based on zone
-    mutate(gb_m2 = case_when(zone == "persistent" ~ 0.4006,
-zone == "transitional" ~ 0.5812, TRUE ~ 0.4006), db_m2 = case_when(zone == "persistent" ~ 0.5576, zone == "transitional" ~ 0.5655, TRUE ~ 0.5576), ub_m2 = case_when(zone == "persistent" ~ 0.5027, zone == "transitional" ~ 0.5341, TRUE ~ 0.5576)) %>%
+    mutate(gb_tree_circ = case_when(zone == "persistent" ~ 0.4006,
+zone == "transitional" ~ 0.5812, TRUE ~ 0.4006), db_tree_circ = case_when(zone == "persistent" ~ 0.5576, zone == "transitional" ~ 0.5655, TRUE ~ 0.5576), ub_tree_circ = case_when(zone == "persistent" ~ 0.5027, zone == "transitional" ~ 0.5341, TRUE ~ 0.5576)) %>%
   #calcuating Watz (power)
   mutate(
-    gb_W = gb_LWout_wperm2 * (gb_m2/2),
-    db_W =  db_LWout_wperm2 * (db_m2/2),
-    ub_W =  ub_LWout_wperm2 * (ub_m2/2),
+    gb_W = gb_LWout_wperm2 * ((gb_tree_circ*gb_snowdepth_m)/2),
+    db_W =  db_LWout_wperm2 * ((db_tree_circ*db_snowdepth_m)/2),
+    ub_W =  ub_LWout_wperm2 * ((ub_tree_circ*live_snowdepth_m)/2),
 #converting from Wperm2 to MJ/day
     gb_LWout_MJperd = gb_W * 86400 / 1e6, 
 db_LWout_MJperd = db_W * 86400 / 1e6, ub_LWout_MJperd = ub_W * 86400 / 1e6)
@@ -350,7 +384,8 @@ Full Hourly GB
 
 ```{r}
 full_hourly_gb_K <- full_hourly_gb %>%
-  mutate(north_temp_k = (north_temp + 273.15), south_temp_k = (south_temp + 273.15), charred_temp_k = (charred_temp + 273.15), uncharred_temp_k = (uncharred_temp + 273.15))
+  mutate(north_temp_k = (north_temp + 273.15), south_temp_k = (south_temp + 273.15), charred_temp_k = (charred_temp + 273.15), uncharred_temp_k = (uncharred_temp + 273.15)) %>%
+  left_join(full_snowcamdepths, by = c("day", "zone", "burn_status"))
 ```
 
 The following dataframe can be used for plotting comparison of GB-only aspect/char pattern comparisons
@@ -362,14 +397,14 @@ full_hourly_gb_LWout <- full_hourly_gb_K %>%
   mutate(
     # Calculate longwave radiation in Wperm^2
     n_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (north_temp_k^4), s_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (south_temp_k^4), c_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (charred_temp_k^4), uc_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (uncharred_temp_k^4)) %>%
-  # Define m2 based on zone
-    mutate(gb_m2 = case_when(zone == "persistent" ~ 0.4006,
+  # Define tree_circ based on zone
+    mutate(gb_tree_circ = case_when(zone == "persistent" ~ 0.4006,
 zone == "transitional" ~ 0.5812, TRUE ~ 0.4006), 
 #calcuating Watz (power)- dividing m2 by 2 for the north/south aspect differences as we assume that the area is only 1/2 the tree by aspect
-    n_W =  n_LWout_wperm2 * (gb_m2/2),
-    s_W =  s_LWout_wperm2 * (gb_m2/2),
-c_W =  c_LWout_wperm2 * (gb_m2/2),
-uc_W =  uc_LWout_wperm2 * (gb_m2/2),
+    n_W =  n_LWout_wperm2 * ((gb_tree_circ*snowcam_max_depth_m)/2),
+    s_W =  s_LWout_wperm2 * ((gb_tree_circ*snowcam_max_depth_m)/2),
+c_W =  c_LWout_wperm2 * ((gb_tree_circ*snowcam_max_depth_m)/2),
+uc_W =  uc_LWout_wperm2 * ((gb_tree_circ*snowcam_max_depth_m)/2),
 #converting from Wperm2 to MJ/day
     n_LWout_MJperd = n_W * 86400 / 1e6, 
 s_LWout_MJperd = s_W * 86400 / 1e6, c_LWout_MJperd = c_W * 86400 / 1e6, uc_LWout_MJperd = uc_W * 86400 / 1e6)
