@@ -139,7 +139,9 @@ filtered_persub_snowcamdepths <- persub_snowcamera_data %>%
 ```{r}
 #making a combined snowcamera depths dataframe
 full_snowcamdepths <- rbind(filtered_persb_snowcamdepths, filtered_transb_snowcamdepths, filtered_persub_snowcamdepths, filtered_transub_snowcamdepths) %>%
-  rename(day = "date")
+  rename(day = "date") %>%
+  #making it so that there is never a zero in the snowdepth column, to see if this fixes my issues with NAs
+  mutate(snowcam_max_depth_m = if_else(snowcam_max_depth_m == 0, 0.001, snowcam_max_depth_m))
 ```
 
 Full Aspect Datasets, with all trees
@@ -175,11 +177,13 @@ filtered_trans_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_ub_asp
   select(-1)
 ```
 
+\*\* this next step is not really working... need to keep working on this
+
 ```{r}
 #adding in snow depth to 15-minute datetime columns of above dataset
 filtered_pers_b_aspects_r <- filtered_pers_b_aspects_r %>%
   full_join(filtered_persb_snowcamdepths, by = c("day" = "date"))
-
+            
 filtered_pers_ub_aspects_r <- filtered_pers_ub_aspects_r %>%
   full_join(filtered_persub_snowcamdepths, by = c("datetime" = "datetime"))
 
@@ -195,8 +199,7 @@ filtered_trans_ub_aspects_r <- filtered_trans_ub_aspects_r %>%
 filtered_all_aspects <- filtered_pers_b_aspects_r %>%
   full_join(filtered_pers_ub_aspects_r) %>%
   full_join(filtered_trans_b_aspects_r) %>%
-  full_join(filtered_trans_ub_aspects_r) %>%
-  select(-date)
+  full_join(filtered_trans_ub_aspects_r)
 
 #crearing a north/south only so that I can join the snow depths with other data for scenarios
 filtered_ns_aspects <- filtered_all_aspects %>%
@@ -320,6 +323,11 @@ Full_Hourly_NS
 #full_15min_ns
 full_hourly_ns_K <- full_hourly_ns %>%
   mutate(north_temp_k = (north_temp + 273.15), south_temp_k = (south_temp + 273.15), ns_avg_temp_k = (ns_avg_temp + 273.15)) %>%
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Retain original value if no match
+  )) %>%
   left_join(full_snowcamdepths, by = c("day", "zone", "burn_status"))
 ```
 
@@ -360,6 +368,11 @@ gbdbub_snowcamdepths <- full_snowcamdepths %>%
 ```{r}
 full_15min_gbdbub_K <- full_15min_gbdbub %>%
   mutate(gb_temp_k = (gb_temp + 273.15), db_temp_k = (db_temp + 273.15), ub_temp_k = (ub_temp + 273.15)) %>%
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Retain original value if no match
+  )) %>%
   #adding snowdepths
   left_join(gbdbub_snowcamdepths, by = c("day", "zone"))
 ```
@@ -387,6 +400,11 @@ Full Hourly GB
 ```{r}
 full_hourly_gb_K <- full_hourly_gb %>%
   mutate(north_temp_k = (north_temp + 273.15), south_temp_k = (south_temp + 273.15), charred_temp_k = (charred_temp + 273.15), uncharred_temp_k = (uncharred_temp + 273.15)) %>%
+  mutate(zone = case_when(
+    zone == "persistent" ~ "PSZ",
+    zone == "transitional" ~ "TSZ",
+    TRUE ~ zone  # Retain original value if no match
+  )) %>%
   left_join(full_snowcamdepths, by = c("day", "zone", "burn_status"))
 ```
 
