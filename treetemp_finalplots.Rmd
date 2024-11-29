@@ -121,7 +121,10 @@ persub_wx_15min_r <- read_csv('nsf/pers_unburned/pers_unburned_wx_15min_r.csv') 
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST'))
 
-p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv")
+p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
+  mutate(sunrise = force_tz(sunrise, tzone = "MST"),
+      sunset = force_tz(sunset, tzone = "MST")
+  )
 ```
 
 ```{r}
@@ -1071,6 +1074,16 @@ mean_dt_transb_wx <- filtered_transb_wx_15min %>%
 ```
 
 ```{r}
+#creating mean nt average values for the weather station data
+mean_nt_transb_wx <- filtered_transb_wx_15min %>%
+  filter(phase == "night") %>%
+  group_by(day, month, phase, zone, burn_status) %>%
+  summarize(SnowDepth_m = mean(SnowDepth_m), AirTC_Avg = mean(AirTC_Avg), SWin_Avg = mean(SWin_Avg), SWout_Avg = mean(SWout_Avg), LWin_Avg = mean(LWin_Avg), LWout_Avg = mean(LWout_Avg), NR_Avg_wperm2 = mean(NR_Avg_new)) %>%
+  #creating a MJ/day mean value column for NR
+  mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000)
+```
+
+```{r}
 ## doing a maximum weather version
 max_dt_transb_wx <- filtered_transb_wx_15min %>%
   filter(phase == "day") %>%
@@ -1082,7 +1095,7 @@ max_dt_transb_wx <- filtered_transb_wx_15min %>%
 
 ```{r}
 mean_dt_transub_wx <- filtered_transub_wx_15min %>%
-  filter(phase == "day") %>%
+  #filter(phase == "day") %>%
   group_by(day, month, phase, zone, burn_status) %>%
   summarize(SnowDepth_m = mean(SnowDepth_m), AirTC_Avg = mean(AirTC_Avg), SWin_Avg = mean(SWin_Avg), SWout_Avg = mean(SWout_Avg), LWin_Avg = mean(LWin_Avg), LWout_Avg = mean(LWout_Avg), NR_Avg_wperm2 = mean(NR_Avg_new)) %>%
   #creating a MJ/day mean value column for NR
@@ -1109,8 +1122,7 @@ mean_dt_persub_wx <- filtered_persub_wx_15min %>%
 
 ```{r}
 #creating dataframes for the a mean daily value of the gb and db tree LWout values for both zones
-p_b_dt_mean_treeLWout <- full_15min_ns_LWout %>%
-  mutate(zone = case_when(zone == "persistent" ~ "PSZ", zone == "transitional" ~ "TSZ")) %>%
+p_b_dt_mean_treeLWout <- full_15min_ns_LWout%>%
   #making a column that includes the tree LWout in MJper day for both the north and south sides of the tree
   mutate(full_tree_LWout_MJperd = n_LWout_MJperd + s_LWout_MJperd) %>%
   #getting only daytime values
@@ -1126,7 +1138,6 @@ p_b_dt_mean_treeLWout <- full_15min_ns_LWout %>%
 
 ```{r}
 t_b_dt_mean_treeLWout <- full_15min_ns_LWout %>%
-  mutate(zone = case_when(zone == "persistent" ~ "PSZ", zone == "transitional" ~ "TSZ")) %>%
   #making a column that includes the tree LWout in MJper day for both the north and south sides of the tree
   mutate(full_tree_LWout_MJperd = n_LWout_MJperd + s_LWout_MJperd) %>%
   #getting only daytime values
@@ -1191,7 +1202,7 @@ p_snowtreewell_NR_plot <- ggplot() +
   geom_line(data = p_b_dt_avg_temp, aes(x = day, y = mean_temp, color = "tree temp"), alpha = 0.8, linewidth = 0.8) +
   # Line plot for snow cam max depth on a secondary y-axis
   #transitional snow depths + tree wells
-  geom_line(data = persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*5, color = "snow depth"), linewidth = 0.8) +
+  geom_line(data = persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*5, color = "snow depth"), alpha = 0.8, linewidth = 0.8) +
   geom_point(data = persb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*5, 
              shape = "dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
@@ -1234,13 +1245,13 @@ p_snowtreewell_NR_plot
 ```{r}
 t_snowtreewell_NR_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = max_dt_transb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.6) +
+  geom_col(data = mean_dt_transb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.6) +
   #air temp line
   geom_line(data = mean_dt_transb_wx, aes(x = day, y = AirTC_Avg, color = "air temp"), linewidth = 0.8) +
   geom_line(data = t_b_dt_avg_temp, aes(x = day, y = mean_temp, color = "tree temp"), alpha = 0.8, linewidth = 0.8) +
   # Line plot for snow cam max depth on a secondary y-axis
   #transitional snow depths + tree wells
-  geom_line(data = transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*5, color = "daily max snow depth"), linewidth = 0.8) +
+  geom_line(data = transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*5, color = "daily max snow depth"), linewidth = 0.8, alpha = 0.7) +
   geom_point(data = transb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*5, 
              shape = "dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
@@ -1279,8 +1290,6 @@ t_snowtreewell_NR_plot <- ggplot() +
 
 t_snowtreewell_NR_plot
 ```
-
-\*\* 2024-11-7 - figure out why the above plots are now showing all negative NR, then fix this before exporting new plots!
 
 ```{r}
 #combining above plots
