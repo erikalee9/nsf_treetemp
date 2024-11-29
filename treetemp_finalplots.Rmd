@@ -309,7 +309,7 @@ dt_full_daily_gbdbub_boxplot_dataframe <- dt_full_daily_gbdbub_plot_dataframe %>
 ```
 
 ```{r}
-t_treetemp_daily_gbdbub_boxplot <- ggplot(data = dt_full_daily_gbdbub_boxplot_dataframe) +
+dt_t_treetemp_daily_gbdbub_boxplot <- ggplot(data = dt_full_daily_gbdbub_boxplot_dataframe) +
   geom_boxplot(aes(x = factor(day), y = temperature, fill = "burn_status", linetype = aspect), 
                position = position_dodge(width = 0.8)) +
   facet_wrap(~ zone + month) +
@@ -327,7 +327,7 @@ t_treetemp_daily_gbdbub_boxplot <- ggplot(data = dt_full_daily_gbdbub_boxplot_da
   scale_y_continuous(limits = c(-20, 20)) +
   theme_bw()
 
-dt_treetemp_daily_gbdbub_boxplot
+dt_t_treetemp_daily_gbdbub_boxplot
 ```
 
 \*\* the above plot is not working. Not sure why, need to work on the box plot if I want to use this.
@@ -401,10 +401,21 @@ Creating a daily mean temperature dataframe, then plotting for full timeframe
 
 ```{r}
 #dataframe
+##mean
 dt_mean_gb <- full_hourly_gb %>%
   filter(phase == "day") %>%
   group_by(day, month, zone) %>%
   summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), charred_temp = mean(charred_temp), uncharred_temp = mean(uncharred_temp))
+
+dt_min_gb <- full_hourly_gb %>%
+  filter(phase == "day") %>%
+  group_by(day, month, zone) %>%
+  summarize(north_temp = min(north_temp), south_temp = min(south_temp), charred_temp = min(charred_temp), uncharred_temp = min(uncharred_temp))
+
+dt_max_gb <- full_hourly_gb %>%
+  filter(phase == "day") %>%
+  group_by(day, month, zone) %>%
+  summarize(north_temp = max(north_temp), south_temp = max(south_temp), charred_temp = max(charred_temp), uncharred_temp = max(uncharred_temp))
 ```
 
 ```{r}
@@ -443,6 +454,18 @@ pers_dt_mean_gb <- dt_mean_gb %>%
 
 trans_dt_mean_gb <- dt_mean_gb %>%
   filter(zone == "TSZ")
+
+pers_dt_min_gb <- dt_min_gb %>%
+  filter(zone == "PSZ")
+
+trans_dt_min_gb <- dt_min_gb %>%
+  filter(zone == "TSZ")
+
+pers_dt_max_gb <- dt_max_gb %>%
+  filter(zone == "PSZ")
+
+trans_dt_max_gb <- dt_max_gb %>%
+  filter(zone == "TSZ")
 ```
 
 ```{r}
@@ -452,7 +475,8 @@ full_mean_gb_temp_plot <- ggplot(data = dt_mean_gb) +
   geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
   geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
   facet_wrap(~zone, dir = "v") +
-  labs(title = "b) Ablation", x = "Date", y = "Temperature (°C)") +
+  labs(#title = "b) Ablation", 
+       x = "Date", y = "Mean Temperature (°C)") +
   scale_color_manual(
     name = "aspect",
     values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
@@ -463,13 +487,50 @@ full_mean_gb_temp_plot
 ```
 
 ```{r}
+full_min_gb_temp_plot <- ggplot(data = dt_min_gb) +
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
+  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
+  facet_wrap(~zone, dir = "v") +
+  labs(#title = "b) Ablation", 
+       x = "Date", y = "Minimum Temperature (°C)") +
+  scale_color_manual(
+    name = "aspect",
+    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
+  ) +
+  theme_bw()
+
+full_min_gb_temp_plot
+```
+
+```{r}
+full_max_gb_temp_plot <- ggplot(data = dt_max_gb) +
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
+  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
+  facet_wrap(~zone, dir = "v") +
+  labs(#title = "b) Ablation", 
+       x = "Date", y = "Minimum Temperature (°C)") +
+  scale_color_manual(
+    name = "aspect",
+    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
+  ) +
+  theme_bw()
+
+full_max_gb_temp_plot
+```
+
+```{r}
+##MEAN TEMP PLOTS
 #PSZ
 PSZ_mean_gb_temp_plot <- ggplot(data = pers_dt_mean_gb) +
   geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
   geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
   geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
   geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
-  labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
+  labs(title = "a) PSZ", x = NULL, y = "Mean Temperature (°C)") +
   scale_color_manual(
     name = "aspect",
     values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
@@ -484,7 +545,7 @@ TSZ_mean_gb_temp_plot <- ggplot(data = trans_dt_mean_gb) +
   geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
   geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
   geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
-  labs(title = "b) TSZ", x = "Date", y = "Temperature (°C)") +
+  labs(title = "b) TSZ", x = NULL, y = "Mean Temperature (°C)") +
   scale_color_manual(
     name = "aspect",
     values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
@@ -495,10 +556,101 @@ TSZ_mean_gb_temp_plot
 ```
 
 ```{r}
+##MIN TEMP PLOTS
+#PSZ
+PSZ_min_gb_temp_plot <- ggplot(data = pers_dt_min_gb) +
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
+  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
+  labs(#title = "a) PSZ", 
+       x = NULL, y = "Minimum Temperature (°C)") +
+  scale_color_manual(
+    name = "aspect",
+    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
+  ) +
+  theme_bw()
+
+PSZ_min_gb_temp_plot
+
+#TSZ
+TSZ_min_gb_temp_plot <- ggplot(data = trans_dt_min_gb) +
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
+  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
+  labs(#title = "b) TSZ", 
+       x = NULL, y = "Minimum Temperature (°C)") +
+  scale_color_manual(
+    name = "aspect",
+    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
+  ) +
+  theme_bw()
+
+TSZ_min_gb_temp_plot
+```
+
+```{r}
+##MAX TEMP PLOTS
+#PSZ
+PSZ_max_gb_temp_plot <- ggplot(data = pers_dt_max_gb) +
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
+  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
+  labs(#title = "a) PSZ", 
+       x = "Date", y = "Maximum Temperature (°C)") +
+  scale_color_manual(
+    name = "aspect",
+    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
+  ) +
+  theme_bw()
+
+PSZ_max_gb_temp_plot
+
+#TSZ
+TSZ_max_gb_temp_plot <- ggplot(data = trans_dt_max_gb) +
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
+  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
+  labs(#title = "b) TSZ", 
+       x = "Date", y = "Maximum Temperature (°C)") +
+  scale_color_manual(
+    name = "aspect",
+    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
+  ) +
+  theme_bw()
+
+TSZ_max_gb_temp_plot
+```
+
+```{r}
+#combined by zone and mean, min, max values 
+
+pers_meanminmax_gb_temp_plot <- ggarrange(PSZ_mean_gb_temp_plot, PSZ_min_gb_temp_plot, PSZ_max_gb_temp_plot, nrow = 3, ncol = 1, common.legend = TRUE, legend = "none")
+
+pers_meanminmax_gb_temp_plot
+
+trans_meanminmax_gb_temp_plot <- ggarrange(TSZ_mean_gb_temp_plot, TSZ_min_gb_temp_plot, TSZ_max_gb_temp_plot, nrow = 3, ncol = 1, common.legend = TRUE, legend = "none")
+
+trans_meanminmax_gb_temp_plot
+```
+
+```{r}
+#combined mean, min max by zone plot
+comb_meanminmax_gb_temp_byzone <- ggarrange(pers_meanminmax_gb_temp_plot, trans_meanminmax_gb_temp_plot, nrow =1, ncol = 2, common.legend = TRUE, legend = "right")
+
+comb_meanminmax_gb_temp_byzone
+```
+
+```{r}
 comb_gb_lineplot <- ggarrange(PSZ_mean_gb_temp_plot, TSZ_mean_gb_temp_plot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
 
 comb_gb_lineplot
 ```
+
+\*\* Not sure if I need to use the above mean/min/max plots, but if so I'll export later.
 
 Month separated plots
 
