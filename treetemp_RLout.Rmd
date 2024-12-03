@@ -185,8 +185,6 @@ filtered_trans_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_ub_asp
   select(-1)
 ```
 
-\*\* this next step is not really working... need to keep working on this
-
 ```{r}
 #adding in snow depth to 15-minute datetime columns of above dataset
 filtered_pers_b_aspects_snowdepth <- filtered_pers_b_aspects_r %>%
@@ -1757,7 +1755,71 @@ full_sd_treeLWout <- filtered_all_aspects_snowdepths %>%
   select(datetime, day, month, phase, zone, burn_status, aspect, tree_name, snowcam_max_depth_m, temp_C, temp_K, tree_circ, LWout_wperm2, m2, Watz, LWout_MJperd, everything())
 ```
 
-1.  Linear to ground (GND = 0 C) - snow depth is based on max snow depth from snow cameras at each burned/unburned site!
+```{r}
+#making a daily average dataset for full_sd_treeLWout_plot
+
+daily_sd_treeLWout <- full_sd_treeLWout %>%
+  group_by(day, month, phase, zone, burn_status, aspect) %>%
+  summarize(snowcam_max_depth_m = mean(snowcam_max_depth_m), temp_C = mean(temp_C), temp_K = mean(temp_K), tree_circ = mean(tree_circ), LWout_wperm2 = mean(LWout_wperm2), LWout_MJperd = mean(LWout_MJperd))
+
+PSZ_daily_sd_treeLWout <- daily_sd_treeLWout %>%
+  filter(zone == "PSZ")
+
+TSZ_daily_sd_treeLWout <- daily_sd_treeLWout %>%
+  filter(zone == "TSZ")
+```
+
+```{r}
+#plotting above LWout values
+
+##full plot
+daily_sd_treeLWout_plot <- ggplot(data = daily_sd_treeLWout) +
+  geom_line(aes(x = day, y = LWout_MJperd, color = burn_status, linetype = aspect), linewidth = 0.7) + 
+  facet_wrap(~zone + phase) +
+  labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
+  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) +
+  theme_bw()
+
+daily_sd_treeLWout_plot
+```
+
+```{r}
+#PSZ plot
+PSZ_daily_sd_treeLWout_plot <- ggplot(data = PSZ_daily_sd_treeLWout) +
+  geom_line(aes(x = day, y = LWout_MJperd, color = burn_status, linetype = aspect), linewidth = 0.7) + 
+  facet_wrap(~ phase) +
+  labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
+  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) +
+  theme_bw()
+
+PSZ_daily_sd_treeLWout_plot
+```
+
+```{r}
+#TSZ plot
+TSZ_daily_sd_treeLWout_plot <- ggplot(data = TSZ_daily_sd_treeLWout) +
+  geom_line(aes(x = day, y = LWout_MJperd, color = burn_status, linetype = aspect), linewidth = 0.7) + 
+  facet_wrap(~ phase) +
+  labs(title = "b) TSZ", x = "Day", y = "Temperature (°C)") +
+  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) +
+  theme_bw()
+
+TSZ_daily_sd_treeLWout_plot
+```
+
+```{r}
+#Combined Plot
+comb_daily_sd_treeLWout_plot <- ggarrange(PSZ_daily_sd_treeLWout_plot, TSZ_daily_sd_treeLWout_plot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+comb_daily_sd_treeLWout_plot
+```
+
+\*\*might need to plot the above data differently depending on how the next scenario turns out
+
+2.  Linear to ground (GND = 0 C) - snow depth is based on max snow depth from snow cameras at each burned/unburned site!
 
     \*\* or should I just do a total of 1 meter for snow depth so I can capture the entire gradient at each site? Because trans_ub doesn't have much snowpack
 
@@ -1788,11 +1850,6 @@ t_gb_m2 = snowdepth*t_gb_circ
 t_db_m2 = snowdepth*t_db_circ
 t_live_m2 = snowdepth*t_live_circ
 ```
-
-\
-\
-\
-\
 
 2.  Based on snow pit temperature gradient of snow?
 
