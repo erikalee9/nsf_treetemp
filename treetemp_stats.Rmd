@@ -1775,6 +1775,92 @@ t_s_full_hourly_gbdbub <- full_hourly_gbdbub %>%
 ```
 
 ```{r}
+#by accumulation/ablation
+#zone-specific tests
+p_n_accu_hourly_gbdbub <- full_hourly_gbdbub %>%
+  filter(zone == "PSZ", aspect == "north") %>%
+  mutate( # Add `snow_phase` before summarizing
+    snow_phase = case_when(
+      (zone == "PSZ" & day >= as.Date("2024-05-06")) ~ "ablation",
+      (zone == "TSZ" & day >= as.Date("2024-04-06")) ~ "ablation",
+      TRUE ~ "accumulation"
+    )) %>%
+  filter(snow_phase == "accumulation")
+
+p_s_accu_hourly_gbdbub <- full_hourly_gbdbub %>%
+  filter(zone == "PSZ", aspect == "south") %>%
+  mutate( # Add `snow_phase` before summarizing
+    snow_phase = case_when(
+      (zone == "PSZ" & day >= as.Date("2024-05-06")) ~ "ablation",
+      (zone == "TSZ" & day >= as.Date("2024-04-06")) ~ "ablation",
+      TRUE ~ "accumulation"
+    )) %>%
+  filter(snow_phase == "accumulation")
+
+t_n_accu_hourly_gbdbub <- full_hourly_gbdbub %>%
+  filter(zone == "TSZ", aspect == "north") %>%
+  mutate( # Add `snow_phase` before summarizing
+    snow_phase = case_when(
+      (zone == "PSZ" & day >= as.Date("2024-05-06")) ~ "ablation",
+      (zone == "TSZ" & day >= as.Date("2024-04-06")) ~ "ablation",
+      TRUE ~ "accumulation"
+    )) %>%
+  filter(snow_phase == "accumulation")
+
+t_s_accu_hourly_gbdbub <- full_hourly_gbdbub %>%
+  filter(zone == "TSZ", aspect == "south") %>%
+  mutate( # Add `snow_phase` before summarizing
+    snow_phase = case_when(
+      (zone == "PSZ" & day >= as.Date("2024-05-06")) ~ "ablation",
+      (zone == "TSZ" & day >= as.Date("2024-04-06")) ~ "ablation",
+      TRUE ~ "accumulation"
+    )) %>%
+  filter(snow_phase == "accumulation")
+```
+
+```{r}
+p_n_abla_hourly_gbdbub <- full_hourly_gbdbub %>%
+  filter(zone == "PSZ", aspect == "north") %>%
+  mutate( # Add `snow_phase` before summarizing
+    snow_phase = case_when(
+      (zone == "PSZ" & day >= as.Date("2024-05-06")) ~ "ablation",
+      (zone == "TSZ" & day >= as.Date("2024-04-06")) ~ "ablation",
+      TRUE ~ "accumulation"
+    )) %>%
+  filter(snow_phase == "ablation")
+
+p_s_abla_hourly_gbdbub <- full_hourly_gbdbub %>%
+  filter(zone == "PSZ", aspect == "south") %>%
+  mutate( # Add `snow_phase` before summarizing
+    snow_phase = case_when(
+      (zone == "PSZ" & day >= as.Date("2024-05-06")) ~ "ablation",
+      (zone == "TSZ" & day >= as.Date("2024-04-06")) ~ "ablation",
+      TRUE ~ "accumulation"
+    )) %>%
+  filter(snow_phase == "ablation")
+
+t_n_abla_hourly_gbdbub <- full_hourly_gbdbub %>%
+  filter(zone == "TSZ", aspect == "north") %>%
+  mutate( # Add `snow_phase` before summarizing
+    snow_phase = case_when(
+      (zone == "PSZ" & day >= as.Date("2024-05-06")) ~ "ablation",
+      (zone == "TSZ" & day >= as.Date("2024-04-06")) ~ "ablation",
+      TRUE ~ "accumulation"
+    )) %>%
+  filter(snow_phase == "ablation")
+
+t_s_abla_hourly_gbdbub <- full_hourly_gbdbub %>%
+  filter(zone == "TSZ", aspect == "south") %>%
+  mutate( # Add `snow_phase` before summarizing
+    snow_phase = case_when(
+      (zone == "PSZ" & day >= as.Date("2024-05-06")) ~ "ablation",
+      (zone == "TSZ" & day >= as.Date("2024-04-06")) ~ "ablation",
+      TRUE ~ "accumulation"
+    )) %>%
+  filter(snow_phase == "ablation")
+```
+
+```{r}
 #GB/DB T-test
 ## north
 p_t_test_hourly_n_gbdb_result <- t.test(p_n_full_hourly_gbdbub$gb_temp, p_n_full_hourly_gbdbub$db_temp)
@@ -1796,45 +1882,66 @@ print(t_t_test_hourly_s_gbdb_result)
 ```
 
 ```{r}
-#GB/live T-test
-## north
-p_t_test_hourly_n_gbub_result <- t.test(p_n_full_hourly_gbdbub$gb_temp, p_n_full_hourly_gbdbub$ub_temp)
+#GB/DB T-test by accumulation/abalation
 
-print(p_t_test_hourly_n_gbub_result)
+p_t_test_hourly_n_accu_gbdb_result <- t.test(p_n_accu_hourly_gbdbub$gb_temp, p_n_accu_hourly_gbdbub$db_temp)
 
-t_t_test_hourly_n_gbub_result <- t.test(t_n_full_hourly_gbdbub$gb_temp, t_n_full_hourly_gbdbub$ub_temp)
+print(p_t_test_hourly_n_accu_gbdb_result)
 
-print(t_t_test_hourly_n_gbub_result)
+t_t_test_hourly_n_accu_gbdb_result <- t.test(t_n_accu_hourly_gbdbub$gb_temp, t_n_accu_hourly_gbdbub$db_temp)
+
+print(t_t_test_hourly_n_accu_gbdb_result)
 
 ##south
-p_t_test_hourly_s_gbub_result <- t.test(p_s_full_hourly_gbdbub$gb_temp, p_s_full_hourly_gbdbub$ub_temp)
+p_t_test_hourly_s_accu_gbdb_result <- t.test(p_s_accu_hourly_gbdbub$gb_temp, p_s_accu_hourly_gbdbub$db_temp)
 
-print(p_t_test_hourly_s_gbub_result)
+print(p_t_test_hourly_s_accu_gbdb_result)
 
-t_t_test_hourly_s_gbub_result <- t.test(t_s_full_hourly_gbdbub$gb_temp, t_s_full_hourly_gbdbub$ub_temp)
+t_t_test_hourly_s_accu_gbdb_result <- t.test(t_s_accu_hourly_gbdbub$gb_temp, t_s_accu_hourly_gbdbub$db_temp)
 
-print(t_t_test_hourly_s_gbub_result)
+print(t_t_test_hourly_s_accu_gbdb_result)
+```
+
+```{r}
+#GB/live T-test
+## north
+p_t_test_hourly_n_accu_gbub_result <- t.test(p_n_accu_hourly_gbdbub$gb_temp, p_n_accu_hourly_gbdbub$ub_temp)
+
+print(p_t_test_hourly_n_accu_gbub_result)
+
+t_t_test_hourly_n_accu_gbub_result <- t.test(t_n_accu_hourly_gbdbub$gb_temp, t_n_accu_hourly_gbdbub$ub_temp)
+
+print(t_t_test_hourly_n_accu_gbub_result)
+
+##south
+p_t_test_hourly_s_accu_gbub_result <- t.test(p_s_accu_hourly_gbdbub$gb_temp, p_s_accu_hourly_gbdbub$ub_temp)
+
+print(p_t_test_hourly_s_accu_gbub_result)
+
+t_t_test_hourly_s_accu_gbub_result <- t.test(t_s_accu_hourly_gbdbub$gb_temp, t_s_accu_hourly_gbdbub$ub_temp)
+
+print(t_t_test_hourly_s_accu_gbub_result)
 ```
 
 ```{r}
 #DB/live T-test
 ## north
-p_t_test_hourly_n_dbub_result <- t.test(p_n_full_hourly_gbdbub$db_temp, p_n_full_hourly_gbdbub$ub_temp)
+p_t_test_hourly_n_accu_dbub_result <- t.test(p_n_accu_hourly_gbdbub$db_temp, p_n_accu_hourly_gbdbub$ub_temp)
 
-print(p_t_test_hourly_n_dbub_result)
+print(p_t_test_hourly_n_accu_dbub_result)
 
-t_t_test_hourly_n_dbub_result <- t.test(t_n_full_hourly_gbdbub$db_temp, t_n_full_hourly_gbdbub$ub_temp)
+t_t_test_hourly_n_accu_dbub_result <- t.test(t_n_accu_hourly_gbdbub$db_temp, t_n_accu_hourly_gbdbub$ub_temp)
 
-print(t_t_test_hourly_n_dbub_result)
+print(t_t_test_hourly_n_accu_dbub_result)
 
 ##south
-p_t_test_hourly_s_dbub_result <- t.test(p_s_full_hourly_gbdbub$db_temp, p_s_full_hourly_gbdbub$ub_temp)
+p_t_test_hourly_s_accu_dbub_result <- t.test(p_s_accu_hourly_gbdbub$db_temp, p_s_accu_hourly_gbdbub$ub_temp)
 
-print(p_t_test_hourly_s_dbub_result)
+print(p_t_test_hourly_s_accu_dbub_result)
 
-t_t_test_hourly_s_dbub_result <- t.test(t_s_full_hourly_gbdbub$db_temp, t_s_full_hourly_gbdbub$ub_temp)
+t_t_test_hourly_s_accu_dbub_result <- t.test(t_s_accu_hourly_gbdbub$db_temp, t_s_accu_hourly_gbdbub$ub_temp)
 
-print(t_t_test_hourly_s_dbub_result)
+print(t_t_test_hourly_s_accu_dbub_result)
 ```
 
 ## Day/Night T-Tests
