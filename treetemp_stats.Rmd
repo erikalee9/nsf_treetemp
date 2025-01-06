@@ -780,23 +780,23 @@ Filtering dataframes for the purpose of temp comparisons
 filtered_pers_b_aspects <- pers_b_aspects %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
   filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00") %>%
-  filter(tree_name != "gb_w")
+  filter(tree_name != "gb_w") %>%
+  mutate(snow_phase = if_else(datetime >= as.Date("2024-05-06"), "ablation", "accumulation"))
 
 filtered_pers_ub_aspects <- pers_ub_aspects %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00")
+  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00")  %>%
+  mutate(snow_phase = if_else(datetime >= as.Date("2024-05-06"), "ablation", "accumulation"))
 
 filtered_trans_b_aspects <- trans_b_aspects %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00")
+  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00")  %>%
+  mutate(snow_phase = if_else(datetime >= as.Date("2024-04-06"), "ablation", "accumulation"))
 
 filtered_trans_ub_aspects <- trans_ub_aspects %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00")
-```
-
-```{r}
-#making datasets for the 
+  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00") %>%
+  mutate(snow_phase = if_else(datetime >= as.Date("2024-04-06"), "ablation", "accumulation"))
 ```
 
 ## T-Test Dataframes
@@ -1369,59 +1369,208 @@ print(t_t_test_may_gb_s_c_result)
 Monthly S/Uncharred
 
 ```{r}
-#persistent monthly - s/charred 
-p_t_test_feb_gb_s_uc_result <- t.test(p_feb_gb_data$mean_south_temp, p_feb_gb_data$mean_uncharred_temp)
+#persistent monthly - s/uncharred 
+p_t_test_feb_gb_s_uc_result <- t.test(p_feb_gb_data$south_temp, p_feb_gb_data$uncharred_temp)
 
 print(p_t_test_feb_gb_s_uc_result)
 ## above is not significant
 
-p_t_test_march_gb_s_uc_result <- t.test(p_march_gb_data$mean_south_temp, p_march_gb_data$mean_uncharred_temp)
+p_t_test_march_gb_s_uc_result <- t.test(p_march_gb_data$south_temp, p_march_gb_data$uncharred_temp)
 
 print(p_t_test_march_gb_s_uc_result)
 ## above is not significant
 
-p_t_test_april_gb_s_uc_result <- t.test(p_april_gb_data$mean_south_temp, p_april_gb_data$mean_uncharred_temp)
+p_t_test_april_gb_s_uc_result <- t.test(p_april_gb_data$south_temp, p_april_gb_data$uncharred_temp)
 
 print(p_t_test_april_gb_s_uc_result)
 ## above is not significant
 
-p_t_test_may_gb_s_uc_result <- t.test(p_may_gb_data$mean_south_temp, p_may_gb_data$mean_uncharred_temp)
+p_t_test_may_gb_s_uc_result <- t.test(p_may_gb_data$south_temp, p_may_gb_data$uncharred_temp)
 
 print(p_t_test_may_gb_s_uc_result)
 ## above is not significant
 ```
 
 ```{r}
-#transitional monthly - s/charred 
-t_t_test_feb_gb_s_uc_result <- t.test(t_feb_gb_data$mean_south_temp, t_feb_gb_data$mean_uncharred_temp)
+#transitional monthly - s/uncharred 
+t_t_test_feb_gb_s_uc_result <- t.test(t_feb_gb_data$south_temp, t_feb_gb_data$uncharred_temp)
 
 print(t_t_test_feb_gb_s_uc_result)
 ## above is not significant
 
-t_t_test_march_gb_s_uc_result <- t.test(t_march_gb_data$mean_south_temp, t_march_gb_data$mean_uncharred_temp)
+t_t_test_march_gb_s_uc_result <- t.test(t_march_gb_data$south_temp, t_march_gb_data$uncharred_temp)
 
 print(t_t_test_march_gb_s_uc_result)
 ## above is not significant
 
-t_t_test_april_gb_s_uc_result <- t.test(t_april_gb_data$mean_south_temp, t_april_gb_data$mean_uncharred_temp)
+t_t_test_april_gb_s_uc_result <- t.test(t_april_gb_data$south_temp, t_april_gb_data$uncharred_temp)
 
 print(t_t_test_april_gb_s_uc_result)
 ## above is not significant
 
-t_t_test_may_gb_s_uc_result <- t.test(t_may_gb_data$mean_south_temp, t_may_gb_data$mean_uncharred_temp)
+t_t_test_may_gb_s_uc_result <- t.test(t_may_gb_data$south_temp, t_may_gb_data$uncharred_temp)
 
 print(t_t_test_may_gb_s_uc_result)
+## above is not significant
+```
+
+Monthly N/Charred
+
+```{r}
+#persistent monthly - n/charred 
+p_t_test_feb_gb_n_c_result <- t.test(p_feb_gb_data$north_temp, p_feb_gb_data$charred_temp)
+
+print(p_t_test_feb_gb_n_c_result)
+## above is not significant
+
+p_t_test_march_gb_n_c_result <- t.test(p_march_gb_data$north_temp, p_march_gb_data$charred_temp)
+
+print(p_t_test_march_gb_n_c_result)
+## above is not significant
+
+p_t_test_april_gb_n_c_result <- t.test(p_april_gb_data$north_temp, p_april_gb_data$charred_temp)
+
+print(p_t_test_april_gb_n_c_result)
+## above is significant
+
+p_t_test_may_gb_n_c_result <- t.test(p_may_gb_data$north_temp, p_may_gb_data$charred_temp)
+
+print(p_t_test_may_gb_n_c_result)
+## above is significant
+```
+
+```{r}
+#transitional monthly - n/charred 
+t_t_test_feb_gb_n_c_result <- t.test(t_feb_gb_data$north_temp, t_feb_gb_data$charred_temp)
+
+print(t_t_test_feb_gb_n_c_result)
+## above is significant
+
+t_t_test_march_gb_n_c_result <- t.test(t_march_gb_data$north_temp, t_march_gb_data$charred_temp)
+
+print(t_t_test_march_gb_n_c_result)
+## above is not significant
+
+t_t_test_april_gb_n_c_result <- t.test(t_april_gb_data$north_temp, t_april_gb_data$charred_temp)
+
+print(t_t_test_april_gb_n_c_result)
+## above is not significant
+
+t_t_test_may_gb_n_c_result <- t.test(t_may_gb_data$north_temp, t_may_gb_data$charred_temp)
+
+print(t_t_test_may_gb_n_c_result)
+## above is not significant
+```
+
+Monthly North/Uncharred
+
+```{r}
+#persistent monthly - n/charred 
+p_t_test_feb_gb_n_uc_result <- t.test(p_feb_gb_data$north_temp, p_feb_gb_data$uncharred_temp)
+
+print(p_t_test_feb_gb_n_uc_result)
+## above is not significant
+
+p_t_test_march_gb_n_uc_result <- t.test(p_march_gb_data$north_temp, p_march_gb_data$uncharred_temp)
+
+print(p_t_test_march_gb_n_uc_result)
+## above is not significant
+
+p_t_test_april_gb_n_uc_result <- t.test(p_april_gb_data$north_temp, p_april_gb_data$uncharred_temp)
+
+print(p_t_test_april_gb_n_uc_result)
+## above is significant
+
+p_t_test_may_gb_n_uc_result <- t.test(p_may_gb_data$north_temp, p_may_gb_data$uncharred_temp)
+
+print(p_t_test_may_gb_n_uc_result)
+## above is significant
+```
+
+```{r}
+#transitional monthly - n/uncharred 
+t_t_test_feb_gb_n_uc_result <- t.test(t_feb_gb_data$north_temp, t_feb_gb_data$uncharred_temp)
+
+print(t_t_test_feb_gb_n_uc_result)
+## above is significant
+
+t_t_test_march_gb_n_uc_result <- t.test(t_march_gb_data$north_temp, t_march_gb_data$uncharred_temp)
+
+print(t_t_test_march_gb_n_uc_result)
+## above is not significant
+
+t_t_test_april_gb_n_uc_result <- t.test(t_april_gb_data$north_temp, t_april_gb_data$uncharred_temp)
+
+print(t_t_test_april_gb_n_uc_result)
+## above is not significant
+
+t_t_test_may_gb_n_uc_result <- t.test(t_may_gb_data$north_temp, t_may_gb_data$uncharred_temp)
+
+print(t_t_test_may_gb_n_uc_result)
+## above is not significant
+```
+
+Monthly Charred/Uncharred
+
+```{r}
+#persistent monthly - charred /uncharred
+p_t_test_feb_gb_c_uc_result <- t.test(p_feb_gb_data$charred_temp, p_feb_gb_data$uncharred_temp)
+
+print(p_t_test_feb_gb_c_uc_result)
+## above is not significant
+
+p_t_test_march_gb_c_uc_result <- t.test(p_march_gb_data$charred_temp, p_march_gb_data$uncharred_temp)
+
+print(p_t_test_march_gb_c_uc_result)
+## above is not significant
+
+p_t_test_april_gb_c_uc_result <- t.test(p_april_gb_data$charred_temp, p_april_gb_data$uncharred_temp)
+
+print(p_t_test_april_gb_c_uc_result)
+## above is significant
+
+p_t_test_may_gb_c_uc_result <- t.test(p_may_gb_data$charred_temp, p_may_gb_data$uncharred_temp)
+
+print(p_t_test_may_gb_c_uc_result)
+## above is significant
+```
+
+```{r}
+#transitional monthly - charred/uncharred 
+t_t_test_feb_gb_c_uc_result <- t.test(t_feb_gb_data$charred_temp, t_feb_gb_data$uncharred_temp)
+
+print(t_t_test_feb_gb_c_uc_result)
+## above is significant
+
+t_t_test_march_gb_c_uc_result <- t.test(t_march_gb_data$charred_temp, t_march_gb_data$uncharred_temp)
+
+print(t_t_test_march_gb_c_uc_result)
+## above is not significant
+
+t_t_test_april_gb_c_uc_result <- t.test(t_april_gb_data$charred_temp, t_april_gb_data$uncharred_temp)
+
+print(t_t_test_april_gb_c_uc_result)
+## above is not significant
+
+t_t_test_may_gb_c_uc_result <- t.test(t_may_gb_data$charred_temp, t_may_gb_data$uncharred_temp)
+
+print(t_t_test_may_gb_c_uc_result)
 ## above is not significant
 ```
 
 ### Dead Burned
 
 ```{r}
-p_final_hourly_db_temps <- final_hourly_db_temps %>%
-  filter (zone == "PSZ")
+p_final_hourly_db_temps <- full_hourly_ns %>%
+  filter(zone == "persistent", burn_status == "dead burn") %>%
+  mutate(zone = "PSZ")
 
-t_final_hourly_db_temps <- final_hourly_db_temps %>%
-  filter (zone == "TSZ")
+t_final_hourly_db_temps <- full_hourly_ns %>%
+  filter(zone == "transitional", burn_status == "dead burn") %>%
+  mutate(zone = "TSZ")
+```
+
+```{r}
 
 p_t_test_hourly_db_s_n_result <- t.test(p_final_hourly_db_temps$south_temp, p_final_hourly_db_temps$north_temp)
 
@@ -1436,29 +1585,29 @@ Monthly DB S-N Comparisons by zone
 
 ```{r}
 #dataframes
-p_feb_db_data <- feb_db_data %>%
-  filter(zone == "persistent")
+p_feb_db_data <- p_final_hourly_db_temps %>%
+  filter(month == "2")
 
-t_feb_db_data <- feb_db_data %>%
-  filter(zone == "transitional")
+t_feb_db_data <- t_final_hourly_db_temps %>%
+  filter(month == "2")
 
-p_march_db_data <- march_db_data %>%
-  filter(zone == "persistent")
+p_march_db_data <- p_final_hourly_db_temps %>%
+  filter(month == "3")
 
-t_march_db_data <- march_db_data %>%
-  filter(zone == "transitional")
+t_march_db_data <- t_final_hourly_db_temps %>%
+  filter(month == "3")
 
-p_april_db_data <- april_db_data %>%
-  filter(zone == "persistent")
+p_april_db_data <- p_final_hourly_db_temps %>%
+  filter(month == "4")
 
-t_april_db_data <- april_db_data %>%
-  filter(zone == "transitional")
+t_april_db_data <- t_final_hourly_db_temps %>%
+  filter(month == "4")
 
-p_may_db_data <- may_db_data %>%
-  filter(zone == "persistent")
+p_may_db_data <- p_final_hourly_db_temps %>%
+  filter(month == "5")
 
-t_may_db_data <- may_db_data %>%
-  filter(zone == "transitional")
+t_may_db_data <- t_final_hourly_db_temps %>%
+  filter(month == "5")
 ```
 
 Persistent
@@ -1512,11 +1661,13 @@ print(t_t_test_may_db_s_n_result)
 ### Live
 
 ```{r}
-p_final_hourly_ub_temps <- final_hourly_ub_temps %>%
-  filter (zone == "PSZ")
+p_final_hourly_ub_temps <- full_hourly_ns %>%
+  filter(zone == "persistent", burn_status == "live") %>%
+  mutate(zone = "PSZ")
 
-t_final_hourly_ub_temps <- final_hourly_ub_temps %>%
-  filter (zone == "TSZ")
+t_final_hourly_ub_temps <- full_hourly_ns %>%
+  filter(zone == "transitional", burn_status == "live") %>%
+  mutate(zone = "TSZ")
 
 p_t_test_hourly_ub_s_n_result <- t.test(p_final_hourly_ub_temps$south_temp, p_final_hourly_ub_temps$north_temp)
 
@@ -1531,29 +1682,29 @@ Monthly Live S-N Comparisons by zone
 
 ```{r}
 #dataframes
-p_feb_ub_data <- feb_ub_data %>%
-  filter(zone == "persistent")
+p_feb_ub_data <- p_final_hourly_ub_temps %>%
+  filter(month == "2")
 
-t_feb_ub_data <- feb_ub_data %>%
-  filter(zone == "transitional")
+t_feb_ub_data <- t_final_hourly_ub_temps %>%
+  filter(month == "2")
 
-p_march_ub_data <- march_ub_data %>%
-  filter(zone == "persistent")
+p_march_ub_data <- p_final_hourly_ub_temps %>%
+  filter(month == "3")
 
-t_march_ub_data <- march_ub_data %>%
-  filter(zone == "transitional")
+t_march_ub_data <- t_final_hourly_ub_temps %>%
+  filter(month == "3")
 
-p_april_ub_data <- april_ub_data %>%
-  filter(zone == "persistent")
+p_april_ub_data <- p_final_hourly_ub_temps %>%
+  filter(month == "4")
 
-t_april_ub_data <- april_ub_data %>%
-  filter(zone == "transitional")
+t_april_ub_data <- t_final_hourly_ub_temps %>%
+  filter(month == "4")
 
-p_may_ub_data <- may_ub_data %>%
-  filter(zone == "persistent")
+p_may_ub_data <- p_final_hourly_ub_temps %>%
+  filter(month == "5")
 
-t_may_ub_data <- may_ub_data %>%
-  filter(zone == "transitional")
+t_may_ub_data <- t_final_hourly_ub_temps %>%
+  filter(month == "5")
 ```
 
 Persistent
@@ -1935,4 +2086,77 @@ max_db_temp_per_phase <- full_15min_gbdbub %>%
 max_ub_temp_per_phase <- full_15min_gbdbub %>%
   group_by(zone, phase, aspect) %>%
   summarise(max_ub_temp = max(ub_temp, na.rm = TRUE), .groups = "drop")
+```
+
+Getting Min and Max values by accumulation and ablation season
+
+```{r}
+mutate( # Add `snow_phase` before summarizing
+    snow_phase = case_when(
+      (zone == "PSZ" & day >= as.Date("2024-05-06")) ~ "ablation",
+      (zone == "TSZ" & day >= as.Date("2024-04-06")) ~ "ablation",
+      TRUE ~ "accumulation"
+    )
+  ) %>%
+```
+
+```{r}
+#accumulation mean vs ablation mean for char patterns
+accu_abla_charpattern <- full_hourly_gb %>%
+  mutate( # Add `snow_phase` before summarizing
+    snow_phase = case_when(
+      (zone == "PSZ" & day >= as.Date("2024-05-06")) ~ "ablation",
+      (zone == "TSZ" & day >= as.Date("2024-04-06")) ~ "ablation",
+      TRUE ~ "accumulation"
+    )
+  ) %>%
+  filter(phase == "day") %>%
+  group_by(snow_phase, zone) %>%
+  summarize(north_temp = mean(north_temp, na.rm = TRUE),
+            south_temp = mean(south_temp, na.rm = TRUE),
+            charred_temp = mean(charred_temp, na.rm = TRUE),
+            uncharred_temp = mean(uncharred_temp, na.rm = TRUE),
+            .groups = "drop")
+```
+
+```{r}
+#accumulation vs ablation mean temps for north and south
+accu_abla_ns <- full_15min_ns %>%
+  mutate(
+    zone = case_when(
+      zone == "transitional" ~ "TSZ",
+      zone == "persistent" ~ "PSZ",
+      TRUE ~ zone # Keep other values unchanged
+    )
+  ) %>%
+  mutate( # Add `snow_phase` before summarizing
+    snow_phase = case_when(
+      (zone == "PSZ" & day >= as.Date("2024-05-06")) ~ "ablation",
+      (zone == "TSZ" & day >= as.Date("2024-04-06")) ~ "ablation",
+      TRUE ~ "accumulation"
+    )
+  ) %>%
+  filter(phase == "day") %>%
+  group_by(zone) %>%
+  summarize(north_temp = mean(north_temp, na.rm = TRUE), south_temp = mean(south_temp, na.rm = TRUE), ns_avg_temp = mean(ns_avg_temp, na.rm = TRUE))
+
+accu_abla_ns_combined <- full_15min_ns %>%
+  mutate(
+    zone = case_when(
+      zone == "transitional" ~ "TSZ",
+      zone == "persistent" ~ "PSZ",
+      TRUE ~ zone # Keep other values unchanged
+    )
+  ) %>%
+  mutate( # Add `snow_phase` before summarizing
+    snow_phase = case_when(
+      (zone == "PSZ" & day >= as.Date("2024-05-06")) ~ "ablation",
+      (zone == "TSZ" & day >= as.Date("2024-04-06")) ~ "ablation",
+      TRUE ~ "accumulation"
+    )
+  ) %>%
+  filter(phase == "day") %>%
+  #not filtering by burn status
+  group_by(snow_phase, zone) %>%
+  summarize(north_temp = mean(north_temp, na.rm = TRUE), south_temp = mean(south_temp, na.rm = TRUE), ns_avg_temp = mean(ns_avg_temp, na.rm = TRUE))
 ```
