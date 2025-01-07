@@ -39,20 +39,19 @@ Tree temp data
 ```{r}
 #calling in tree temp data from n-drive
 ## burned
-pers_b_aspects <- read_excel("nsf/105E_pers_burned/105E_pers_b_aspects.xlsx") %>%
+pers_b_aspects <- read_csv("nsf/105E_pers_burned/105E_pers_b_aspects.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST'))
 
-trans_b_aspects <- read_excel("nsf/105E_trans_burned/105E_trans_b_aspects.xlsx") %>%
+trans_b_aspects <- read_csv("nsf/105E_trans_burned/105E_trans_b_aspects.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST'))
 
-##unburned
-pers_ub_aspects <- read_excel("nsf/105E_pers_unburned/105E_pers_ub_aspects.xlsx") %>%
+pers_ub_aspects <- read_csv("nsf/105E_pers_unburned/105E_pers_ub_aspects.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST'))
 
-trans_ub_aspects <- read_excel("nsf/105E_trans_unburned/105E_trans_ub_aspects.xlsx") %>%
+trans_ub_aspects <- read_csv("nsf/105E_trans_unburned/105E_trans_ub_aspects.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST'))
 ```
@@ -85,41 +84,47 @@ persub_wx_15min_r <- read_csv('nsf/pers_unburned/pers_unburned_wx_15min_r.csv') 
 filtered_pers_b_aspects <- pers_b_aspects %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
   filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
-         datetime <= as.POSIXct("2024-05-24 00:00:00", tz = "MST"))
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST"))
 
 filtered_pers_ub_aspects <- pers_ub_aspects %>%
  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
   filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
-         datetime <= as.POSIXct("2024-05-24 00:00:00", tz = "MST"))
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST"))
 
 filtered_trans_b_aspects <- trans_b_aspects %>%
  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
   filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
-         datetime <= as.POSIXct("2024-05-24 00:00:00", tz = "MST"))
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST"))
 
 filtered_trans_ub_aspects <- trans_ub_aspects %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
   filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
-         datetime <= as.POSIXct("2024-05-24 00:00:00", tz = "MST"))
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST"))
 ```
 
 ```{r}
 #setting consistent timeframe for weather data
 #filtered weather dataframes
-filtered_persb_wx_15min <- persb_wx_15min %>%
-  filter(datetime >= start_time & datetime <= end_time) %>%
-  #removed UTM column
-  select(-TIMESTAMP)
+filtered_persb_wx_hourly <- persb_wx_hourly_r %>%
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST"))
 
-filtered_persub_wx_15min <- persub_wx_15min %>%
+filtered_persub_wx_15min <- persub_wx_15min_r %>%
   select(datetime, everything()) %>%
-  filter(datetime >= start_time & datetime <= end_time)
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST"))
   
-filtered_transb_wx_15min <- transb_wx_15min %>%
-  filter(datetime >= start_time & datetime <= end_time)
+filtered_transb_wx_15min <- transb_wx_15min_r %>%
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST"))
 
-filtered_transun_wx_15min <- transub_wx_15min %>%
-  filter(datetime >= start_time & datetime <= end_time)
+filtered_transun_wx_15min <- transub_wx_15min_r %>%
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST"))
 ```
 
 # Tree Temp Comparison
@@ -136,7 +141,11 @@ filtered_pers_b_aspects <- filtered_pers_b_aspects %>%
   mutate(zone = "PSZ") %>%
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
          month = as.numeric(format(datetime, "%m"))) %>%
-  select(datetime, day, month, zone, burn_status, sensor_id, tree_name, everything()) %>%
+  mutate(snow_phase = case_when(
+      day >= as.Date("2024-05-06") ~ "ablation",
+      TRUE ~ "accumulation"
+    )) %>%
+  select(datetime, day, month, zone, snow_phase, burn_status, sensor_id, tree_name, everything()) %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST"))
 
 filtered_pers_ub_aspects <- filtered_pers_ub_aspects %>%
@@ -148,7 +157,11 @@ filtered_pers_ub_aspects <- filtered_pers_ub_aspects %>%
   mutate(zone = "PSZ") %>%
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
          month = as.numeric(format(datetime, "%m"))) %>%
-  select(datetime, day, month, zone, burn_status, sensor_id, tree_name, everything()) %>%
+  mutate(snow_phase = case_when(
+      day >= as.Date("2024-05-06") ~ "ablation",
+      TRUE ~ "accumulation"
+    )) %>%
+  select(datetime, day, month, zone, snow_phase, burn_status, sensor_id, tree_name, everything()) %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST"))
 
 filtered_trans_b_aspects <- filtered_trans_b_aspects %>%
@@ -161,7 +174,11 @@ filtered_trans_b_aspects <- filtered_trans_b_aspects %>%
   mutate(zone = "TSZ") %>%
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
          month = as.numeric(format(datetime, "%m"))) %>%
-  select(datetime, day, month, zone, burn_status, sensor_id, tree_name, everything()) %>%
+  mutate(snow_phase = case_when(
+      day >= as.Date("2024-04-06") ~ "ablation",
+      TRUE ~ "accumulation"
+    )) %>%
+  select(datetime, day, month, zone, snow_phase, burn_status, sensor_id, tree_name, everything()) %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST"))
 
 filtered_trans_ub_aspects <- filtered_trans_ub_aspects %>%
@@ -172,6 +189,11 @@ filtered_trans_ub_aspects <- filtered_trans_ub_aspects %>%
   mutate(zone = "TSZ") %>%
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
          month = as.numeric(format(datetime, "%m"))) %>%
+  mutate(snow_phase = case_when(
+      day >= as.Date("2024-05-06") ~ "ablation",
+      TRUE ~ "accumulation"
+    )) %>%
+  select(datetime, day, month, zone, snow_phase, burn_status, sensor_id, tree_name, everything()) %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST"))
 ```
 
@@ -571,13 +593,10 @@ write_csv(full_ns_comparison_data, "nsf/treetemp_data/full_ns_comparison_data.cs
 ```{r}
 #creating a combined new dataframe from original dataframes with individual tree temps - May not want a full combined dataset!
 full_burned_combined_data <- filtered_pers_b_aspects %>%
-  full_join(filtered_trans_b_aspects) %>%
-  #issue with time parsing of trans_b so we need to start on 00:15:00
- filter(datetime >= "2024-02-02 00:15:00")
+  full_join(filtered_trans_b_aspects)
 
 full_unburned_combined_data <- filtered_pers_ub_aspects %>%
-  full_join(filtered_trans_ub_aspects) %>%
-  filter(datetime >= "2024-02-02 00:15:00")
+  full_join(filtered_trans_ub_aspects)
 ```
 
 Combined Full, Filtered Aspect/temp dataframes
@@ -601,19 +620,19 @@ full_gb_data <- full_burned_combined_data %>%
   filter(burn_status == "green burn") %>%
   filter(!(tree_name == "gb_w")) %>%
   #getting mean temperature of all trees, instead of having individual trees identified
-  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  group_by(datetime, day, month, aspect, zone, snow_phase, burn_status) %>%
   # Calculate the mean temperature for each aspect
   summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop')
 
 final_gb_temps <- full_gb_data%>%
-  group_by(datetime, day, month, burn_status, zone) %>%
+  group_by(datetime, day, month, burn_status, zone, snow_phase) %>%
   pivot_wider(names_from = aspect, values_from = mean_temp) %>%
   rename(north_temp = north, south_temp = south, charred_temp = charred, uncharred_temp = uncharred) %>%
   summarize(north_temp, south_temp, charred_temp, uncharred_temp)
 
 final_hourly_gb_temps <-final_gb_temps %>%
   mutate(datetime_hour = floor_date(datetime, unit = "hour")) %>%  # Create an hourly datetime column
-  group_by(datetime_hour, day, month, zone, burn_status) %>%  # Group by the hourly datetime
+  group_by(datetime_hour, day, month, zone, snow_phase, burn_status) %>%  # Group by the hourly datetime
   #mean_hourly_treetemp is the mean of all the db/gb/live trees in the dataframe averaged by burn_status on an hourly timestep
   summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), charred_temp = mean(charred_temp), uncharred_temp = mean(uncharred_temp), ns_avg_temp = ((north_temp + south_temp)/2), cuc_avg_temp = ((charred_temp + uncharred_temp)/2), sc_avg_temp = ((south_temp + charred_temp)/2), suc_avg_temp = ((south_temp + uncharred_temp)/2), nc_avg_temp = ((north_temp + charred_temp)/2), nuc_avg_temp = ((north_temp + uncharred_temp)/2), ns_temp_diff = (south_temp - north_temp), cuc_temp_diff = (charred_temp - uncharred_temp), sc_temp_diff = (south_temp - charred_temp), suc_temp_diff = (south_temp - uncharred_temp), nc_temp_diff = (north_temp - charred_temp), nuc_temp_diff = (north_temp - uncharred_temp), .groups = 'drop')
 ```
@@ -640,12 +659,12 @@ full_pers_ns_data <- full_burned_combined_data %>%
   #remove gb_w tree, so there is two gb and two db
   filter(!(tree_name == "gb_w")) %>%
   #getting mean temperature of all trees, instead of having individual trees identified
-  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  group_by(datetime, day, month, aspect, zone, snow_phase, burn_status) %>%
   # Calculate the mean temperature for each aspect
   summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop')
 
 final_persb_ns_temps <- full_pers_ns_data %>%
-  group_by(datetime, day, month, burn_status, zone) %>%
+  group_by(datetime, day, month, burn_status, zone, snow_phase) %>%
   pivot_wider(names_from = aspect, values_from = mean_temp) %>%
   rename(north_temp = north, south_temp = south) %>%
   summarize(north_temp, south_temp)
@@ -659,12 +678,12 @@ full_pers_ub_ns_data <- full_unburned_combined_data %>%
   mutate(burn_status = "live") %>%
   filter(zone == "PSZ") %>%
   #getting mean temperature of all trees, instead of having individual trees identified
-  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  group_by(datetime, day, month, aspect, zone, snow_phase, burn_status) %>%
   # Calculate the mean temperature for each aspect
   summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop')
 
 final_pers_ub_ns_temps <- full_pers_ub_ns_data %>%
-  group_by(datetime, day, month, burn_status, zone) %>%
+  group_by(datetime, day, month, burn_status, zone, snow_phase) %>%
   pivot_wider(names_from = aspect, values_from = mean_temp) %>%
   rename(north_temp = north, south_temp = south) %>%
   summarize(north_temp, south_temp)
@@ -685,12 +704,12 @@ full_trans_ns_data <- full_burned_combined_data %>%
   filter(!(aspect %in% c("charred", "uncharred"))) %>%
   filter(zone == "TSZ") %>%
   #getting mean temperature of all trees, instead of having individual trees identified
-  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  group_by(datetime, day, month, aspect, zone, snow_phase, burn_status) %>%
   # Calculate the mean temperature for each aspect
   summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop')
 
 final_transb_ns_temps <- full_trans_ns_data %>%
-  group_by(datetime, day, month, burn_status, zone) %>%
+  group_by(datetime, day, month, burn_status, zone, snow_phase) %>%
   pivot_wider(names_from = aspect, values_from = mean_temp) %>%
   rename(north_temp = north, south_temp = south) %>%
   summarize(north_temp, south_temp)
@@ -704,12 +723,12 @@ full_trans_ub_ns_data <- full_unburned_combined_data %>%
   mutate(burn_status = "live") %>%
   filter(zone == "TSZ") %>%
   #getting mean temperature of all trees, instead of having individual trees identified
-  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  group_by(datetime, day, month, aspect, zone, snow_phase, burn_status) %>%
   # Calculate the mean temperature for each aspect
   summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop')
 
 final_trans_ub_ns_temps <- full_trans_ub_ns_data %>%
-  group_by(datetime, day, month, burn_status, zone) %>%
+  group_by(datetime, day, month, burn_status, zone, snow_phase) %>%
   pivot_wider(names_from = aspect, values_from = mean_temp) %>%
   rename(north_temp = north, south_temp = south) %>%
   summarize(north_temp, south_temp)
@@ -736,14 +755,13 @@ full_pers_gbdb_data <- full_burned_combined_data %>%
   #remove gb_w tree
   filter(!(tree_name == "gb_w")) %>%
   #getting mean temperature of all trees, instead of having individual trees identified
-  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  group_by(datetime, day, month, aspect, zone, snow_phase, burn_status) %>%
   # Calculate the mean temperature for each aspect
   summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop') %>%
-  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
-  filter(datetime <= as.POSIXct("2024-05-23 23:45:00", tz = "MST"))
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST"))
 
 final_pers_gbdb_temps <- full_pers_gbdb_data %>%
-  group_by(datetime, day, month, aspect, zone) %>%
+  group_by(datetime, day, month, aspect, zone, snow_phase) %>%
   pivot_wider(names_from = burn_status, values_from = mean_temp) %>%
   rename(gb_temp = "green burn", db_temp = "dead burn") %>%
   summarize(gb_temp, db_temp) %>%
@@ -758,14 +776,13 @@ full_trans_gbdb_data <- full_burned_combined_data %>%
   filter(!(aspect %in% c("charred", "uncharred"))) %>%
   filter(zone == "TSZ") %>%
   #getting mean temperature of all trees, instead of having individual trees identified
-  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  group_by(datetime, day, month, aspect, zone, snow_phase, burn_status) %>%
   # Calculate the mean temperature for each aspect
   summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop') %>%
-  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
-  filter(datetime <= as.POSIXct("2024-05-23 23:45:00", tz = "MST"))
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST"))
 
 final_trans_gbdb_temps <- full_trans_gbdb_data %>%
-  group_by(datetime, day, month, aspect, zone) %>%
+  group_by(datetime, day, month, aspect, zone, snow_phase) %>%
   pivot_wider(names_from = burn_status, values_from = mean_temp) %>%
   rename(gb_temp = "green burn", db_temp = "dead burn") %>%
   summarize(gb_temp, db_temp)
@@ -779,11 +796,10 @@ full_pers_ub_data <- full_unburned_combined_data %>%
   mutate(burn_status = "live") %>%
   filter(zone == "PSZ") %>%
   #getting mean temperature of all trees, instead of having individual trees identified
-  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  group_by(datetime, day, month, aspect, zone, snow_phase, burn_status) %>%
   # Calculate the mean temperature for each aspect
   summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop') %>%
-  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
-  filter(datetime <= as.POSIXct("2024-05-23 23:45:00", tz = "MST"))
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST"))
 
 final_pers_ub_temps <- full_pers_ub_data %>%
   rename(ub_temp = mean_temp) %>%
@@ -798,11 +814,10 @@ full_trans_ub_data <- full_unburned_combined_data %>%
   mutate(burn_status = "live") %>%
   filter(zone == "TSZ") %>%
   #getting mean temperature of all trees, instead of having individual trees identified
-  group_by(datetime, day, month, aspect, zone, burn_status) %>%
+  group_by(datetime, day, month, aspect, zone, snow_phase, burn_status) %>%
   # Calculate the mean temperature for each aspect
   summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop') %>%
-  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
-  filter(datetime <= as.POSIXct("2024-05-23 23:45:00", tz = "MST"))
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST"))
 
 final_trans_ub_temps <- full_trans_ub_data %>%
   rename(ub_temp = mean_temp) %>%
@@ -826,17 +841,17 @@ final_15min_ns_ub <- final_pers_ub_ns_temps %>%
   #adding in mean temp of north and south temps
   mutate(avg_temp = mean((south_temp + north_temp) / 2)) %>%
   mutate(burn_status = "live") %>%
-  select(datetime, day, month, zone, burn_status, everything())
+  select(datetime, day, month, zone, snow_phase, burn_status, everything())
 ```
 
 ```{r}
 #combining persistent and transitional burnedto create a 15min_burned datatable
 final_15min_ns_b <- final_persb_ns_temps %>%
   full_join(final_transb_ns_temps) %>%
-  group_by(datetime, day, month, zone, burn_status) %>%
+  group_by(datetime, day, month, zone, snow_phase, burn_status) %>%
   #adding in mean temp of north and south temps
   mutate(avg_temp = mean((south_temp + north_temp) / 2)) %>%
-  select(datetime, day, month, zone, burn_status, everything())
+  select(datetime, day, month, zone, snow_phase, burn_status, everything())
 ```
 
 ```{r}
@@ -845,7 +860,7 @@ final_15min_ns_b <- final_persb_ns_temps %>%
 final_hourly_ns_ub <- final_15min_ns_ub %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S")) %>%
   mutate(datetime_hour = floor_date(datetime, unit = "hour")) %>%
-  group_by(datetime_hour, day, month, zone, burn_status) %>%
+  group_by(datetime_hour, day, month, zone, snow_phase, burn_status) %>%
   summarize(north_temp = mean(north_temp, na.rm = TRUE), south_temp = mean(south_temp, na.rm = TRUE), avg_temp = mean(avg_temp, na.rm = TRUE), .groups = 'drop')
 ```
 
@@ -853,7 +868,7 @@ final_hourly_ns_ub <- final_15min_ns_ub %>%
 final_hourly_ns_b <- final_15min_ns_b %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S")) %>%
   mutate(datetime_hour = floor_date(datetime, unit = "hour")) %>%
-  group_by(datetime_hour, day, month, zone, burn_status) %>%
+  group_by(datetime_hour, day, month, zone, snow_phase, burn_status) %>%
   summarize(north_temp = mean(north_temp, na.rm = TRUE), south_temp = mean(south_temp, na.rm = TRUE), avg_temp = mean(avg_temp, na.rm = TRUE), .groups = 'drop')
 ```
 
@@ -878,7 +893,7 @@ final_15min_gbdb <- final_pers_gbdb_temps %>%
   full_join(final_trans_gbdb_temps) %>%
   #adding in mean temp of north and south temps
   mutate(avg_temp = mean((gb_temp + db_temp) / 2)) %>%
-  select(datetime, day, month, zone, everything()) %>%
+  select(datetime, day, month, zone, snow_phase, everything()) %>%
   #mutating the floor_date to fix datetime issue
   mutate(datetime = floor_date(datetime, "15 minutes"))
 
@@ -886,7 +901,7 @@ final_15min_gbdb <- final_pers_gbdb_temps %>%
 final_hourly_gbdb <- final_15min_gbdb %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S")) %>%
   mutate(datetime_hour = floor_date(datetime, unit = "hour")) %>%
-  group_by(datetime_hour, day, month, zone, aspect) %>%
+  group_by(datetime_hour, day, month, zone, snow_phase, aspect) %>%
   summarize(gb_temp = mean(gb_temp, na.rm = TRUE), db_temp = mean(db_temp, na.rm = TRUE), avg_temp = mean(avg_temp, na.rm = TRUE), .groups = 'drop')
 ```
 
@@ -897,7 +912,7 @@ final_15min_gbdb_ub <- final_pers_ub_temps %>%
   #adding in day & month
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
          month = as.numeric(format(datetime, "%m"))) %>%
-  select(datetime, day, month, zone, everything()) %>%
+  select(datetime, day, month, zone, snow_phase, everything()) %>%
   #mutating the floor_date to fix datetime issue
   mutate(datetime = floor_date(datetime, "15 minutes"))
 
@@ -905,7 +920,7 @@ final_15min_gbdb_ub <- final_pers_ub_temps %>%
 final_hourly_gbdb_ub <- final_15min_gbdb_ub %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S")) %>%
   mutate(datetime_hour = floor_date(datetime, unit = "hour")) %>%
-  group_by(datetime_hour, day, month, zone, aspect) %>%
+  group_by(datetime_hour, day, month, zone, snow_phase, aspect) %>%
   summarize(ub_temp = mean(ub_temp, na.rm = TRUE), .groups = 'drop')
 ```
 
@@ -936,7 +951,7 @@ final_15min_gbub <- final_gb_temps %>%
 final_hourly_gbub <- final_15min_gbub %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S")) %>%
   mutate(datetime_hour = floor_date(datetime, unit = "hour")) %>%
-  group_by(datetime_hour, day, month, zone, aspect) %>%
+  group_by(datetime_hour, day, month, zone, snow_phase, aspect) %>%
   summarize(gb_temp = mean(gb_temp, na.rm = TRUE), 
             # Replace ub_temp with the correct column name if needed
             ub_temp = mean(ub_temp, na.rm = TRUE), 
@@ -1101,7 +1116,8 @@ Data Wrangling V2 - with proper solar sunrise/sunset applied
 \*\* Using final full_15min_ns data that is from the end of this rmd! Important to note! Because it has the correct phases on it based on sunrise/sunset
 
 ```{r}
-dtnt_full_15min_ns <- full_15min_ns %>%
+##this dataframe that I am starting from is created below this in the code! At the end of the phase section towards the bottom!
+dtnt_full_15min_ns <- full_15min_ns_dtnt %>%
   pivot_wider(
     names_from = phase,
     values_from = c(north_temp, south_temp))
@@ -1109,9 +1125,9 @@ dtnt_full_15min_ns <- full_15min_ns %>%
 dt_alltemps <- dtnt_full_15min_ns %>%
   select(-c(north_temp_night, south_temp_night)) %>%
   filter(!is.na(north_temp_day) & !is.na(south_temp_day)) %>%
-  select(datetime, day, month, zone, burn_status, north_temp_day, south_temp_day) %>%
+  select(datetime, day, month, zone, snow_phase, burn_status, north_temp_day, south_temp_day) %>%
   rename(dt_north_temp = "north_temp_day", dt_south_temp = "south_temp_day") %>%
-  group_by(day, month, zone , burn_status) %>%
+  group_by(day, month, zone, snow_phase, burn_status) %>%
   summarize(dt_north_temp = mean(dt_north_temp), dt_south_temp = mean(dt_south_temp))
 
 nt_alltemps <- dtnt_full_15min_ns %>%
@@ -1628,7 +1644,7 @@ t_ub_lon <- -105.587383
 ## use the p_b_lat/long since all of these dates/times are almost identical for sunrise/sunset
 
 # Create a date sequence from February 2nd to May 24th, 2024 for solar exposure
-solex_dates <- seq(as.Date("2024-02-02"), as.Date("2024-05-24"), by = "day")
+solex_dates <- seq(as.Date("2024-02-02"), as.Date("2024-07-01"), by = "day")
 
 # Get solar times for each day
 p_b_solar_times <- getSunlightTimes(date = solex_dates, lat = p_b_lat, lon = p_b_lon, tz = "MST") %>%
@@ -1653,7 +1669,7 @@ filtered_pers_b_aspects_r <- filtered_pers_b_aspects %>%
       datetime < sunrise ~ "night",
       datetime >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  select(datetime, day, month, phase, zone, burn_status, aspect, sensor_id, tree_name, temp, solarNoon, sunrise, sunset, dawn, dusk)
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, aspect, sensor_id, tree_name, temp, solarNoon, sunrise, sunset, dawn, dusk)
 ```
 
 ```{r}
@@ -1666,7 +1682,7 @@ filtered_pers_ub_aspects_r <- filtered_pers_ub_aspects %>%
       datetime < sunrise ~ "night",
       datetime >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  select(datetime, day, month, phase, zone, burn_status, aspect, sensor_id, tree_name, temp, solarNoon, sunrise, sunset, dawn, dusk)
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, aspect, sensor_id, tree_name, temp, solarNoon, sunrise, sunset, dawn, dusk)
 ```
 
 ```{r}
@@ -1679,7 +1695,7 @@ filtered_trans_b_aspects_r <- filtered_trans_b_aspects %>%
       datetime < sunrise ~ "night",
       datetime >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  select(datetime, day, month, phase, zone, burn_status, aspect, sensor_id, tree_name, temp, solarNoon, sunrise, sunset, dawn, dusk)
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, aspect, sensor_id, tree_name, temp, solarNoon, sunrise, sunset, dawn, dusk)
 ```
 
 ```{r}
@@ -1692,7 +1708,7 @@ filtered_trans_ub_aspects_r <- filtered_trans_ub_aspects %>%
       datetime < sunrise ~ "night",
       datetime >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  select(datetime, day, month, phase, zone, burn_status, aspect, sensor_id, tree_name, temp, solarNoon, sunrise, sunset, dawn, dusk)
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, aspect, sensor_id, tree_name, temp, solarNoon, sunrise, sunset, dawn, dusk)
 ```
 
 ```{r}
@@ -1715,8 +1731,8 @@ full_15min_ns_dtnt <- full_15min_ns %>%
     day = as.Date.POSIXct(datetime, tz = "MST"),
     datetime = with_tz(datetime, tzone = "MST")
   ) %>%
-  filter(datetime >= as.POSIXct("2024-02-02 00:15:00", tz = "MST") & 
-         datetime <= as.POSIXct("2024-05-23 23:45:00", tz = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST")) %>%
   inner_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
   mutate(
@@ -1725,7 +1741,7 @@ full_15min_ns_dtnt <- full_15min_ns %>%
       datetime < sunrise ~ "night",
       datetime >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  select(datetime, day, month, phase, zone, burn_status, north_temp, south_temp, ns_avg_temp, ns_temp_diff, sunrise, sunset, solarNoon)
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, north_temp, south_temp, ns_avg_temp, ns_temp_diff, sunrise, sunset, solarNoon)
 ```
 
 ```{r}
@@ -1736,10 +1752,6 @@ full_hourly_ns_dtnt <- full_hourly_ns %>%
     day = as.Date.POSIXct(datetime_hour, tz = "MST"),
     datetime = with_tz(datetime_hour, tzone = "MST")
   ) %>%
-   #filtering for the correct timeframe for both zones
- filter(datetime_hour >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
-         datetime_hour <= as.POSIXct("2024-05-23 23:00:00", tz = "MST")) %>%
-  #adding in solar exposure dataframe with sunrise/sunset times
   left_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
   mutate(
@@ -1748,7 +1760,7 @@ full_hourly_ns_dtnt <- full_hourly_ns %>%
       datetime_hour < sunrise ~ "night",
       datetime_hour >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  select(datetime_hour, day, month, phase, zone, burn_status, north_temp, south_temp, ns_avg_temp, ns_temp_diff, sunrise, sunset, solarNoon)
+  select(datetime_hour, day, month, phase, zone, snow_phase, burn_status, north_temp, south_temp, ns_avg_temp, ns_temp_diff, sunrise, sunset, solarNoon)
 ```
 
 ```{r}
@@ -1760,10 +1772,6 @@ full_15min_gbdbub_dtnt <- full_15min_gbdbub %>%
     day = as.Date.POSIXct(datetime, tz = "MST"),
     datetime = with_tz(datetime, tzone = "MST")
   ) %>%
-   #filtering for the correct timeframe for both zones
- filter(datetime >= as.POSIXct("2024-02-02 00:15:00", tz = "MST") & 
-         datetime <= as.POSIXct("2024-05-23 23:45:00", tz = "MST")) %>%
-  #adding in solar exposure dataframe with sunrise/sunset times
   left_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
   mutate(
@@ -1772,7 +1780,7 @@ full_15min_gbdbub_dtnt <- full_15min_gbdbub %>%
       datetime < sunrise ~ "night",
       datetime >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp, gbdb_avg_temp, gbub_avg_temp, dbub_avg_temp, gbdb_temp_diff, gbub_temp_diff, dbub_temp_diff, sunrise, sunset, solarNoon)
+  select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp, gbdb_avg_temp, gbub_avg_temp, dbub_avg_temp, gbdb_temp_diff, gbub_temp_diff, dbub_temp_diff, sunrise, sunset, solarNoon)
 ```
 
 ```{r}
@@ -1783,9 +1791,6 @@ full_hourly_gbdbub_dtnt <- full_hourly_gbdbub %>%
     day = as.Date.POSIXct(datetime_hour, tz = "MST"),
     datetime = with_tz(datetime_hour, tzone = "MST")
   ) %>%
-   #filtering for the correct timeframe for both zones
- filter(datetime_hour >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
-         datetime_hour <= as.POSIXct("2024-05-23 23:00:00", tz = "MST")) %>%
   #adding in solar exposure dataframe with sunrise/sunset times
   left_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
@@ -1795,7 +1800,7 @@ full_hourly_gbdbub_dtnt <- full_hourly_gbdbub %>%
       datetime_hour < sunrise ~ "night",
       datetime_hour >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  select(datetime_hour, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp, gbdb_avg_temp, gbub_avg_temp, dbub_avg_temp, gbdb_temp_diff, gbub_temp_diff, dbub_temp_diff, sunrise, sunset, solarNoon)
+  select(datetime_hour, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp, gbdb_avg_temp, gbub_avg_temp, dbub_avg_temp, gbdb_temp_diff, gbub_temp_diff, dbub_temp_diff, sunrise, sunset, solarNoon)
 ```
 
 ```{r}
@@ -1808,9 +1813,6 @@ full_hourly_gb_dtnt <- final_hourly_gb_temps %>%
     day = as.Date.POSIXct(datetime_hour, tz = "MST"),
     datetime = with_tz(datetime_hour, tzone = "MST")
   ) %>%
-   #filtering for the correct timeframe for both zones
- filter(datetime_hour >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
-         datetime_hour <= as.POSIXct("2024-05-23 23:00:00", tz = "MST")) %>%
   #adding in solar exposure dataframe with sunrise/sunset times
   left_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
@@ -1820,7 +1822,7 @@ full_hourly_gb_dtnt <- final_hourly_gb_temps %>%
       datetime_hour < sunrise ~ "night",
       datetime_hour >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  select(datetime_hour, day, month, phase, zone, burn_status, north_temp, south_temp, charred_temp, uncharred_temp, ns_avg_temp, cuc_avg_temp, sc_avg_temp, suc_avg_temp, nc_avg_temp, nuc_avg_temp, ns_temp_diff, cuc_temp_diff, sc_temp_diff, suc_temp_diff, nc_temp_diff, nuc_temp_diff, sunrise, sunset, solarNoon)
+  select(datetime_hour, day, month, phase, zone, snow_phase, burn_status, north_temp, south_temp, charred_temp, uncharred_temp, ns_avg_temp, cuc_avg_temp, sc_avg_temp, suc_avg_temp, nc_avg_temp, nuc_avg_temp, ns_temp_diff, cuc_temp_diff, sc_temp_diff, suc_temp_diff, nc_temp_diff, nuc_temp_diff, sunrise, sunset, solarNoon)
 ```
 
 ```{r}
@@ -1833,13 +1835,11 @@ Exporting final dataframes
 ```{r}
 write.csv(full_15min_ns_dtnt, "nsf/treetemp_data/full_15min_ns.csv")
 
-write.csv(full_hourly_ns_dtnt, "nsf/treetemp_data/full_hourly_ns.csv")
+#write.csv(full_hourly_ns_dtnt, "nsf/treetemp_data/full_hourly_ns.csv")
 
 write.csv(full_15min_gbdbub_dtnt, "nsf/treetemp_data/full_15min_gbdbub.csv")
 
-write.csv(full_hourly_gbdbub_dtnt, "nsf/treetemp_data/full_hourly_gbdbub.csv")
+#write.csv(full_hourly_gbdbub_dtnt, "nsf/treetemp_data/full_hourly_gbdbub.csv")
 
 write.csv(full_hourly_gb_dtnt, "nsf/treetemp_data/full_hourly_gb.csv")
 ```
-
-### Weather Station Data with Phase
