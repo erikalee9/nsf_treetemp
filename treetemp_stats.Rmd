@@ -2112,17 +2112,17 @@ print(t_t_test_s_ub_daynight_temps)
 GB Trees
 
 ```{r}
-p_accum_gb_data <- full_hourly_gb %>%
-  filter(zone == "PSZ", snow_phase == "accumulation")
+p_accum_gb_data <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "accumulation", burn_status == "green burn")
 
-p_abla_gb_data <- full_hourly_gb %>%
-  filter(zone == "PSZ", snow_phase == "ablation")
+p_abla_gb_data <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "ablation", burn_status == "green burn")
 
-t_accum_gb_data <- full_hourly_gb %>%
-  filter(zone == "TSZ", snow_phase == "accumulation")
+t_accum_gb_data <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "accumulation", burn_status == "green burn")
 
-t_abla_gb_data <- full_hourly_gb %>%
-  filter(zone == "TSZ", snow_phase == "ablation")
+t_abla_gb_data <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "ablation", burn_status == "green burn")
 ```
 
 ```{r}
@@ -2162,10 +2162,10 @@ p_accum_db_data <- full_15min_ns %>%
 p_abla_db_data <- full_15min_ns %>%
   filter(zone == "PSZ", snow_phase == "ablation", burn_status == "dead burn")
 
-t_accum_db_data <- full_hourly_gb %>%
+t_accum_db_data <- full_15min_ns %>%
   filter(zone == "TSZ", snow_phase == "accumulation", burn_status == "dead burn")
 
-t_abla_db_data <- full_hourly_gb %>%
+t_abla_db_data <- full_15min_ns %>%
   filter(zone == "TSZ", snow_phase == "ablation",  burn_status == "dead burn")
 ```
 
@@ -2177,7 +2177,7 @@ print(p_ttest_accum_db_s_n_results)
 ```
 
 ```{r}
-#persistent accumulation - N/S
+#persistent ablation- N/S
 p_ttest_abla_db_s_n_results <- t.test(p_abla_db_data $south_temp, p_abla_db_data$north_temp)
 
 print(p_ttest_abla_db_s_n_results)
@@ -2195,6 +2195,336 @@ print(t_ttest_accum_db_s_n_results)
 t_ttest_abla_db_s_n_results <- t.test(t_abla_db_data $south_temp, t_abla_db_data$north_temp)
 
 print(t_ttest_abla_db_s_n_results)
+```
+
+Live - N/S
+
+```{r}
+p_accum_live_data <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "accumulation", burn_status == "live")
+
+p_abla_live_data <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "ablation", burn_status == "live")
+
+t_accum_live_data <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "accumulation", burn_status == "live")
+
+t_abla_live_data <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "ablation",  burn_status == "live")
+```
+
+```{r}
+#persistent accumulation - N/S
+p_ttest_accum_live_s_n_results <- t.test(p_accum_live_data $south_temp, p_accum_live_data$north_temp)
+
+print(p_ttest_accum_live_s_n_results)
+```
+
+```{r}
+#persistent ablation - N/S
+p_ttest_abla_live_s_n_results <- t.test(p_abla_live_data $south_temp, p_abla_live_data$north_temp)
+
+print(p_ttest_abla_live_s_n_results)
+```
+
+```{r}
+#transitional accumulation - N/S
+t_ttest_accum_live_s_n_results <- t.test(t_accum_live_data $south_temp, t_accum_live_data$north_temp)
+
+print(t_ttest_accum_live_s_n_results)
+```
+
+```{r}
+#transitional ablation - N/S
+t_ttest_abla_live_s_n_results <- t.test(t_abla_live_data $south_temp, t_abla_live_data$north_temp)
+
+print(t_ttest_abla_live_s_n_results)
+```
+
+\*\* The above analysis does show somewhat of a pattern that is easier to interpret!
+
+GB vs DB vs Live
+
+```{r}
+p_n_accu_gbdbub <- full_15min_gbdbub %>%
+  filter(zone == "PSZ", aspect == "north", snow_phase == "accumulation")
+
+p_n_abla_gbdbub <- full_15min_gbdbub %>%
+  filter(zone == "PSZ", aspect == "north", snow_phase == "ablation")
+
+t_n_accu_gbdbub <- full_15min_gbdbub %>%
+  filter(zone == "TSZ", aspect == "north", snow_phase == "accumulation")
+
+t_n_abla_gbdbub <- full_15min_gbdbub %>%
+  filter(zone == "TSZ", aspect == "north", snow_phase == "ablation")
+```
+
+```{r}
+p_s_accu_gbdbub <- full_15min_gbdbub %>%
+  filter(zone == "PSZ", aspect == "south", snow_phase == "accumulation")
+
+p_s_abla_gbdbub <- full_15min_gbdbub %>%
+  filter(zone == "PSZ", aspect == "south", snow_phase == "ablation")
+
+t_s_accu_gbdbub <- full_15min_gbdbub %>%
+  filter(zone == "TSZ", aspect == "south", snow_phase == "accumulation")
+
+t_s_abla_gbdbub <- full_15min_gbdbub %>%
+  filter(zone == "TSZ", aspect == "south", snow_phase == "ablation")
+```
+
+GB vs DB - N
+
+```{r}
+#persistent accumulation - GB vs DB
+p_ttest_accum_gb_db_n_results <- t.test(p_n_accu_gbdbub $gb_temp, p_n_accu_gbdbub$db_temp)
+
+print(p_ttest_accum_gb_db_n_results)
+
+p_ttest_abla_gb_db_n_results <- t.test(p_n_abla_gbdbub $gb_temp, p_n_abla_gbdbub$db_temp)
+
+print(p_ttest_abla_gb_db_n_results)
+```
+
+```{r}
+#transitional accumulation - GB vs DB
+t_ttest_accum_gb_db_n_results <- t.test(t_n_accu_gbdbub $gb_temp, t_n_accu_gbdbub$db_temp)
+
+print(t_ttest_accum_gb_db_n_results)
+
+t_ttest_abla_gb_db_n_results <- t.test(t_n_abla_gbdbub $gb_temp, t_n_abla_gbdbub$db_temp)
+
+print(t_ttest_abla_gb_db_n_results)
+```
+
+GB vs DB - S
+
+```{r}
+#persistent accumulation - GB vs DB
+p_ttest_accum_gb_db_s_results <- t.test(p_s_accu_gbdbub $gb_temp, p_s_accu_gbdbub$db_temp)
+
+print(p_ttest_accum_gb_db_s_results)
+
+p_ttest_abla_gb_db_s_results <- t.test(p_s_abla_gbdbub $gb_temp, p_s_abla_gbdbub$db_temp)
+
+print(p_ttest_abla_gb_db_s_results)
+```
+
+```{r}
+#transitional accumulation - GB vs DB
+t_ttest_accum_gb_db_s_results <- t.test(t_s_accu_gbdbub $gb_temp, t_s_accu_gbdbub$db_temp)
+
+print(t_ttest_accum_gb_db_s_results)
+
+t_ttest_abla_gb_db_s_results <- t.test(t_s_abla_gbdbub $gb_temp, t_s_abla_gbdbub$db_temp)
+
+print(t_ttest_abla_gb_db_s_results)
+```
+
+GB vs Live - N
+
+```{r}
+#persistent accumulation - GB vs Live North
+p_ttest_accum_gb_live_n_results <- t.test(p_n_accu_gbdbub $gb_temp, p_n_accu_gbdbub$ub_temp)
+
+print(p_ttest_accum_gb_live_n_results)
+
+p_ttest_abla_gb_live_n_results <- t.test(p_n_abla_gbdbub $gb_temp, p_n_abla_gbdbub$ub_temp)
+
+print(p_ttest_abla_gb_live_n_results)
+```
+
+```{r}
+#transitional accumulation - GB vs Live North
+t_ttest_accum_gb_live_n_results <- t.test(t_n_accu_gbdbub $gb_temp, t_n_accu_gbdbub$ub_temp)
+
+print(t_ttest_accum_gb_live_n_results)
+
+t_ttest_abla_gb_live_n_results <- t.test(t_n_abla_gbdbub $gb_temp, t_n_abla_gbdbub$ub_temp)
+
+print(t_ttest_abla_gb_live_n_results)
+```
+
+GB vs Live - S
+
+```{r}
+#persistent accumulation - GB vs Live South
+p_ttest_accum_gb_live_s_results <- t.test(p_s_accu_gbdbub $gb_temp, p_s_accu_gbdbub$ub_temp)
+
+print(p_ttest_accum_gb_live_s_results)
+
+p_ttest_abla_gb_live_s_results <- t.test(p_s_abla_gbdbub $gb_temp, p_s_abla_gbdbub$ub_temp)
+
+print(p_ttest_abla_gb_live_s_results)
+```
+
+```{r}
+#transitional accumulation - GB vs Live South
+t_ttest_accum_gb_live_s_results <- t.test(t_s_accu_gbdbub $gb_temp, t_s_accu_gbdbub$ub_temp)
+
+print(t_ttest_accum_gb_live_s_results)
+
+t_ttest_abla_gb_live_s_results <- t.test(t_s_abla_gbdbub $gb_temp, t_s_abla_gbdbub$ub_temp)
+
+print(t_ttest_abla_gb_live_s_results)
+```
+
+DB vs Live - N
+
+```{r}
+#persistent accumulation - DB vs Live North
+p_ttest_accum_db_live_n_results <- t.test(p_n_accu_gbdbub $db_temp, p_n_accu_gbdbub$ub_temp)
+
+print(p_ttest_accum_db_live_n_results)
+
+p_ttest_abla_db_live_n_results <- t.test(p_n_abla_gbdbub $db_temp, p_n_abla_gbdbub$ub_temp)
+
+print(p_ttest_abla_db_live_n_results)
+```
+
+```{r}
+#transitional accumulation - DB vs Live North
+t_ttest_accum_db_live_n_results <- t.test(t_n_accu_gbdbub $db_temp, t_n_accu_gbdbub$ub_temp)
+
+print(t_ttest_accum_db_live_n_results)
+
+t_ttest_abla_db_live_n_results <- t.test(t_n_abla_gbdbub $db_temp, t_n_abla_gbdbub$ub_temp)
+
+print(t_ttest_abla_db_live_n_results)
+```
+
+DB vs Live - S
+
+```{r}
+#persistent accumulation - DB vs Live South
+p_ttest_accum_db_live_s_results <- t.test(p_s_accu_gbdbub $db_temp, p_s_accu_gbdbub$ub_temp)
+
+print(p_ttest_accum_db_live_s_results)
+
+p_ttest_abla_db_live_s_results <- t.test(p_s_abla_gbdbub $db_temp, p_s_abla_gbdbub$ub_temp)
+
+print(p_ttest_abla_db_live_s_results)
+```
+
+```{r}
+#transitional accumulation - DB vs Live South
+t_ttest_accum_db_live_s_results <- t.test(t_s_accu_gbdbub $db_temp, t_s_accu_gbdbub$ub_temp)
+
+print(t_ttest_accum_db_live_s_results)
+
+t_ttest_abla_db_live_s_results <- t.test(t_s_abla_gbdbub $db_temp, t_s_abla_gbdbub$ub_temp)
+
+print(t_ttest_abla_db_live_s_results)
+```
+
+GB - South vs Charred/Uncharred
+
+```{r}
+p_accu_gb <- full_hourly_gb %>%
+  filter(zone == "PSZ", snow_phase == "accumulation")
+
+p_abla_gb <- full_hourly_gb %>%
+  filter(zone == "PSZ", snow_phase == "ablation")
+
+t_accu_gb <- full_hourly_gb %>%
+  filter(zone == "TSZ", snow_phase == "accumulation")
+
+t_abla_gb <- full_hourly_gb %>%
+  filter(zone == "TSZ", snow_phase == "ablation")
+```
+
+```{r}
+#persistent accumulation - S/C
+p_ttest_accum_gb_s_c_results <- t.test(p_accu_gb$south_temp, p_accu_gb$charred_temp)
+
+print(p_ttest_accum_gb_s_c_results)
+
+p_ttest_abla_gb_s_c_results <- t.test(p_abla_gb$south_temp, p_abla_gb$charred_temp)
+
+print(p_ttest_abla_gb_s_c_results)
+```
+
+```{r}
+#transitional accumulation - S/C
+t_ttest_accum_gb_s_c_results <- t.test(t_accu_gb$south_temp, t_accu_gb$charred_temp)
+
+print(t_ttest_accum_gb_s_c_results)
+
+t_ttest_abla_gb_s_c_results <- t.test(t_abla_gb$south_temp, t_abla_gb$charred_temp)
+
+print(t_ttest_abla_gb_s_c_results)
+```
+
+GB- South vs Uncharred
+
+```{r}
+#persistent accumulation - S/UC
+p_ttest_accum_gb_s_uc_results <- t.test(p_accu_gb$south_temp, p_accu_gb$uncharred_temp)
+
+print(p_ttest_accum_gb_s_uc_results)
+
+p_ttest_abla_gb_s_uc_results <- t.test(p_abla_gb$south_temp, p_abla_gb$uncharred_temp)
+
+print(p_ttest_abla_gb_s_uc_results)
+```
+
+```{r}
+#transitional accumulation - S/UC
+t_ttest_accum_gb_s_uc_results <- t.test(t_accu_gb$south_temp, t_accu_gb$uncharred_temp)
+
+print(t_ttest_accum_gb_s_uc_results)
+
+t_ttest_abla_gb_s_uc_results <- t.test(t_abla_gb$south_temp, t_abla_gb$uncharred_temp)
+
+print(t_ttest_abla_gb_s_uc_results)
+```
+
+GB- North vs Charred
+
+```{r}
+#persistent accumulation - N/C
+p_ttest_accum_gb_n_c_results <- t.test(p_accu_gb$north_temp, p_accu_gb$charred_temp)
+
+print(p_ttest_accum_gb_n_c_results)
+
+p_ttest_abla_gb_n_c_results <- t.test(p_abla_gb$north_temp, p_abla_gb$charred_temp)
+
+print(p_ttest_abla_gb_n_c_results)
+```
+
+```{r}
+#transitional accumulation - N/C
+t_ttest_accum_gb_n_c_results <- t.test(t_accu_gb$north_temp, t_accu_gb$charred_temp)
+
+print(t_ttest_accum_gb_n_c_results)
+
+t_ttest_abla_gb_n_c_results <- t.test(t_abla_gb$north_temp, t_abla_gb$charred_temp)
+
+print(t_ttest_abla_gb_n_c_results)
+```
+
+GB- North vs Uncharred
+
+```{r}
+#persistent accumulation - N/UC
+p_ttest_accum_gb_n_uc_results <- t.test(p_accu_gb$north_temp, p_accu_gb$uncharred_temp)
+
+print(p_ttest_accum_gb_n_uc_results)
+
+p_ttest_abla_gb_n_uc_results <- t.test(p_abla_gb$north_temp, p_abla_gb$uncharred_temp)
+
+print(p_ttest_abla_gb_n_uc_results)
+```
+
+```{r}
+#transitional accumulation - N/UC
+t_ttest_accum_gb_n_uc_results <- t.test(t_accu_gb$north_temp, t_accu_gb$uncharred_temp)
+
+print(t_ttest_accum_gb_n_uc_results)
+
+t_ttest_abla_gb_n_uc_results <- t.test(t_abla_gb$north_temp, t_abla_gb$uncharred_temp)
+
+print(t_ttest_abla_gb_n_uc_results)
 ```
 
 # Calculating Min and Max values & Day/Night comparison values for tables in thesis
