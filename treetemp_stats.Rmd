@@ -78,20 +78,20 @@ full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
                                datetime = force_tz(datetime, tz = 'MST')) %>%
   select(-1)
 
-full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
-   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
-  select(-1)
+#full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
+   #mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                              # datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+#  select(-1)
 
 full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST'))  %>%
   select(-1)
 
-full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv") %>%
-  mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
-  select(-1)
+#full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv") %>%
+ # mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                          #     datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+  #select(-1)
 
 full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
@@ -778,24 +778,24 @@ Filtering dataframes for the purpose of temp comparisons
 
 ```{r}
 filtered_pers_b_aspects <- pers_b_aspects %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00") %>%
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00") %>%
   filter(tree_name != "gb_w") %>%
   mutate(snow_phase = if_else(datetime >= as.Date("2024-05-06"), "ablation", "accumulation"))
 
 filtered_pers_ub_aspects <- pers_ub_aspects %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00")  %>%
+   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00") %>%
   mutate(snow_phase = if_else(datetime >= as.Date("2024-05-06"), "ablation", "accumulation"))
 
 filtered_trans_b_aspects <- trans_b_aspects %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00")  %>%
+   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00") %>%
   mutate(snow_phase = if_else(datetime >= as.Date("2024-04-06"), "ablation", "accumulation"))
 
 filtered_trans_ub_aspects <- trans_ub_aspects %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S"))) %>%
-  filter(datetime >= "2024-02-02 00:15:00" & datetime <= "2024-05-24 00:00:00") %>%
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00") %>%
   mutate(snow_phase = if_else(datetime >= as.Date("2024-04-06"), "ablation", "accumulation"))
 ```
 
@@ -1172,10 +1172,10 @@ print(t_test_may_ub_s_n_result)
 ```{r}
 #setting up dataframes
 p_final_hourly_gb_temps <- full_hourly_gb %>%
-  filter (zone == "PSZ")
+  filter(zone == "PSZ")
 
 t_final_hourly_gb_temps <- full_hourly_gb %>%
-  filter (zone == "TSZ")
+  filter(zone == "TSZ")
 
 #N/S
 p_t_test_hourly_gb_s_n_result <- t.test(p_final_hourly_gb_temps$south_temp, p_final_hourly_gb_temps$north_temp)
@@ -2107,6 +2107,34 @@ t_t_test_s_ub_daynight_temps <- t.test(t_s_ub_daynight_temps$day_temp, t_s_ub_da
 print(t_t_test_s_ub_daynight_temps)
 ```
 
+### Ablation vs Accumulation T-Test
+
+GB Trees
+
+```{r}
+p_accum_gb_data <- full_hourly_gb %>%
+  filter(zone == "PSZ", snow_phase == "accumulation")
+
+p_abla_gb_data <- full_hourly_gb %>%
+  filter(zone == "PSZ", snow_phase == "ablation")
+
+t_accum_gb_data <- full_hourly_gb %>%
+  filter(zone == "TSZ", snow_phase == "accumulation")
+
+t_abla_gb_data <- full_hourly_gb %>%
+  filter(zone == "TSZ", snow_phase == "ablation")
+```
+
+```{r}
+#persistent monthly - N/S
+p_ttest_accum_gb_s_n_results <- t.test(p_accum_gb_data $south_temp, p_accum_gb_data$north_temp)
+
+print(p_ttest_accum_gb_s_n_results)
+```
+
+```{}
+```
+
 # Calculating Min and Max values & Day/Night comparison values for tables in thesis
 
 ```{r}
@@ -2267,3 +2295,5 @@ accu_abla_ns_combined <- full_15min_ns %>%
   group_by(snow_phase, zone) %>%
   summarize(north_temp = mean(north_temp, na.rm = TRUE), south_temp = mean(south_temp, na.rm = TRUE), ns_avg_temp = mean(ns_avg_temp, na.rm = TRUE))
 ```
+
+## Ablation vs Accumulation T-Test
