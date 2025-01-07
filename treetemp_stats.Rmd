@@ -2107,7 +2107,7 @@ t_t_test_s_ub_daynight_temps <- t.test(t_s_ub_daynight_temps$day_temp, t_s_ub_da
 print(t_t_test_s_ub_daynight_temps)
 ```
 
-### Ablation vs Accumulation T-Test
+## Ablation vs Accumulation T-Test
 
 GB Trees
 
@@ -2126,13 +2126,75 @@ t_abla_gb_data <- full_hourly_gb %>%
 ```
 
 ```{r}
-#persistent monthly - N/S
+#persistent accumulation - N/S
 p_ttest_accum_gb_s_n_results <- t.test(p_accum_gb_data $south_temp, p_accum_gb_data$north_temp)
 
 print(p_ttest_accum_gb_s_n_results)
 ```
 
-```{}
+```{r}
+#persistent ablation - N/S
+p_ttest_abla_gb_s_n_results <- t.test(p_abla_gb_data $south_temp, p_abla_gb_data$north_temp)
+
+print(p_ttest_abla_gb_s_n_results)
+```
+
+```{r}
+#transitional accumulation - N/S
+t_ttest_accum_gb_s_n_results <- t.test(t_accum_gb_data $south_temp, t_accum_gb_data$north_temp)
+
+print(t_ttest_accum_gb_s_n_results)
+```
+
+```{r}
+#transitional ablation - N/S
+t_ttest_abla_gb_s_n_results <- t.test(t_abla_gb_data $south_temp, t_abla_gb_data$north_temp)
+
+print(t_ttest_abla_gb_s_n_results)
+```
+
+DB N-S
+
+```{r}
+p_accum_db_data <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "accumulation", burn_status == "dead burn")
+
+p_abla_db_data <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "ablation", burn_status == "dead burn")
+
+t_accum_db_data <- full_hourly_gb %>%
+  filter(zone == "TSZ", snow_phase == "accumulation", burn_status == "dead burn")
+
+t_abla_db_data <- full_hourly_gb %>%
+  filter(zone == "TSZ", snow_phase == "ablation",  burn_status == "dead burn")
+```
+
+```{r}
+#persistent accumulation - N/S
+p_ttest_accum_db_s_n_results <- t.test(p_accum_db_data $south_temp, p_accum_db_data$north_temp)
+
+print(p_ttest_accum_db_s_n_results)
+```
+
+```{r}
+#persistent accumulation - N/S
+p_ttest_abla_db_s_n_results <- t.test(p_abla_db_data $south_temp, p_abla_db_data$north_temp)
+
+print(p_ttest_abla_db_s_n_results)
+```
+
+```{r}
+#transitional accumulation - N/S
+t_ttest_accum_db_s_n_results <- t.test(t_accum_db_data $south_temp, t_accum_db_data$north_temp)
+
+print(t_ttest_accum_db_s_n_results)
+```
+
+```{r}
+#transitional ablation - N/S
+t_ttest_abla_db_s_n_results <- t.test(t_abla_db_data $south_temp, t_abla_db_data$north_temp)
+
+print(t_ttest_abla_db_s_n_results)
 ```
 
 # Calculating Min and Max values & Day/Night comparison values for tables in thesis
