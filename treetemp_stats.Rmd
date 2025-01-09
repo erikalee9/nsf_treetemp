@@ -2527,6 +2527,30 @@ t_ttest_abla_gb_n_uc_results <- t.test(t_abla_gb$north_temp, t_abla_gb$uncharred
 print(t_ttest_abla_gb_n_uc_results)
 ```
 
+GB - Charred vs Uncharred
+
+```{r}
+#persistent accumulation - C/UC
+p_ttest_accum_gb_c_uc_results <- t.test(p_accu_gb$charred_temp, p_accu_gb$uncharred_temp)
+
+print(p_ttest_accum_gb_c_uc_results)
+
+p_ttest_abla_gb_c_uc_results <- t.test(p_abla_gb$charred_temp, p_abla_gb$uncharred_temp)
+
+print(p_ttest_abla_gb_c_uc_results)
+```
+
+```{r}
+#transitional accumulation - C/UC
+t_ttest_accum_gb_c_uc_results <- t.test(t_accu_gb$charred_temp, t_accu_gb$uncharred_temp)
+
+print(t_ttest_accum_gb_c_uc_results)
+
+t_ttest_abla_gb_c_uc_results <- t.test(t_abla_gb$charred_temp, t_abla_gb$uncharred_temp)
+
+print(t_ttest_abla_gb_c_uc_results)
+```
+
 # Calculating Min and Max values & Day/Night comparison values for tables in thesis
 
 ```{r}
