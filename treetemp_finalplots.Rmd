@@ -30,6 +30,11 @@ library(ggpattern)
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
 
+```{r}
+#clear prior environment
+rm(list = ls())
+```
+
 # Loading in Data
 
 ```{r}
@@ -73,7 +78,7 @@ transb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transb_snowd
   )) %>%
   mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
   #filtering to timerange for these plots
-  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23")) %>%
+  filter(date >= as.Date("2024-02-02") & date < as.Date("2024-07-01")) %>%
   mutate(zone = "TSZ")
 
 persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_east_snowdepths.csv") %>%
@@ -87,7 +92,7 @@ persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_
   )) %>%
   mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
   #filtering to timerange for these plots
-  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23")) %>%
+  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-07-01")) %>%
   mutate(zone = "PSZ")
 ```
 
@@ -134,7 +139,7 @@ filtered_transb_wx_15min <- transb_wx_15min_r %>%
     month = as.numeric(format(datetime, "%m")),
     datetime = with_tz(datetime, tzone = "MST")) %>%
   filter(datetime >= as.POSIXct("2024-02-02 00:15:00", tz = "MST") & 
-         datetime <= as.POSIXct("2024-05-23 23:45:00", tz = "MST")) %>%
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST")) %>%
   inner_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
   mutate(
@@ -538,7 +543,11 @@ PSZ_mean_gb_temp_plot <- ggplot(data = pers_dt_mean_gb) +
     name = "aspect",
     values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
   ) +
-  theme_bw()
+  theme_bw() +
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
+             linetype = "solid",                # Dashed line
+             color = "mediumblue",                      # Line color
+             size = 0.6)
 
 PSZ_mean_gb_temp_plot
 
@@ -553,9 +562,21 @@ TSZ_mean_gb_temp_plot <- ggplot(data = trans_dt_mean_gb) +
     name = "aspect",
     values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
   ) +
-  theme_bw()
+  theme_bw() + 
+  #accumulation/ablation date destiction
+  geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
+             linetype = "solid",                # Dashed line
+             color = "mediumblue",                      # Line color
+             size = 0.6)
 
 TSZ_mean_gb_temp_plot
+```
+
+```{r}
+#combined mean temp plots
+comb_mean_gb_temp_byzone <- ggarrange(PSZ_mean_gb_temp_plot, TSZ_mean_gb_temp_plot, nrow =2, ncol = 1, common.legend = TRUE, legend = "right")
+
+comb_mean_gb_temp_byzone
 ```
 
 ```{r}
