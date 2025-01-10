@@ -808,7 +808,10 @@ full_pers_ub_data <- full_unburned_combined_data %>%
 
 final_pers_ub_temps <- full_pers_ub_data %>%
   rename(ub_temp = mean_temp) %>%
-  select(-burn_status)
+  select(datetime, day, month, aspect, zone, snow_phase, ub_temp) %>%
+  mutate(
+    datetime = floor_date(datetime, unit = "15 minutes")  # Rounds down to nearest 15 minutes
+  )
 ```
 
 ### Trans_ub
@@ -826,17 +829,28 @@ full_trans_ub_data <- full_unburned_combined_data %>%
 
 final_trans_ub_temps <- full_trans_ub_data %>%
   rename(ub_temp = mean_temp) %>%
-  select(-burn_status)
+  select(-burn_status) %>%
+  mutate(
+    datetime = floor_date(datetime, unit = "15 minutes")  # Rounds down to nearest 15 minutes
+  )
+```
+
+```{r}
+final_pers_gbdb_temps <- final_pers_gbdb_temps %>%
+  mutate(datetime = force_tz(datetime, tz = "MST"))
+
+final_pers_ub_temps <- final_pers_ub_temps %>%
+  mutate(datetime = force_tz(datetime, tz = "MST"))
 ```
 
 ```{r}
 full_pers_gbdbub_data <- final_pers_gbdb_temps %>%
-  full_join(final_pers_ub_temps)
+  inner_join(final_pers_ub_temps)
 ```
 
 ```{r}
 full_trans_gbdbub_data <- final_trans_gbdb_temps %>%
-  full_join(final_trans_ub_temps)
+  inner_join(final_trans_ub_temps)
 ```
 
 ```{r}
@@ -844,7 +858,7 @@ write_csv(full_15min_gbdbub, "nsf/treetemp_data/full_15min_gbdbub.csv")
 
 write_csv(full_pers_gbdbub_data, "nsf/treetemp_data/full_pers_gbdbub_data.csv")
 
-write_csv(full_trans_gbdbub_data, "nsf/treetemp_data/full_pers_gbdbub_data.csv")
+write_csv(full_trans_gbdbub_data, "nsf/treetemp_data/full_trans_gbdbub_data.csv")
 ```
 
 # Final 15-minute Dataframes
