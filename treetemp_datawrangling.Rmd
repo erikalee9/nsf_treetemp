@@ -32,6 +32,11 @@ library(suncalc)
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
 
+```{r}
+#to clear prior environment
+rm(list = ls())
+```
+
 ### Calling in data
 
 Tree temp data
@@ -121,7 +126,7 @@ filtered_transb_wx_15min <- transb_wx_15min_r %>%
   filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
          datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST"))
 
-filtered_transun_wx_15min <- transub_wx_15min_r %>%
+filtered_transub_wx_15min <- transub_wx_15min_r %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "MST")) %>%
   filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
          datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST"))
@@ -190,7 +195,7 @@ filtered_trans_ub_aspects <- filtered_trans_ub_aspects %>%
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
          month = as.numeric(format(datetime, "%m"))) %>%
   mutate(snow_phase = case_when(
-      day >= as.Date("2024-05-06") ~ "ablation",
+      day >= as.Date("2024-04-06") ~ "ablation",
       TRUE ~ "accumulation"
     )) %>%
   select(datetime, day, month, zone, snow_phase, burn_status, sensor_id, tree_name, everything()) %>%
@@ -895,10 +900,6 @@ final_15min_gbdb <- final_pers_gbdb_temps %>%
   mutate(avg_temp = mean((gb_temp + db_temp) / 2)) %>%
   select(datetime, day, month, zone, snow_phase, everything())
 
-%>%
-  #mutating the floor_date to fix datetime issue
-  mutate(datetime = floor_date(datetime, "15 minutes"))
-
 #adding in an hourly version of this final_15min_gbdb dataframe
 final_hourly_gbdb <- final_15min_gbdb %>%
   mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S")) %>%
@@ -914,9 +915,7 @@ final_15min_gbdb_ub <- final_pers_ub_temps %>%
   #adding in day & month
   mutate(day = as.POSIXct(format(datetime, "%Y-%m-%d")),
          month = as.numeric(format(datetime, "%m"))) %>%
-  select(datetime, day, month, zone, snow_phase, everything()) %>%
-  #mutating the floor_date to fix datetime issue
-  mutate(datetime = floor_date(datetime, "15 minutes"))
+  select(datetime, day, month, zone, snow_phase, everything()) 
 
 #adding in an hourly version of this final_15min_ub dataframe
 final_hourly_gbdb_ub <- final_15min_gbdb_ub %>%
@@ -934,6 +933,10 @@ full_15min_gbdbub <- final_15min_gbdb %>%
   full_join(final_15min_gbdb_ub) %>%
   #remove weird NAs
   drop_na()
+```
+
+```{r}
+write_csv(full_15min_gbdbub, "nsf/treetemp_data/full_15min_gbdbub.csv")
 ```
 
 ```{r}
@@ -1747,7 +1750,7 @@ full_15min_ns_dtnt <- full_15min_ns %>%
       datetime < sunrise ~ "night",
       datetime >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  select(datetime, day, month, phase, zone, snow_phase, burn_status, north_temp, south_temp, ns_avg_temp, ns_temp_diff, sunrise, sunset, solarNoon)
+  select(datetime, day, month, phase, zone, burn_status, north_temp, south_temp, ns_avg_temp, ns_temp_diff, sunrise, sunset, solarNoon)
 ```
 
 ```{r}
