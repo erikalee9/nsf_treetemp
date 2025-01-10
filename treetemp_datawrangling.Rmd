@@ -893,7 +893,9 @@ final_15min_gbdb <- final_pers_gbdb_temps %>%
   full_join(final_trans_gbdb_temps) %>%
   #adding in mean temp of north and south temps
   mutate(avg_temp = mean((gb_temp + db_temp) / 2)) %>%
-  select(datetime, day, month, zone, snow_phase, everything()) %>%
+  select(datetime, day, month, zone, snow_phase, everything())
+
+%>%
   #mutating the floor_date to fix datetime issue
   mutate(datetime = floor_date(datetime, "15 minutes"))
 
@@ -1653,6 +1655,10 @@ p_b_solar_times <- getSunlightTimes(date = solex_dates, lat = p_b_lat, lon = p_b
     sunrise = with_tz(as.POSIXct(sunrise), tzone = "MST"),  # Set MST timezone
     sunset = with_tz(as.POSIXct(sunset), tzone = "MST")     # Set MST timezone
   )
+```
+
+```{r}
+write_csv(p_b_solar_times, "nsf/treetemp_data/p_b_solar_times.csv")
 ```
 
 ## Adding Day/Night Phase to final CSVs
