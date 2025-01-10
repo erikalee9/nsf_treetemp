@@ -78,7 +78,7 @@ transb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transb_snowd
   )) %>%
   mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
   #filtering to timerange for these plots
-  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23")) %>%
+  filter(date >= as.Date("2024-02-02") & date < as.Date("2024-07-01")) %>%
   mutate(zone = "TSZ")
 
 persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_east_snowdepths.csv") %>%
@@ -92,7 +92,7 @@ persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_
   )) %>%
   mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
   #filtering to timerange for these plots
-  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23")) %>%
+  filter(date >= as.Date("2024-02-02") & date < as.Date("2024-07-01")) %>%
   mutate(zone = "PSZ")
 
 persub_snowcamera_data_r <- read_csv("nsf/pers_unburned/pers_unburned_wx_hourly_r.csv")
@@ -108,12 +108,12 @@ persub_snowcamera_data <- persub_snowcamera_data_r %>%
   mutate(datetime_15min = list(seq(datetime, datetime + 45 * 60, by = "15 mins"))) %>%
   unnest(datetime_15min) %>%
   select(datetime = datetime_15min, AirTC_Avg, snowcam_max_depth_m, date, zone) %>%
-  filter(datetime >= as.Date("2024-02-02 00:15:00") & datetime <= as.Date("2024-05-23 00:00:00"))
+  filter(datetime >= as.Date("2024-02-02 00:15:00") & datetime < as.Date("2024-07-01 00:00:00"))
 
 transub_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transub_snowdepths.csv") %>%
   mutate(snowcam_max_depth_m = max_depth_cm/100) %>%
   #filtering to timerange for these plots
-  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-05-23")) %>%
+  filter(date >= as.Date("2024-02-02") & date < as.Date("2024-07-01")) %>%
   mutate(zone = "TSZ")
 ```
 
@@ -159,7 +159,7 @@ filtered_pers_b_aspects_r <- read_csv("nsf/treetemp_data/filtered_pers_b_aspects
   select(-sensor_id) %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST')) %>%
-  filter(datetime >= "2024-02-02 00:15:00") %>%
+  filter(datetime >= "2024-02-02 00:00:00") %>%
   select(-1)
   
 
@@ -167,21 +167,21 @@ filtered_pers_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_pers_ub_aspec
   select(-sensor_id) %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST')) %>%
-  filter(datetime >= "2024-02-02 00:15:00") %>%
+  filter(datetime >= "2024-02-02 00:00:00") %>%
   select(-1)
 
 filtered_trans_b_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_b_aspects_r.csv") %>%
   select(-sensor_id) %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST')) %>%
-  filter(datetime >= "2024-02-02 00:15:00") %>%
+  filter(datetime >= "2024-02-02 00:00:00") %>%
   select(-1)
 
 filtered_trans_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_ub_aspects_r.csv") %>%
   select(-sensor_id) %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = force_tz(datetime, tz = 'MST')) %>%
-  filter(datetime >= "2024-02-02 00:15:00") %>%
+  filter(datetime >= "2024-02-02 00:00:00") %>%
   select(-1)
 ```
 
