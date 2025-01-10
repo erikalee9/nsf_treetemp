@@ -829,6 +829,24 @@ final_trans_ub_temps <- full_trans_ub_data %>%
   select(-burn_status)
 ```
 
+```{r}
+full_pers_gbdbub_data <- final_pers_gbdb_temps %>%
+  full_join(final_pers_ub_temps)
+```
+
+```{r}
+full_trans_gbdbub_data <- final_trans_gbdb_temps %>%
+  full_join(final_trans_ub_temps)
+```
+
+```{r}
+write_csv(full_15min_gbdbub, "nsf/treetemp_data/full_15min_gbdbub.csv")
+
+write_csv(full_pers_gbdbub_data, "nsf/treetemp_data/full_pers_gbdbub_data.csv")
+
+write_csv(full_trans_gbdbub_data, "nsf/treetemp_data/full_pers_gbdbub_data.csv")
+```
+
 # Final 15-minute Dataframes
 
 Combining burned and unburned dataframes by zone and 15-minute timestep - this is what is used for stats calculations
@@ -1769,7 +1787,7 @@ full_hourly_ns_dtnt <- full_hourly_ns %>%
       datetime_hour < sunrise ~ "night",
       datetime_hour >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  select(datetime_hour, day, month, phase, zone, snow_phase, burn_status, north_temp, south_temp, ns_avg_temp, ns_temp_diff, sunrise, sunset, solarNoon)
+  select(datetime_hour, day, month, phase, zone, burn_status, north_temp, south_temp, ns_avg_temp, ns_temp_diff, sunrise, sunset, solarNoon)
 ```
 
 ```{r}
