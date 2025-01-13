@@ -41,17 +41,27 @@ rm(list = ls())
 #new full dataframes to load - including burned and unburned/ all burn_status types together
 full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST')) %>%
-  select(-1)
+                               datetime = with_tz(datetime, tz = 'MST')) %>%
+  mutate(day = as.Date(day, format = ("%Y-%m-%d")))
 
 full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
    mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
-  select(-1)
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST')) %>%
+  mutate(day = as.Date(day, format = ("%Y-%m-%d")))
+
+p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
+  mutate(
+    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunrise = with_tz(sunrise, tz = "MST")
+  ) %>%
+   mutate(
+    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunset = with_tz(sunset, tz = "MST")
+  )
 
 full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST'), ,
+                               datetime = with_tz(datetime, tz = 'MST'), ,
     day = as.Date(datetime, tz= "MST")) %>%
   inner_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
@@ -63,15 +73,16 @@ full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
       TRUE ~ NA_character_)) %>%
   select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp, solarNoon, sunrise, sunset, dawn, dusk)
 
-full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv") %>%
-  mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
-  select(-1)
+#don't need hourly dbgbub dataframe! Therefore I haven't update this code line to include phase, et. 
+
+#full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv") %>%
+ # mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                     #          datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+ # select(-1)
 
 full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
-  select(-1)
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))
 ```
 
 \*\* as of 2025-01-10 - new data for temp figures separated by burn status
@@ -82,6 +93,14 @@ full_pers_gbdbub_data <- read_csv("nsf/treetemp_data/full_pers_gbdbub_data.csv")
                                datetime = with_tz(datetime, tz = 'MST'), ,
     day = as.Date(datetime, tz= "MST")) %>%
   inner_join(p_b_solar_times, by = "day") %>%
+  mutate(
+    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunrise = with_tz(sunrise, tz = "MST")
+  ) %>%
+   mutate(
+    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunset = with_tz(sunset, tz = "MST")
+  ) %>%
   #creating a phase column that parses by daily sunrise/sunset times
   mutate(
     phase = case_when(
@@ -97,6 +116,14 @@ full_trans_gbdbub_data <- read_csv("nsf/treetemp_data/full_trans_gbdbub_data.csv
     day = as.Date(datetime, tz= "MST")) %>%
   inner_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunrise = with_tz(sunrise, tz = "MST")
+  ) %>%
+   mutate(
+    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunset = with_tz(sunset, tz = "MST")
+  ) %>%
   mutate(
     phase = case_when(
       datetime >= sunrise & datetime < sunset ~ "day",
@@ -133,7 +160,7 @@ persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_
   )) %>%
   mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
   #filtering to timerange for these plots
-  filter(date >= as.Date("2024-02-02") & date <= as.Date("2024-07-01")) %>%
+  filter(date >= as.Date("2024-02-02") & date < as.Date("2024-07-01")) %>%
   mutate(zone = "PSZ")
 ```
 
@@ -145,7 +172,9 @@ full_15min_ns_LWout <- read_csv("nsf/treetemp_data/full_15min_ns_LWout.csv")
 
 cum_full_daily_LWout <- read_csv("nsf/treetemp_data/cum_full_daily_treeLWout.csv")
 
-cum_dt_gbdbub_LWout <- read_csv("nsf/treetemp_data/cum_dt_gbdbub_LWout.csv")
+cum_full_daily_gbdbub_treeLWout <- read_csv("nsf/treetemp_data/cum_full_daily_gbdbub_treeLWout.csv")
+
+cum_dt_gbdbub_LWout <- read_csv("nsf/treetemp_data/cum_full_daily_gbdbub_treeLWout.csv")
 ```
 
 Weather Data
@@ -153,21 +182,26 @@ Weather Data
 ```{r}
 transb_wx_15min_r <- read_csv('nsf/trans_burned/trans_burned_wx_15min_r.csv') %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST'))
+                               datetime = with_tz(datetime, tz = 'MST'))
 
 transub_wx_15min_r <- read_csv('nsf/trans_unburned/trans_unburned_wx_15min_r.csv') %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST'))
+                               datetime = with_tz(datetime, tz = 'MST'))
 
 persb_wx_hourly_r <- read_csv('nsf/pers_burned/pers_burned_wx_hourly_r.csv') %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST'))
+                               datetime = with_tz(datetime, tz = 'MST'))
 
-persub_wx_15min_r <- read_csv('nsf/pers_unburned/pers_unburned_wx_15min_r.csv') %>%
+#persub_wx_15min_r <- read_csv('nsf/pers_unburned/pers_unburned_wx_15min_r.csv') %>%
+  #mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                       #        datetime = with_tz(datetime, tz = 'MST'))
+
+#use hourly unburned and burned for PSZ
+persub_wx_hourly_r <- read_csv('nsf/pers_unburned/pers_unburned_wx_hourly_r.csv') %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST'))
-
-p_b_solar_time <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
+                               datetime = with_tz(datetime, tz = 'MST'))
+  
+p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
   mutate(
     sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"), # Assuming data is in UTC
     sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
@@ -182,7 +216,7 @@ filtered_transb_wx_15min <- transb_wx_15min_r %>%
   mutate(day = as.Date.POSIXct(datetime, tz = "MST"),
     month = as.numeric(format(datetime, "%m")),
     datetime = with_tz(datetime, tzone = "MST")) %>%
-  filter(datetime >= as.POSIXct("2024-02-02 00:15:00", tz = "MST") & 
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
          datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST")) %>%
   inner_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
@@ -204,7 +238,7 @@ filtered_transub_wx_15min <- transub_wx_15min_r %>%
   mutate(day = as.Date.POSIXct(datetime, tz = "MST"),
     month = as.numeric(format(datetime, "%m")),
     datetime = with_tz(datetime, tzone = "MST")) %>%
-  filter(datetime >= as.POSIXct("2024-02-02 00:15:00", tz = "MST") & 
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
          datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST")) %>%
   inner_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
@@ -225,7 +259,7 @@ filtered_persb_wx_hourly <- persb_wx_hourly_r %>%
   mutate(day = as.Date.POSIXct(datetime, tz = "MST"),
     month = as.numeric(format(datetime, "%m")),
     datetime = with_tz(datetime, tzone = "MST")) %>%
-  filter(datetime >= as.POSIXct("2024-02-02 00:15:00", tz = "MST") & 
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
          datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST")) %>%
   inner_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
@@ -242,7 +276,7 @@ filtered_persb_wx_hourly <- persb_wx_hourly_r %>%
 ```
 
 ```{r}
-filtered_persub_wx_15min <- persub_wx_15min_r %>%
+filtered_persub_wx_hourly <- persub_wx_hourly_r %>%
   mutate(day = as.Date.POSIXct(datetime, tz = "MST"),
     month = as.numeric(format(datetime, "%m")),
     datetime = with_tz(datetime, tzone = "MST")) %>%
@@ -342,6 +376,8 @@ dtnt_treetemp_lineplot <- ggarrange(dt_treetemp_daily_gbdbub_lineplot, nt_treete
 
 dtnt_treetemp_lineplot
 ```
+
+\*\* as of 2025-01-13 - use the below plots instead of above plots!
 
 ```{r}
 #parsing by zone instead
@@ -1020,7 +1056,17 @@ p_cum_dt_gbdbub_plot <- ggplot(data = p_accu_dr_gbdbub_LWout) +
     linetype = "Aspect"
   ) +
   scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
-  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid"))
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) + 
+  #accumulation/ablation date destiction
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-06-05')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8)
 
 p_cum_dt_gbdbub_plot
 ```
@@ -1040,10 +1086,22 @@ t_cum_dt_gbdbub_plot <- ggplot(data = t_accu_dr_gbdbub_LWout) +
     linetype = "Aspect"
   ) +
   scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
-  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid"))
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) + 
+  #accumulation/ablation date destiction
+  geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-25')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8)
 
 t_cum_dt_gbdbub_plot
 ```
+
+\*\* as of 2025-01-13 - need to look through this dataframe for TSZ and figure out why the LWout values are equal through march... this could be an issue with missing data?
 
 ```{r}
 cum_full_daily_treeLWout <- ggarrange(p_cum_dt_gbdbub_plot, t_cum_dt_gbdbub_plot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
@@ -1286,6 +1344,22 @@ mean_dt_persub_wx <- filtered_persub_wx_15min %>%
 ```{r}
 #creating dataframes for the a mean daily value of the gb and db tree LWout values for both zones
 p_b_dt_mean_treeLWout <- full_15min_ns_LWout%>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #making sunrise/sunset columns correct timezone
+   mutate(
+    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunrise = with_tz(sunrise, tz = "MST")
+  ) %>%
+   mutate(
+    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunset = with_tz(sunset, tz = "MST")
+  ) %>%
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
   #making a column that includes the tree LWout in MJper day for both the north and south sides of the tree
   mutate(full_tree_LWout_MJperd = n_LWout_MJperd + s_LWout_MJperd) %>%
   #getting only daytime values
@@ -1301,6 +1375,22 @@ p_b_dt_mean_treeLWout <- full_15min_ns_LWout%>%
 
 ```{r}
 t_b_dt_mean_treeLWout <- full_15min_ns_LWout %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #making sunrise/sunset columns correct timezone
+   mutate(
+    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunrise = with_tz(sunrise, tz = "MST")
+  ) %>%
+   mutate(
+    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunset = with_tz(sunset, tz = "MST")
+  ) %>%
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
   #making a column that includes the tree LWout in MJper day for both the north and south sides of the tree
   mutate(full_tree_LWout_MJperd = n_LWout_MJperd + s_LWout_MJperd) %>%
   #getting only daytime values
@@ -1320,6 +1410,22 @@ t_b_dt_mean_treeLWout <- full_15min_ns_LWout %>%
 
 ##persistent
 p_b_dt_avg_temp <- full_15min_ns %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #making sunrise/sunset columns correct timezone
+   mutate(
+    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunrise = with_tz(sunrise, tz = "MST")
+  ) %>%
+   mutate(
+    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunset = with_tz(sunset, tz = "MST")
+  ) %>%
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
   filter(burn_status %in% c("green burn", "dead burn"), zone == "persistent", phase == "day") %>%
   mutate(zone = "PSZ") %>%
   select(datetime, day, month, phase, zone, burn_status, ns_avg_temp) %>%
@@ -1328,6 +1434,22 @@ p_b_dt_avg_temp <- full_15min_ns %>%
 
 ##transitional
 t_b_dt_avg_temp <- full_15min_ns %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #making sunrise/sunset columns correct timezone
+   mutate(
+    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunrise = with_tz(sunrise, tz = "MST")
+  ) %>%
+   mutate(
+    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunset = with_tz(sunset, tz = "MST")
+  ) %>%
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
   filter(burn_status %in% c("green burn", "dead burn"), zone == "transitional", phase == "day") %>%
   mutate(zone = "TSZ") %>%
   select(datetime, day, month, phase, zone, burn_status, ns_avg_temp) %>%
@@ -1385,7 +1507,7 @@ p_snowtreewell_NR_plot <- ggplot() +
          fill = guide_legend(title = NULL), #Remove fill legend
          shape = guide_legend(title = NULL)) +
   scale_x_date(
-    limits = c(as.Date("2024-02-02"), as.Date("2024-05-23")), 
+    limits = c(as.Date("2024-02-02"), as.Date("2024-07-01")), 
     expand = c(0.02, 0.02)  # Remove extra space on the x-axis
   ) +# Remove title for shape legend
   scale_y_continuous(
@@ -1400,7 +1522,17 @@ p_snowtreewell_NR_plot <- ggplot() +
     axis.text = element_text(size = 11),                      # Axis text size
     legend.text = element_text(size = 12),                    # Legend text size
     legend.title = element_text(size = 12),                   # Legend title size
-    strip.text = element_text(size = 12))
+    strip.text = element_text(size = 12)) + 
+  #accumulation/ablation date destiction
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-06-05')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8)
 
 p_snowtreewell_NR_plot
 ```
@@ -1434,7 +1566,7 @@ t_snowtreewell_NR_plot <- ggplot() +
          fill = guide_legend(title = NULL), #Remove fill legend
          shape = guide_legend(title = NULL)) +
   scale_x_date(
-    limits = c(as.Date("2024-02-02"), as.Date("2024-05-23")), 
+    limits = c(as.Date("2024-02-02"), as.Date("2024-07-01")), 
     expand = c(0.02, 0.02)  # Remove extra space on the x-axis
   ) +# Remove title for shape legend
   scale_y_continuous(
@@ -1449,7 +1581,17 @@ t_snowtreewell_NR_plot <- ggplot() +
     axis.text = element_text(size = 11),                      # Axis text size
     legend.text = element_text(size = 12),                    # Legend text size
     legend.title = element_text(size = 12),                   # Legend title size
-    strip.text = element_text(size = 12))
+    strip.text = element_text(size = 12)) + 
+   #accumulation/ablation date destiction
+  geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-25')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8)
 
 t_snowtreewell_NR_plot
 ```
