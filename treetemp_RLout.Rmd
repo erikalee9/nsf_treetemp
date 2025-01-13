@@ -70,7 +70,7 @@ full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
   ) %>%
   mutate(day = as.Date(day, format = "%Y-%m-%d"))
 
-hfull_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
+full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
   mutate(
     datetime_hour = as.POSIXct(datetime_hour, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
     datetime_hour = force_tz(datetime_hour, tz = "MST")
