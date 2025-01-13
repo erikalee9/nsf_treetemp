@@ -1030,11 +1030,29 @@ Data Wrangling
 
 ```{r}
 #data wrangling 
-p_accu_dr_gbdbub_LWout <- cum_dt_gbdbub_LWout %>%
-  filter(zone == "PSZ")
+p_accu_dr_gbdbub_LWout <- cum_full_daily_gbdbub_treeLWout %>%
+  filter(zone == "PSZ") %>%
+  mutate(day = as.Date(day, format = "%Y-%m-%d"))
 
-t_accu_dr_gbdbub_LWout <- cum_dt_gbdbub_LWout %>%
-  filter(zone == "TSZ")
+t_accu_dr_gbdbub_LWout <- cum_full_daily_gbdbub_treeLWout %>%
+  filter(zone == "TSZ") %>%
+  mutate(day = as.Date(day, format = "%Y-%m-%d"))
+```
+
+```{r}
+test <- t_accu_dr_gbdbub_LWout %>%
+  group_by(day) %>%
+  summarize(n = n(), value = mean(accu_daily_gb_LWout_MJperd, na.rm = TRUE)) %>%
+  filter(n > 1)
+```
+
+```{r}
+cum_t_exploration <- ggplot(data = t_accu_dr_gbdbub_LWout) +
+  geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd)) + 
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month")
+
+
+cum_t_exploration
 ```
 
 Plotting
