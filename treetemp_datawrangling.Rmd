@@ -854,6 +854,10 @@ full_trans_gbdbub_data <- final_trans_gbdb_temps %>%
 ```
 
 ```{r}
+full_15min_gbdbub <- rbind(full_pers_gbdbub_data, full_trans_gbdbub_data)
+```
+
+```{r}
 write_csv(full_15min_gbdbub, "nsf/treetemp_data/full_15min_gbdbub.csv")
 
 write_csv(full_pers_gbdbub_data, "nsf/treetemp_data/full_pers_gbdbub_data.csv")
