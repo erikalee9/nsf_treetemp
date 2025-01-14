@@ -1439,8 +1439,7 @@ p_b_dt_avg_temp <- full_15min_ns %>%
       datetime < sunrise ~ "night",
       datetime >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  filter(burn_status %in% c("green burn", "dead burn"), zone == "persistent", phase == "day") %>%
-  mutate(zone = "PSZ") %>%
+  filter(burn_status %in% c("green burn", "dead burn"), zone == "PSZ", phase == "day") %>%
   select(datetime, day, month, phase, zone, burn_status, ns_avg_temp) %>%
   group_by(day, month, phase, zone) %>%
   summarize(mean_temp = mean(ns_avg_temp))
@@ -1463,8 +1462,7 @@ t_b_dt_avg_temp <- full_15min_ns %>%
       datetime < sunrise ~ "night",
       datetime >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
-  filter(burn_status %in% c("green burn", "dead burn"), zone == "transitional", phase == "day") %>%
-  mutate(zone = "TSZ") %>%
+  filter(burn_status %in% c("green burn", "dead burn"), zone == "TSZ", phase == "day") %>%
   select(datetime, day, month, phase, zone, burn_status, ns_avg_temp) %>%
   group_by(day, month, phase, zone) %>%
   summarize(mean_temp = mean(ns_avg_temp))
@@ -1494,15 +1492,15 @@ Plotting
 ```{r}
 p_snowtreewell_NR_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_persb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.6) +
+  geom_col(data = mean_dt_persb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), alpha = 0.4) +
   #air temp line
   geom_line(data = mean_dt_persb_wx, aes(x = day, y = AirTC_Avg, color = "air temp"), linewidth = 0.8) +
   geom_line(data = p_b_dt_avg_temp, aes(x = day, y = mean_temp, color = "tree temp"), alpha = 0.8, linewidth = 0.8) +
   # Line plot for snow cam max depth on a secondary y-axis
   #transitional snow depths + tree wells
-  geom_line(data = persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*5, color = "snow depth"), alpha = 0.8, linewidth = 0.8) +
-  geom_point(data = persb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*5, 
-             shape = "dates that treewells developed"), 
+  geom_line(data = persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*15, color = "snow depth"), alpha = 0.8, linewidth = 0.8) +
+  geom_point(data = persb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*15, 
+             shape = "dates that wells developed"), 
              color = "black", fill = "black", size = 1.5) +
   facet_wrap(~burn_status) +
   labs(
@@ -1515,7 +1513,7 @@ p_snowtreewell_NR_plot <- ggplot() +
                      values = c("air temp" = "#D95F02", "tree temp" = "#1B7837", "snow depth" = "#2166AC")) +
   scale_fill_manual(name = "Radiation Data", 
                     values = c("net radiation" = "#666666")) +
-  scale_shape_manual(values = c("dates that treewells developed" = 21)) +
+  scale_shape_manual(values = c("dates that wells developed" = 21)) +
   guides(color = guide_legend(title = NULL),  # Remove title for color legend
          fill = guide_legend(title = NULL), #Remove fill legend
          shape = guide_legend(title = NULL)) +
@@ -1524,8 +1522,8 @@ p_snowtreewell_NR_plot <- ggplot() +
     expand = c(0.02, 0.02)  # Remove extra space on the x-axis
   ) +# Remove title for shape legend
   scale_y_continuous(
-    limits = c(-18, 18),
-    sec.axis = sec_axis(~./4, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+    limits = c(-15, 38),
+    sec.axis = sec_axis(~./15, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
   theme_bw() + 
   theme(
@@ -1553,15 +1551,15 @@ p_snowtreewell_NR_plot
 ```{r}
 t_snowtreewell_NR_plot <- ggplot() + 
   # Column plot for Net Longwave Radiation of total plot area
-  geom_col(data = mean_dt_transb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), position = "stack", alpha = 0.6) +
+  geom_col(data = mean_dt_transb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), alpha = 0.4) +
   #air temp line
   geom_line(data = mean_dt_transb_wx, aes(x = day, y = AirTC_Avg, color = "air temp"), linewidth = 0.8) +
   geom_line(data = t_b_dt_avg_temp, aes(x = day, y = mean_temp, color = "tree temp"), alpha = 0.8, linewidth = 0.8) +
   # Line plot for snow cam max depth on a secondary y-axis
   #transitional snow depths + tree wells
-  geom_line(data = transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*5, color = "daily max snow depth"), linewidth = 0.8, alpha = 0.7) +
-  geom_point(data = transb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*5, 
-             shape = "dates that treewells developed"), 
+  geom_line(data = transb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*15, color = "daily max snow depth"), linewidth = 0.8, alpha = 0.8) +
+  geom_point(data = transb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*15, 
+             shape = "dates that wells developed"), 
              color = "black", fill = "black", size = 1.5) +
   facet_wrap(~burn_status) +
   labs(
@@ -1574,7 +1572,7 @@ t_snowtreewell_NR_plot <- ggplot() +
                      values = c("air temp" = "#D95F02", "tree temp" = "#1B7837", "daily max snow depth" = "#2166AC")) +
   scale_fill_manual(name = "Radiation Data", 
                     values = c("net radiation" = "#666666")) +
-  scale_shape_manual(values = c("dates that treewells developed" = 21)) +
+  scale_shape_manual(values = c("dates that wells developed" = 21)) +
   guides(color = guide_legend(title = NULL),  # Remove title for color legend
          fill = guide_legend(title = NULL), #Remove fill legend
          shape = guide_legend(title = NULL)) +
@@ -1583,8 +1581,8 @@ t_snowtreewell_NR_plot <- ggplot() +
     expand = c(0.02, 0.02)  # Remove extra space on the x-axis
   ) +# Remove title for shape legend
   scale_y_continuous(
-    limits = c(-18, 18),
-    sec.axis = sec_axis(~./4, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+    limits = c(-15, 38),
+    sec.axis = sec_axis(~./15, name = "Snow Depth (m)")  # Adjusting for the secondary axis
   ) +
   theme_bw() + 
   theme(
@@ -1616,6 +1614,8 @@ comb_b_snowtreewell_NR_plots <- ggarrange(p_snowtreewell_NR_plot, t_snowtreewell
 comb_b_snowtreewell_NR_plots
 ```
 
+\*\* as of 2025-01-14 - need to add an unburned comparison to the above plots!
+
 Plotting the same graph but with tree LWout instead of total net radiation
 
 -   this doesn't show the pattern as well as the NR plots do, so I probably won't use this...
@@ -1630,7 +1630,7 @@ p_snowtreewell_treeLWout_plot <- ggplot() +
   # Line plot for snow cam max depth on a secondary y-axis
   #transitional snow depths + tree wells
   geom_line(data = persb_snowcamera_data, aes(x = date, y = snowcam_max_depth_m*8, color = "daily max snow depth"), linewidth = 0.8) +
-  geom_point(data = persb_treewell_dates, aes(x = date, y = snowcam_max_depth_m*8, 
+  geom_point(data = persb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*8, 
              shape = "dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
   facet_wrap(~burn_status) +
