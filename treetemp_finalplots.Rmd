@@ -35,6 +35,14 @@ setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 rm(list = ls())
 ```
 
+```{r}
+#to display the colors
+display.brewer.pal(n = 8, name = "Dark2")
+
+#to get the hex number of the colors
+brewer.pal(n = 8, name = "Dark2")
+```
+
 # Loading in Data
 
 ```{r}
@@ -674,40 +682,53 @@ full_max_gb_temp_plot
 ##MEAN TEMP PLOTS
 #PSZ
 PSZ_mean_gb_temp_plot <- ggplot(data = pers_dt_mean_gb) +
-  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
-  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
-  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
-  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.5, alpha = 0.8) +
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.5) +
+  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.5) + 
+  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linewidth = 0.5, linetype = "dashed") + 
   labs(title = "a) PSZ", x = NULL, y = "Mean Temperature (°C)") +
   scale_color_manual(
     name = "aspect",
-    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
+    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "#1B7837", "uncharred" = "grey30")
   ) +
   theme_bw() +
   geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
              linetype = "solid",                # Dashed line
-             color = "mediumblue",                      # Line color
-             size = 0.6)
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-06-05')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8)
 
 PSZ_mean_gb_temp_plot
+```
 
+```{r}
+##MEAN TEMP PLOTS
 #TSZ
 TSZ_mean_gb_temp_plot <- ggplot(data = trans_dt_mean_gb) +
-  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
-  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
-  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
-  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
-  labs(title = "b) TSZ", x = NULL, y = "Mean Temperature (°C)") +
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.5, alpha = 0.8) + 
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.5) +
+  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.5) + 
+  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linewidth = 0.5, linetype = "dashed") + 
+  labs(title = "b) PSZ", x = NULL, y = "Mean Temperature (°C)") +
   scale_color_manual(
     name = "aspect",
-    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
+    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "#1B7837", "uncharred" = "grey30")
   ) +
-  theme_bw() + 
+  theme_bw()+
   #accumulation/ablation date destiction
   geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
              linetype = "solid",                # Dashed line
-             color = "mediumblue",                      # Line color
-             size = 0.6)
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-25')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8)
 
 TSZ_mean_gb_temp_plot
 ```
