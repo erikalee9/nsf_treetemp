@@ -88,49 +88,11 @@ full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
 \*\* as of 2025-01-10 - new data for temp figures separated by burn status
 
 ```{r}
-full_pers_gbdbub_data <- read_csv("nsf/treetemp_data/full_pers_gbdbub_data.csv") %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = with_tz(datetime, tz = 'MST'), ,
-    day = as.Date(datetime, tz= "MST")) %>%
-  inner_join(p_b_solar_times, by = "day") %>%
-  mutate(
-    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
-    sunrise = with_tz(sunrise, tz = "MST")
-  ) %>%
-   mutate(
-    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
-    sunset = with_tz(sunset, tz = "MST")
-  ) %>%
-  #creating a phase column that parses by daily sunrise/sunset times
-  mutate(
-    phase = case_when(
-      datetime >= sunrise & datetime < sunset ~ "day",
-      datetime < sunrise ~ "night",
-      datetime >= sunset ~ "night",
-      TRUE ~ NA_character_)) %>%
-  select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp, solarNoon, sunrise, sunset, dawn, dusk)
+full_pers_gbdbub_data <- full_15min_gbdbub %>%
+  filter(zone == "PSZ")
 
-full_trans_gbdbub_data <- read_csv("nsf/treetemp_data/full_trans_gbdbub_data.csv") %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = with_tz(datetime, tz = 'MST'), ,
-    day = as.Date(datetime, tz= "MST")) %>%
-  inner_join(p_b_solar_times, by = "day") %>%
-  #creating a phase column that parses by daily sunrise/sunset times
-  mutate(
-    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
-    sunrise = with_tz(sunrise, tz = "MST")
-  ) %>%
-   mutate(
-    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
-    sunset = with_tz(sunset, tz = "MST")
-  ) %>%
-  mutate(
-    phase = case_when(
-      datetime >= sunrise & datetime < sunset ~ "day",
-      datetime < sunrise ~ "night",
-      datetime >= sunset ~ "night",
-      TRUE ~ NA_character_)) %>%
-  select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp, solarNoon, sunrise, sunset, dawn, dusk)
+full_trans_gbdbub_data <- full_15min_gbdbub %>%
+  filter(zone == "TSZ")
 ```
 
 ```{r}
@@ -280,7 +242,7 @@ filtered_persub_wx_hourly <- persub_wx_hourly_r %>%
   mutate(day = as.Date.POSIXct(datetime, tz = "MST"),
     month = as.numeric(format(datetime, "%m")),
     datetime = with_tz(datetime, tzone = "MST")) %>%
-  filter(datetime >= as.POSIXct("2024-02-02 00:15:00", tz = "MST") & 
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
          datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST")) %>%
   inner_join(p_b_solar_times, by = "day") %>%
   #creating a phase column that parses by daily sunrise/sunset times
@@ -1084,7 +1046,8 @@ p_cum_dt_gbdbub_plot <- ggplot(data = p_accu_dr_gbdbub_LWout) +
   geom_vline(xintercept = as.numeric(as.Date('2024-06-05')), 
              linetype = "dashed",                # Dashed line
              color = "grey23",                      # Line color
-             size = 0.4, alpha = 0.8)
+             size = 0.4, alpha = 0.8) + 
+  scale_y_continuous(limits = c(0, 2000))
 
 p_cum_dt_gbdbub_plot
 ```
@@ -1114,17 +1077,28 @@ t_cum_dt_gbdbub_plot <- ggplot(data = t_accu_dr_gbdbub_LWout) +
   geom_vline(xintercept = as.numeric(as.Date('2024-05-25')), 
              linetype = "dashed",                # Dashed line
              color = "grey23",                      # Line color
-             size = 0.4, alpha = 0.8)
+             size = 0.4, alpha = 0.8) + 
+  scale_y_continuous(limits = c(0, 2000))
 
 t_cum_dt_gbdbub_plot
 ```
-
-\*\* as of 2025-01-13 - need to look through this dataframe for TSZ and figure out why the LWout values are equal through march... this could be an issue with missing data?
 
 ```{r}
 cum_full_daily_treeLWout <- ggarrange(p_cum_dt_gbdbub_plot, t_cum_dt_gbdbub_plot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
 
 cum_full_daily_treeLWout
+```
+
+Mean cumulative LWout values for all zones
+
+```{r}
+total_cum_TSZ <- t_accu_dr_gbdbub_LWout %>%
+  summarise(sum_gb_LWout = max(accu_daily_gb_LWout_MJperd), sum_db_LWout = max(accu_daily_db_LWout_MJperd), sum_ub_LWout = max(accu_daily_ub_LWout_MJperd))
+```
+
+```{r}
+total_cum_PSZ <- p_accu_dr_gbdbub_LWout %>%
+  summarise(sum_gb_LWout = max(accu_daily_gb_LWout_MJperd), sum_db_LWout = max(accu_daily_db_LWout_MJperd), sum_ub_LWout = max(accu_daily_ub_LWout_MJperd))
 ```
 
 ### Snow Depth & Tree Well Plots
