@@ -50,7 +50,7 @@ full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
 
 full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
    mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = with_tz(datetime, tz = 'MST')) %>%
+                               datetime_hour = with_tz(datetime_hour, tz = 'MST')) %>%
   mutate(day = as.Date(day, format = ("%Y-%m-%d")))
 
 full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
@@ -627,7 +627,8 @@ full_daily_gbdbub_LWout <- full_15min_gbdbub_LWout %>%
       datetime >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
   group_by(day, month, phase, zone, aspect) %>%
-  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp), gb_LWout_wperm2 = mean(gb_LWout_wperm2), db_LWout_wperm2 = mean(db_LWout_wperm2), ub_LWout_wperm2 = mean(ub_LWout_wperm2), gb_LWout_MJperd = mean(gb_LWout_MJperd), db_LWout_MJperd = mean(db_LWout_MJperd), ub_LWout_MJperd = mean(ub_LWout_MJperd))
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp), gb_LWout_wperm2 = mean(gb_LWout_wperm2), db_LWout_wperm2 = mean(db_LWout_wperm2), ub_LWout_wperm2 = mean(ub_LWout_wperm2), gb_LWout_MJperd = mean(gb_LWout_MJperd), db_LWout_MJperd = mean(db_LWout_MJperd), ub_LWout_MJperd = mean(ub_LWout_MJperd)) %>%
+  drop_na()
 ```
 
 ```{r}
