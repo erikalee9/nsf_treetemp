@@ -1018,6 +1018,39 @@ comb_gb_lineplot_bymonth <- ggarrange(
 comb_gb_lineplot_bymonth
 ```
 
+## GB DB UB Stats
+
+```{r}
+stats_gbdbub <- full_15min_gbdbub %>%
+  group_by(zone, phase, snow_phase) %>%
+  summarize(
+    mean_gb_temp = mean(gb_temp, na.rm = TRUE), 
+    mean_db_temp = mean(db_temp, na.rm = TRUE), 
+    mean_ub_temp = mean(ub_temp, na.rm = TRUE)
+  )
+```
+
+```{r}
+#total range of temperatures for GB, DB and live trees, not accounting for day/night phase
+
+stats_totaltemprange_gbdbub <- full_15min_gbdbub %>%
+  group_by(zone, phase) %>%
+  summarize(
+    mean_gb_temp = mean(gb_temp, na.rm = TRUE), 
+    mean_db_temp = mean(db_temp, na.rm = TRUE), 
+    mean_ub_temp = mean(ub_temp, na.rm = TRUE),
+    min_gb_temp = min(gb_temp, na.rm = TRUE), 
+    min_db_temp = min(db_temp, na.rm = TRUE), 
+    min_ub_temp = min(ub_temp, na.rm = TRUE),
+    max_gb_temp = max(gb_temp, na.rm = TRUE), 
+    max_db_temp = max(db_temp, na.rm = TRUE), 
+    max_ub_temp = max(ub_temp, na.rm = TRUE),
+    gb_temp_range = (max_gb_temp - min_gb_temp), 
+    db_temp_range = (max_db_temp - min_db_temp),
+    ub_temp_range = (max_ub_temp - min_ub_temp),
+  )
+```
+
 ## Cumulative Tree LWout Plot
 
 ### Cumulative Burn Status LWout Line Plot
