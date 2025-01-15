@@ -369,6 +369,19 @@ TSZ_dtnt_daily_gbdbub_plot_dataframe <- full_trans_gbdbub_data %>%
 ```
 
 ```{r}
+#getting accumulation vs ablation stats
+PSZ_meanminmax_stats <- full_pers_gbdbub_data %>%
+  group_by(snow_phase, phase, aspect) %>%
+  summarize(mean_temp = mean(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), max_temp = max(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), min_temp = min(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), temp_range = (max_temp - min_temp))
+```
+
+```{r}
+TSZ_meanminmax_stats <- full_trans_gbdbub_data %>%
+  group_by(snow_phase, phase, aspect) %>%
+  summarize(mean_temp = mean(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), max_temp = max(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), min_temp = min(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), temp_range = (max_temp - min_temp))
+```
+
+```{r}
 #daytime plot
 PSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = PSZ_dtnt_daily_gbdbub_plot_dataframe ) +
   geom_line(aes(x = day, y = gb_temp, color = "green burn", linetype = aspect)) + 
