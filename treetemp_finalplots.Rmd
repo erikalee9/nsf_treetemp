@@ -50,7 +50,16 @@ brewer.pal(n = 8, name = "Dark2")
 full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = with_tz(datetime, tz = 'MST')) %>%
-  mutate(day = as.Date(day, format = ("%Y-%m-%d")))
+  mutate(day = as.Date(day, format = ("%Y-%m-%d"))) %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, north_temp, south_temp, solarNoon, sunrise, sunset, dawn, dusk)
 
 full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
    mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
@@ -294,6 +303,18 @@ nt_full_daily_gbdbub_plot_dataframe <- full_15min_gbdbub %>%
 ```
 
 ```{r}
+##don't need to include this
+wide_dt_gbdbub_temps <- dt_full_daily_gbdbub_plot_dataframe %>%
+  pivot_wider(names_from = phase, values_from = c(gb_temp, db_temp, ub_temp))
+
+wide_nt_gbdbub_temps <- nt_full_daily_gbdbub_plot_dataframe %>%
+  pivot_wider(names_from = phase, values_from = c(gb_temp, db_temp, ub_temp))
+
+wide_dtnt_gbdbub_temps <- wide_dt_gbdbub_temps %>%
+  inner_join(wide_nt_gbdbub_temps)
+```
+
+```{r}
 #daytime plot
 dt_treetemp_daily_gbdbub_lineplot <- ggplot(data = dt_full_daily_gbdbub_plot_dataframe) +
   geom_line(aes(x = day, y = gb_temp, color = "green burn", linetype = aspect)) + 
@@ -479,7 +500,7 @@ dt_full_daily_gbdbub_boxplot_dataframe <- dt_full_daily_gbdbub_plot_dataframe %>
 
 ```{r}
 dt_t_treetemp_daily_gbdbub_boxplot <- ggplot(data = dt_full_daily_gbdbub_boxplot_dataframe) +
-  geom_boxplot(aes(x = factor(day), y = temperature, fill = "burn_status", linetype = aspect), 
+  geom_boxplot(aes(x = phase, y = temperature, fill = "burn_status", linetype = aspect), 
                position = position_dodge(width = 0.8)) +
   facet_wrap(~ zone + month) +
   labs(title = "a) Day Temps", x = "Day", y = "Temperature (°C)") +
@@ -487,83 +508,261 @@ dt_t_treetemp_daily_gbdbub_boxplot <- ggplot(data = dt_full_daily_gbdbub_boxplot
     name = "burn status",
     values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = "#2166AC"),
     labels = c("green burn" = "Green Burn", "dead burn" = "Dead Burn", "live" = "Live")
-  ) +
-  scale_linetype_manual(
-    name = "aspect", 
-    values = c("north" = "dashed", "south" = "solid"),
-    labels = c("north" = "North", "south" = "South")
-  ) +
-  scale_y_continuous(limits = c(-20, 20)) +
-  theme_bw()
+  )
 
 dt_t_treetemp_daily_gbdbub_boxplot
 ```
 
-\*\* the above plot is not working. Not sure why, need to work on the box plot if I want to use this.
+### DTNT Boxplots
+
+```{r}
+#PSZ boxplot dataframes
+PSZ_dtnt_data <- full_pers_gbdbub_data %>%
+  pivot_longer(
+    cols = c(gb_temp, db_temp, ub_temp),  # Columns to reshape
+    names_to = "burn_status",            # New column for burn status
+    values_to = "temp"            # New column for temperature values
+  ) %>%
+ mutate(
+    burn_status = case_when(
+      burn_status == "gb_temp" ~ "GB",
+      burn_status == "db_temp" ~ "DB",
+      burn_status == "ub_temp" ~ "live",
+      TRUE ~ burn_status  # Optional: Keep original value if no match
+    )
+  )
+
+#TSZ
+TSZ_dtnt_data_V2 <- full_trans_gbdbub_data %>%
+  pivot_longer(
+    cols = c(gb_temp, db_temp, ub_temp),  # Columns to reshape
+    names_to = "burn_status",            # New column for burn status
+    values_to = "temp"            # New column for temperature values
+  ) %>%
+ mutate(
+    burn_status = case_when(
+      burn_status == "gb_temp" ~ "GB",
+      burn_status == "db_temp" ~ "DB",
+      burn_status == "ub_temp" ~ "live",
+      TRUE ~ burn_status  # Optional: Keep original value if no match
+    )
+  )
+```
+
+```{r}
+PSZ_dtnt_data$snow_phase <- fct_relevel(PSZ_dtnt_data$snow_phase, "accumulation", "ablation")
+
+#PSZ day/night boxplots
+PSZ_dtnt_boxplot <- ggplot(data = PSZ_dtnt_data) + 
+  geom_boxplot(aes(x = phase, y = temp, fill = burn_status)) +
+  scale_fill_manual(
+    name = "Burn Status",
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = adjustcolor("#2166AC", alpha.f = 0.8)), 
+    labels = c("GB" = "GB", "DB" = "DB", "live" = "Live")
+  ) +
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) +
+  scale_alpha_manual(
+    name = "Burn Status",
+    values = c("GB" = 1, "DB" = 1, "live" = 0.5)  # Adjust alpha for "live"
+  ) +
+  #facet_wrap(~aspect) +
+  scale_y_continuous(
+    limits = c(-25, 40)  # Set y-axis limits from 0 to 30
+  ) +
+  theme_bw() +
+  facet_wrap(~snow_phase)
+
+PSZ_dtnt_boxplot
+```
+
+```{r}
+TSZ_dtnt_data_V2$snow_phase <- fct_relevel(TSZ_dtnt_data_V2$snow_phase, "accumulation", "ablation")
+
+#TSZ day/night boxplots
+TSZ_dtnt_boxplot <- ggplot(data = TSZ_dtnt_data) + 
+  geom_boxplot(aes(x = phase, y = temp, fill = burn_status)) +
+  scale_fill_manual(
+    name = "Burn Status",
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = adjustcolor("#2166AC", alpha.f = 0.8)), 
+    labels = c("GB" = "GB", "DB" = "DB", "live" = "Live")
+  ) +
+  labs(
+    title = "b) TSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) +
+  scale_alpha_manual(
+    name = "Burn Status",
+    values = c("GB" = 1, "DB" = 1, "live" = 0.5)  # Adjust alpha for "live"
+  ) +
+  #facet_wrap(~aspect) +
+  scale_y_continuous(
+    limits = c(-25, 40)  # Set y-axis limits from 0 to 30
+  ) +
+  theme_bw() +
+  facet_wrap(~snow_phase)
+
+TSZ_dtnt_boxplot
+```
+
+```{r}
+comb_dtnt_boxplot <- ggarrange(PSZ_dtnt_boxplot,  TSZ_dtnt_boxplot, ncol = 1, nrow = 2, common.legend = TRUE, legend = "right")
+
+comb_dtnt_boxplot
+```
 
 ## GB Aspect/Char Pattern Comparison
 
-```{r}
-#dataframe
-##march
-march_dt_mean_gb_temps <- full_hourly_gb %>%
-  filter(phase == "day", month == "3") %>%
-  group_by(day, month, zone) %>%
-  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), charred_temp = mean(charred_temp), uncharred_temp = mean(uncharred_temp)) %>%
-  filter(day >= "2024-03-10" & day <= "2024-03-20")
+### Aspect-only Comparisons
 
-##april
-april_dt_mean_gb_temps <- full_hourly_gb %>%
-  filter(phase == "day", month == "4") %>%
-  group_by(day, month, zone) %>%
-  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), charred_temp = mean(charred_temp), uncharred_temp = mean(uncharred_temp))  %>%
-  filter(day >= "2024-04-15" & day <= "2024-04-25")
+```{r}
+pers_dt_ns_boxplot_data <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "day") %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp),  # Columns to reshape
+    names_to = "aspect",            # New column for burn status
+    values_to = "temp"            # New column for temperature values
+  ) %>%
+ mutate(
+    aspect = case_when(
+      aspect == "north_temp" ~ "north",
+      aspect == "south_temp" ~ "south",
+      TRUE ~ aspect  # Optional: Keep original value if no match
+    ))
 ```
 
 ```{r}
-march_dt_mean_gb_temp_plot <- ggplot(data = march_dt_mean_gb_temps) +
-  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
-  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
-  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
-  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
-  facet_wrap(~zone) +
-  labs(title = "a) Accumulation", x = NULL, y = "Temperature (°C)") +
-  scale_color_manual(
-    name = "aspect",
-    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
+trans_dt_ns_boxplot_data <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "day") %>%
+ pivot_longer(
+    cols = c(north_temp, south_temp),  # Columns to reshape
+    names_to = "aspect",            # New column for burn status
+    values_to = "temp"            # New column for temperature values
+  ) %>%
+ mutate(
+    aspect = case_when(
+      aspect == "north_temp" ~ "north",
+      aspect == "south_temp" ~ "south",
+      TRUE ~ aspect  # Optional: Keep original value if no match
+    ))
+```
+
+Boxplots
+
+```{r}
+pers_dt_ns_boxplot_data$snow_phase <- fct_relevel(pers_dt_ns_boxplot_data$snow_phase, "accumulation", "ablation")
+
+PSZ_ns_boxplot <- ggplot(data = pers_dt_ns_boxplot_data) + 
+  geom_boxplot(aes(x = aspect, y = temp, fill = burn_status)) +
+  scale_fill_manual(
+    name = "Burn Status",
+    values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha.f = 0.8)),
+               labels = c("green burn" = "GB", "dead burn" = "DB", "live" = "live"))+ # Corrected the parenthesis here
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Temperature (°C)"
   ) +
-  theme_bw()
+  theme_bw() +
+  facet_wrap(~snow_phase) +
+  scale_y_continuous(
+    limits = c(-25, 48))
 
-march_dt_mean_gb_temp_plot
+PSZ_ns_boxplot
 ```
 
 ```{r}
-april_dt_mean_gb_temp_plot <- ggplot(data = april_dt_mean_gb_temps) +
-  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7, alpha = 0.8) + 
-  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
-  geom_line(aes(x = day, y = charred_temp, color = "charred"), linewidth = 0.7) + 
-  geom_line(aes(x = day, y = uncharred_temp, color = "uncharred"), linetype = "dashed", linewidth = 0.7) + 
-  facet_wrap(~zone) +
-  labs(title = "b) Ablation", x = "Date", y = "Temperature (°C)") +
-  scale_color_manual(
-    name = "aspect",
-    values = c("north" = "#2166AC", "south" = "#D95F02", "charred" = "grey15", "uncharred" = "grey30")
+trans_dt_ns_boxplot_data$snow_phase <- fct_relevel(trans_dt_ns_boxplot_data$snow_phase, "accumulation", "ablation")
+
+TSZ_ns_boxplot <- ggplot(data = trans_dt_ns_boxplot_data) + 
+  geom_boxplot(aes(x = aspect, y = temp, fill = burn_status)) +
+  scale_fill_manual(
+    name = "Burn Status",
+    values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha.f = 0.8)),
+               labels = c("green burn" = "GB", "dead burn" = "DB", "live" = "live"))+ # Corrected the parenthesis here
+  labs(
+    title = "b) TSZ",
+    x = "Aspect",
+    y = "Temperature (°C)"
   ) +
-  theme_bw()
+  theme_bw() +
+  facet_wrap(~snow_phase) + 
+  scale_y_continuous(
+    limits = c(-25, 48))
 
-april_dt_mean_gb_temp_plot
+TSZ_ns_boxplot
 ```
 
 ```{r}
-example_gb_temps_lineplot <- ggarrange(
-  march_dt_mean_gb_temp_plot, 
-  april_dt_mean_gb_temp_plot, 
-  nrow = 2, 
-  ncol = 1, 
-  common.legend = TRUE,
-  legend = "right")
+#combined ns boxplot
+comb_dt_ns_boxplot <- ggarrange(PSZ_ns_boxplot, TSZ_ns_boxplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
 
-example_gb_temps_lineplot
+comb_dt_ns_boxplot
+```
+
+Only Boxplotting by North/South, not by burn status, to see if this helps with interpretation?
+
+```{r}
+pers_dt_ns_allburnstatuses_boxplot_data <- pers_dt_ns_boxplot_data %>%
+  group_by(datetime, day, month, phase, zone, snow_phase, aspect) %>%
+  summarize(all_temp = mean(temp))
+
+trans_dt_ns_allburnstatuses_boxplot_data <- trans_dt_ns_boxplot_data %>%
+  group_by(datetime, day, month, phase, zone, snow_phase, aspect) %>%
+  summarize(all_temp = mean(temp))
+```
+
+```{r}
+pers_dt_ns_allburnstatuses_boxplot_data$snow_phase <- fct_relevel(pers_dt_ns_allburnstatuses_boxplot_data$snow_phase, "accumulation", "ablation")
+
+pers_dt_ns_allburnstatuses_boxplot <- ggplot(data = pers_dt_ns_allburnstatuses_boxplot_data) + 
+  geom_boxplot(aes(x = aspect, y = all_temp, fill = aspect)) +
+  scale_fill_manual(
+    name = "Aspect",
+    values = c("north" = "#1B7837", "south" = "#D95F02")) + 
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) +
+  theme_bw() +
+  facet_wrap(~snow_phase) +
+  scale_y_continuous(
+    limits = c(-25, 48))
+
+pers_dt_ns_allburnstatuses_boxplot
+```
+
+```{r}
+trans_dt_ns_allburnstatuses_boxplot_data$snow_phase <- fct_relevel(trans_dt_ns_allburnstatuses_boxplot_data$snow_phase, "accumulation", "ablation")
+
+trans_dt_ns_allburnstatuses_boxplot <- ggplot(data = trans_dt_ns_allburnstatuses_boxplot_data) + 
+  geom_boxplot(aes(x = aspect, y = all_temp, fill = aspect)) +
+  scale_fill_manual(
+    name = "Aspect",
+    values = c("north" = "#1B7837", "south" = "#D95F02")) + 
+  labs(
+    title = "b) TSZ",
+    x = "Group",
+    y = "Temperature (°C)"
+  ) +
+  theme_bw() +
+  facet_wrap(~snow_phase) +
+  scale_y_continuous(
+    limits = c(-25, 48))
+
+trans_dt_ns_allburnstatuses_boxplot
+```
+
+```{r}
+#combined all temps ns boxplot
+comb_ns_allburnstatuses_boxplot_V1 <- ggarrange(pers_dt_ns_allburnstatuses_boxplot, trans_dt_ns_allburnstatuses_boxplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+comb_ns_allburnstatuses_boxplot_V1
 ```
 
 Creating a daily mean temperature dataframe, then plotting for full timeframe
@@ -573,7 +772,7 @@ Creating a daily mean temperature dataframe, then plotting for full timeframe
 ##mean
 dt_mean_gb <- full_hourly_gb %>%
   filter(phase == "day") %>%
-  group_by(day, month, zone) %>%
+  group_by(day, month, zone, snow_phase) %>%
   summarize(north_temp = mean(north_temp), south_temp = mean(south_temp), charred_temp = mean(charred_temp), uncharred_temp = mean(uncharred_temp))
 
 dt_min_gb <- full_hourly_gb %>%
@@ -585,35 +784,6 @@ dt_max_gb <- full_hourly_gb %>%
   filter(phase == "day") %>%
   group_by(day, month, zone) %>%
   summarize(north_temp = max(north_temp), south_temp = max(south_temp), charred_temp = max(charred_temp), uncharred_temp = max(uncharred_temp))
-```
-
-```{r}
-#making a monthly version by month and zone
-pers_feb_dt_mean_gb <- dt_mean_gb %>%
-  filter(zone == "PSZ", month == "2")
-
-pers_march_dt_mean_gb <- dt_mean_gb %>%
-  filter(zone == "PSZ", month == "3")
-
-pers_april_dt_mean_gb <- dt_mean_gb %>%
-  filter(zone == "PSZ", month == "4")
-
-pers_may_dt_mean_gb <- dt_mean_gb %>%
-  filter(zone == "PSZ", month == "5")
-```
-
-```{r}
-trans_feb_dt_mean_gb <- dt_mean_gb %>%
-  filter(zone == "TSZ", month == "2")
-
-trans_march_dt_mean_gb <- dt_mean_gb %>%
-  filter(zone == "TSZ", month == "3")
-
-trans_april_dt_mean_gb <- dt_mean_gb %>%
-  filter(zone == "TSZ", month == "4")
-
-trans_may_dt_mean_gb <- dt_mean_gb %>%
-  filter(zone == "TSZ", month == "5")
 ```
 
 ```{r}
@@ -635,6 +805,14 @@ pers_dt_max_gb <- dt_max_gb %>%
 
 trans_dt_max_gb <- dt_max_gb %>%
   filter(zone == "TSZ")
+
+pers_dt_gb <- full_hourly_gb %>%
+  filter(zone == "PSZ", phase == "day") %>%
+  select(-burn_status)
+
+trans_dt_gb <- full_hourly_gb %>%
+  filter(zone == "TSZ", phase == "day") %>%
+  select(-burn_status)
 ```
 
 ```{r}
@@ -849,6 +1027,90 @@ comb_gb_lineplot
 ```
 
 \*\* Not sure if I need to use the above mean/min/max plots, but if so I'll export later.
+
+###  GB Char Comparison Boxplots
+
+```{r}
+pers_gb_boxplot_data <- pers_dt_gb %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp, charred_temp, uncharred_temp),  # Columns to reshape
+    names_to = "burn_status",            # New column for burn status
+    values_to = "temp"            # New column for temperature values
+  ) %>%
+ mutate(
+    burn_status = case_when(
+      burn_status == "north_temp" ~ "north",
+      burn_status == "south_temp" ~ "south",
+      burn_status == "charred_temp" ~ "charred",
+      burn_status == "uncharred_temp" ~ "uncharred",
+      TRUE ~ burn_status  # Optional: Keep original value if no match
+    ))
+```
+
+```{r}
+trans_gb_boxplot_data <- trans_dt_gb %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp, charred_temp, uncharred_temp),  # Columns to reshape
+    names_to = "burn_status",            # New column for burn status
+    values_to = "temp"            # New column for temperature values
+  ) %>%
+ mutate(
+    burn_status = case_when(
+      burn_status == "north_temp" ~ "north",
+      burn_status == "south_temp" ~ "south",
+      burn_status == "charred_temp" ~ "charred",
+      burn_status == "uncharred_temp" ~ "uncharred",
+      TRUE ~ burn_status  # Optional: Keep original value if no match
+    ))
+```
+
+```{r}
+pers_gb_boxplot_data$snow_phase <- fct_relevel(pers_gb_boxplot_data$snow_phase, "accumulation", "ablation")
+
+PSZ_gb_boxplot <- ggplot(data = pers_gb_boxplot_data) + 
+  geom_boxplot(aes(x = burn_status, y = temp, fill = burn_status)) +
+  scale_fill_manual(
+    name = "Char Pattern / Aspect",
+    values = c("north" = "#1B7837", "south" = "#D95F02", 
+               "uncharred" = adjustcolor("#2166AC", alpha.f = 0.8), "charred" = adjustcolor("grey23", alpha.f = 0.8))
+  ) +  # Corrected the parenthesis here
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) +
+  theme_bw() +
+  facet_wrap(~snow_phase)
+
+PSZ_gb_boxplot
+```
+
+```{r}
+trans_gb_boxplot_data$snow_phase <- fct_relevel(trans_gb_boxplot_data$snow_phase, "accumulation", "ablation")
+
+TSZ_gb_boxplot <- ggplot(data = trans_gb_boxplot_data) + 
+  geom_boxplot(aes(x = burn_status, y = temp, fill = burn_status)) +
+  scale_fill_manual(
+    name = "Char Pattern / Aspect",
+    values = c("north" = "#1B7837", "south" = "#D95F02", 
+               "uncharred" = adjustcolor("#2166AC", alpha.f = 0.8), "charred" = adjustcolor("grey23", alpha.f = 0.8))
+  ) +  # Corrected the parenthesis here
+  labs(
+    title = "b) TSZ",
+    x = "Group",
+    y = "Temperature (°C)"
+  ) +
+  theme_bw() +
+  facet_wrap(~snow_phase)
+
+TSZ_gb_boxplot
+```
+
+```{r}
+comb_charpattern_boxplot <- ggarrange(PSZ_gb_boxplot, TSZ_gb_boxplot, ncol = 1, nrow = 2, common.legend = TRUE, legend = "right")
+
+comb_charpattern_boxplot
+```
 
 Month separated plots
 
@@ -1066,22 +1328,6 @@ p_accu_dr_gbdbub_LWout <- cum_full_daily_gbdbub_treeLWout %>%
 t_accu_dr_gbdbub_LWout <- cum_full_daily_gbdbub_treeLWout %>%
   filter(zone == "TSZ") %>%
   mutate(day = as.Date(day, format = "%Y-%m-%d"))
-```
-
-```{r}
-test <- t_accu_dr_gbdbub_LWout %>%
-  group_by(day) %>%
-  summarize(n = n(), value = mean(accu_daily_gb_LWout_MJperd, na.rm = TRUE)) %>%
-  filter(n > 1)
-```
-
-```{r}
-cum_t_exploration <- ggplot(data = t_accu_dr_gbdbub_LWout) +
-  geom_line(aes(x = day, y = accu_daily_gb_LWout_MJperd)) + 
-  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month")
-
-
-cum_t_exploration
 ```
 
 Plotting
@@ -1350,7 +1596,9 @@ mean_dt_transb_wx <- filtered_transb_wx_15min %>%
   group_by(day, month, phase, zone, burn_status) %>%
   summarize(SnowDepth_m = mean(SnowDepth_m), AirTC_Avg = mean(AirTC_Avg), SWin_Avg = mean(SWin_Avg), SWout_Avg = mean(SWout_Avg), LWin_Avg = mean(LWin_Avg), LWout_Avg = mean(LWout_Avg), NR_Avg_wperm2 = mean(NR_Avg_new)) %>%
   #creating a MJ/day mean value column for NR
-  mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000)
+  mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000) %>%
+  #adding in a netSW and netLW column for plotting that is converted to MJperd
+  mutate(Net_SW_MJperd = ((SWin_Avg - SWout_Avg)* 86400)/1000000, Net_LW_MJperd = ((LWin_Avg - LWout_Avg)* 86400)/1000000)
 ```
 
 ```{r}
@@ -1370,7 +1618,9 @@ max_dt_transb_wx <- filtered_transb_wx_15min %>%
   group_by(day, month, phase, zone, burn_status) %>%
   summarize(SnowDepth_m = mean(SnowDepth_m), AirTC_Avg = max(AirTC_Avg), SWin_Avg = max(SWin_Avg), SWout_Avg = max(SWout_Avg), LWin_Avg = max(LWin_Avg), LWout_Avg = max(LWout_Avg), NR_Avg_wperm2 = max(NR_Avg_new)) %>%
   #creating a MJ/day mean value column for NR
-  mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000)
+  mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000) %>%
+  #adding in a netSW and netLW column for plotting that is converted to MJperd
+  mutate(Net_SW_MJperd = ((SWin_Avg - SWout_Avg)* 86400)/1000000, Net_LW_MJperd = ((LWin_Avg - LWout_Avg)* 86400)/1000000)
 ```
 
 ```{r}
@@ -1379,7 +1629,9 @@ mean_dt_transub_wx <- filtered_transub_wx_15min %>%
   group_by(day, month, phase, zone, burn_status) %>%
   summarize(SnowDepth_m = mean(SnowDepth_m), AirTC_Avg = mean(AirTC_Avg), SWin_Avg = mean(SWin_Avg), SWout_Avg = mean(SWout_Avg), LWin_Avg = mean(LWin_Avg), LWout_Avg = mean(LWout_Avg), NR_Avg_wperm2 = mean(NR_Avg_new)) %>%
   #creating a MJ/day mean value column for NR
-  mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000)
+  mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000) %>%
+  #adding in a netSW and netLW column for plotting that is converted to MJperd
+  mutate(Net_SW_MJperd = ((SWin_Avg - SWout_Avg)* 86400)/1000000, Net_LW_MJperd = ((LWin_Avg - LWout_Avg)* 86400)/1000000)
 ```
 
 ```{r}
@@ -1388,16 +1640,20 @@ mean_dt_persb_wx <- filtered_persb_wx_hourly %>%
   group_by(day, month, phase, zone, burn_status) %>%
   summarize(SnowDepth_m = mean(SnowDepth_m), AirTC_Avg = mean(AirTC_Avg), SWin_Avg = mean(SWin_Avg), SWout_Avg = mean(SWout_Avg), LWin_Avg = mean(LWin_Avg), LWout_Avg = mean(LWout_Avg), NR_Avg_wperm2 = mean(NR_Avg_new)) %>%
   #creating a MJ/day mean value column for NR
-  mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000)
+  mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000) %>%
+  #adding in a netSW and netLW column for plotting that is converted to MJperd
+  mutate(Net_SW_MJperd = ((SWin_Avg - SWout_Avg)* 86400)/1000000, Net_LW_MJperd = ((LWin_Avg - LWout_Avg)* 86400)/1000000)
 ```
 
 ```{r}
-mean_dt_persub_wx <- filtered_persub_wx_15min %>%
+mean_dt_persub_wx <- filtered_persub_wx_hourly %>%
   filter(phase == "day") %>%
   group_by(day, month, phase, zone, burn_status) %>%
   summarize(SnowDepth_m = mean(SnowDepth_m), AirTC_Avg = mean(AirTC_Avg), SWin_Avg = mean(SWin_Avg), SWout_Avg = mean(SWout_Avg), LWin_Avg = mean(LWin_Avg), LWout_Avg = mean(LWout_Avg), NR_Avg_wperm2 = mean(NR_Avg_new)) %>%
 #creating a MJ/day mean value column for NR
-  mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000)
+  mutate(NR_Avg_MJperd = (NR_Avg_wperm2 * 86400)/1000000) %>%
+  #adding in a netSW and netLW column for plotting that is converted to MJperd
+  mutate(Net_SW_MJperd = ((SWin_Avg - SWout_Avg)* 86400)/1000000, Net_LW_MJperd = ((LWin_Avg - LWout_Avg)* 86400)/1000000) 
 ```
 
 ```{r}
@@ -1548,7 +1804,8 @@ p_snowtreewell_NR_plot <- ggplot() +
   geom_point(data = persb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*15, 
              shape = "dates that wells developed"), 
              color = "black", fill = "black", size = 1.5) +
-  facet_wrap(~burn_status) +
+  #facet_wrap(~burn_status) +
+  #geom_line(data = p_b_dt_mean_treeLWout, aes(x = day, y = full_tree_LWout_MJperd, color = "tree LWout"), alpha = 0.8, linewidth = 0.8) +
   labs(
     title = "a) PSZ",
     x = NULL,
@@ -1556,7 +1813,7 @@ p_snowtreewell_NR_plot <- ggplot() +
   ) +
   # Customizing colors and shapes
   scale_color_manual(name = "Radiation Data", 
-                     values = c("air temp" = "#D95F02", "tree temp" = "#1B7837", "snow depth" = "#2166AC")) +
+                     values = c("air temp" = "#D95F02", "tree temp" = "#1B7837", "snow depth" = "#2166AC", "tree LWout"= "black")) +
   scale_fill_manual(name = "Radiation Data", 
                     values = c("net radiation" = "#666666")) +
   scale_shape_manual(values = c("dates that wells developed" = 21)) +
@@ -1607,7 +1864,7 @@ t_snowtreewell_NR_plot <- ggplot() +
   geom_point(data = transb_treewell_dates, aes(x = day, y = snowcam_max_depth_m*15, 
              shape = "dates that wells developed"), 
              color = "black", fill = "black", size = 1.5) +
-  facet_wrap(~burn_status) +
+  #facet_wrap(~burn_status) +
   labs(
     title = "b) TSZ",
     x = "Date",
@@ -1662,6 +1919,71 @@ comb_b_snowtreewell_NR_plots
 
 \*\* as of 2025-01-14 - need to add an unburned comparison to the above plots!
 
+SW/LW Plots
+
+\*\* as of 2025-01-16 - not sure I am going to use the SW/LW plots below.
+
+```{r}
+p_rad_plot <- ggplot() + 
+  #Net SW
+  geom_col(data = mean_dt_persb_wx, aes(x = day, y = Net_SW_MJperd, fill = "net SW"), alpha = 0.7, position = position_dodge(width = 0.5)) +
+  #Total Net Rad
+  geom_col(data = mean_dt_persb_wx, aes(x = day, y = NR_Avg_MJperd, fill = "net radiation"), alpha = 0.7, position = position_dodge(width = 0.5)) +
+  #Net LW
+  geom_col(data = mean_dt_persb_wx, aes(x = day, y = Net_LW_MJperd, fill = "net LW"), alpha = 0.7, position = position_dodge(width = 0.5)) +
+  geom_line(data = p_b_dt_mean_treeLWout, aes(x = day, y = full_tree_LWout_MJperd, color = "tree LWout"), alpha = 0.8, linewidth = 0.8) +
+  facet_wrap(~burn_status) +
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Total Net Rad (MJ/day) & Temp (°C)"
+  ) +
+  # Customizing colors and shapes
+  scale_color_manual(name = "Tree Sensor Data", 
+                     values = c("tree LWout" = "black")) +
+  scale_fill_manual(name = "Weather Station Data", 
+                    values = c("net radiation" ="#666666", "net SW" ="#D95F02", "net LW" ="#2166AC")) +
+  guides(color = guide_legend(title = NULL),  # Remove title for color legend
+         fill = guide_legend(title = NULL), #Remove fill legend
+         shape = guide_legend(title = NULL)) +
+  scale_x_date(
+    limits = c(as.Date("2024-02-02"), as.Date("2024-07-01")), 
+    expand = c(0.02, 0.02)  # Remove extra space on the x-axis
+  ) +# Remove title for shape legend
+  #scale_y_continuous(
+ #   limits = c(-15, 38),
+  #  sec.axis = sec_axis(~./15, name = "Snow Depth (m)")  # Adjusting for the secondary axis
+ # ) +
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size = 13),      # Title size
+    axis.title.x = element_text(size = 11),                   # X-axis title size
+    axis.title.y = element_text(size = 11),                   # Y-axis title size
+    axis.text = element_text(size = 11),                      # Axis text size
+    legend.text = element_text(size = 12),                    # Legend text size
+    legend.title = element_text(size = 12),                   # Legend title size
+    strip.text = element_text(size = 12)) + 
+  #accumulation/ablation date destiction
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-06-05')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8)
+
+p_rad_plot
+```
+
+```{r}
+#combined radiation and snow depth/tree temp data
+comb_persb_rad_treewell_plot <- ggarrange(p_snowtreewell_NR_plot, p_rad_plot, ncol = 1, nrow = 2, common.legend = FALSE)
+
+comb_persb_rad_treewell_plot
+```
+
 Plotting the same graph but with tree LWout instead of total net radiation
 
 -   this doesn't show the pattern as well as the NR plots do, so I probably won't use this...
@@ -1712,7 +2034,7 @@ p_snowtreewell_treeLWout_plot <- ggplot() +
     legend.title = element_text(size = 12),                   # Legend title size
     strip.text = element_text(size = 12))
 
-p_snowtreewell_treeLWout_plot
+p_rad_plot
 ```
 
 Air Temp Compared to Tree Temp
