@@ -35,6 +35,11 @@ library(pagedown)
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
 
+```{r}
+#clear prior environment
+rm(list = ls())
+```
+
 ## Loading Data
 
 -   I don't think I need all of these dataframes, but I'll need to rework the stats so that I pull from only the combined dataframes in the second chunk below!
@@ -72,11 +77,30 @@ final_daynight_singleavg_temps <- read_csv("nsf/treetemp_data/final_daynight_sin
 \*\* I think I only need the following imports!
 
 ```{r}
+p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
+  mutate(
+    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"), # Assuming data is in UTC
+    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunrise = with_tz(sunrise, "MST"),  # Convert to MST timezone
+    sunset = with_tz(sunset, "MST")     # Convert to MST timezone
+  )
+```
+
+```{r}
 #new full dataframes to load - including burned and unburned/ all burn_status types together
 full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST')) %>%
-  select(-1)
+                               datetime = with_tz(datetime, tz = 'MST')) %>%
+  mutate(day = as.Date(day, format = ("%Y-%m-%d"))) %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, north_temp, south_temp, solarNoon, sunrise, sunset, dawn, dusk)
 
 #full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
    #mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
@@ -85,8 +109,17 @@ full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
 
 full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST'))  %>%
-  select(-1)
+                               datetime = with_tz(datetime, tz = 'MST')) %>%
+  mutate(day = as.Date(day, format = ("%Y-%m-%d"))) %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp, solarNoon, sunrise, sunset, dawn, dusk)
 
 #full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv") %>%
  # mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
@@ -95,12 +128,10 @@ full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
 
 full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
-  select(-1)
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))
 
 #day/night comparisons
-full_dtnt_ns_temps <- read_csv("nsf/treetemp_data/full_dtnt_ns_temps.csv") %>%
-  select(-1)
+full_dtnt_ns_temps <- read_csv("nsf/treetemp_data/full_dtnt_ns_temps.csv")
 ```
 
 ## Calculating Stats
@@ -1950,8 +1981,7 @@ print(t_t_test_hourly_s_accu_dbub_result)
 
 ```{r}
 #GB dataframe with daily averaged day and night temperatures
-gb_daynight_ns_temps <- full_hourly_gbdbub %>%
-  select(1:7) %>%
+gb_daynight_ns_temps <- full_15min_gbdbub %>%
   rename(date = day) %>%
   group_by(date, month, phase, zone, aspect) %>%
   summarize(gb_temp = mean(gb_temp)) %>%
@@ -2454,6 +2484,92 @@ t_ttest_abla_gb_s_c_results <- t.test(t_abla_gb$south_temp, t_abla_gb$charred_te
 
 print(t_ttest_abla_gb_s_c_results)
 ```
+
+GB vs DB vs Live - NO Aspect - updated 2025-01-17
+
+```{r}
+p_accu_gbdbub <- full_15min_gbdbub %>%
+  filter(zone == "PSZ", snow_phase == "accumulation")
+
+p_abla_gbdbub <- full_15min_gbdbub %>%
+  filter(zone == "PSZ", snow_phase == "ablation")
+
+t_accu_gbdbub <- full_15min_gbdbub %>%
+  filter(zone == "TSZ", snow_phase == "accumulation")
+
+t_abla_gbdbub <- full_15min_gbdbub %>%
+  filter(zone == "TSZ", snow_phase == "ablation")
+```
+
+```{r}
+#GB vs DB
+p_ttest_accum_gb_db_results <- t.test(p_accu_gbdbub$gb_temp, p_accu_gbdbub$db_temp)
+
+print(p_ttest_accum_gb_db_results)
+
+t_ttest_accum_gb_db_results <- t.test(t_accu_gbdbub$gb_temp, t_accu_gbdbub$db_temp)
+
+print(t_ttest_accum_gb_db_results)
+```
+
+```{r}
+#GB vs Live
+p_ttest_accum_gb_ub_results <- t.test(p_accu_gbdbub$gb_temp, p_accu_gbdbub$ub_temp)
+
+print(p_ttest_accum_gb_ub_results)
+
+t_ttest_accum_gb_ub_results <- t.test(t_accu_gbdbub$gb_temp, t_accu_gbdbub$ub_temp)
+
+print(t_ttest_accum_gb_ub_results)
+```
+
+```{r}
+#DB vs Live
+p_ttest_accum_db_ub_results <- t.test(p_accu_gbdbub$db_temp, p_accu_gbdbub$ub_temp)
+
+print(p_ttest_accum_db_ub_results)
+
+t_ttest_accum_db_ub_results <- t.test(t_accu_gbdbub$db_temp, t_accu_gbdbub$ub_temp)
+
+print(t_ttest_accum_db_ub_results)
+```
+
+Accumulation
+
+```{r}
+#GB vs DB
+p_ttest_abla_gb_db_results <- t.test(p_abla_gbdbub$gb_temp, p_abla_gbdbub$db_temp)
+
+print(p_ttest_abla_gb_db_results)
+
+t_ttest_abla_gb_db_results <- t.test(t_abla_gbdbub$gb_temp, t_abla_gbdbub$db_temp)
+
+print(t_ttest_abla_gb_db_results)
+```
+
+```{r}
+#GB vs Live
+p_ttest_abla_gb_ub_results <- t.test(p_abla_gbdbub$gb_temp, p_abla_gbdbub$ub_temp)
+
+print(p_ttest_abla_gb_ub_results)
+
+t_ttest_abla_gb_ub_results <- t.test(t_abla_gbdbub$gb_temp, t_abla_gbdbub$ub_temp)
+
+print(t_ttest_abla_gb_ub_results)
+```
+
+```{r}
+#DB vs Live
+p_ttest_abla_db_ub_results <- t.test(p_abla_gbdbub$db_temp, p_abla_gbdbub$ub_temp)
+
+print(p_ttest_abla_db_ub_results)
+
+t_ttest_abla_db_ub_results <- t.test(t_abla_gbdbub$db_temp, t_abla_gbdbub$ub_temp)
+
+print(t_ttest_abla_db_ub_results)
+```
+
+GB Comparisons
 
 GB- South vs Uncharred
 
