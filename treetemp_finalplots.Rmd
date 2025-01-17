@@ -1028,7 +1028,7 @@ comb_gb_lineplot
 
 \*\* Not sure if I need to use the above mean/min/max plots, but if so I'll export later.
 
-###  GB Char Comparison Boxplots
+### GB Char Comparison Boxplots
 
 ```{r}
 pers_gb_boxplot_data <- pers_dt_gb %>%
@@ -1299,13 +1299,21 @@ stats_gbdbub <- full_15min_gbdbub %>%
 ### GB DB UB Stats
 
 ```{r}
-stats_gbdbub <- full_15min_gbdbub %>%
+stats_gbdbub_dtnt <- full_15min_gbdbub %>%
   group_by(zone, phase, snow_phase) %>%
   summarize(
     mean_gb_temp = mean(gb_temp, na.rm = TRUE), 
     mean_db_temp = mean(db_temp, na.rm = TRUE), 
-    mean_ub_temp = mean(ub_temp, na.rm = TRUE)
+    mean_ub_temp = mean(ub_temp, na.rm = TRUE), 
+    min_gb_temp = min(gb_temp, na.rm = TRUE), 
+    min_db_temp = min(db_temp, na.rm = TRUE),
+    min_ub_temp = min(ub_temp, na.rm = TRUE), 
+    max_gb_temp = max(gb_temp, na.rm = TRUE), 
+    max_db_temp = max(db_temp, na.rm = TRUE),
+    max_ub_temp = max(ub_temp, na.rm = TRUE),
   )
+
+write_csv(stats_gbdbub_dtnt, "nsf/treetemp_data/stats_gbdbub_dtnt_simple.csv")
 ```
 
 ```{r}
