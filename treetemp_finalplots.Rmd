@@ -286,19 +286,19 @@ TotalNetRad = (SWin -SWout) + (LWin - LWout) + LWout_tree)
 #creating dataframe for this that has renamed zones - mean daily value!!
 dt_full_daily_gbdbub_plot_dataframe <- full_15min_gbdbub %>%
   #selecting data that we need
-  select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
+  select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp) %>%
   filter(phase == "day") %>%
   #summarizing for one daily value
-  group_by(day, month, phase, zone, aspect) %>%
+  group_by(day, month, phase, zone, snow_phase, aspect) %>%
   summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
   
 
 nt_full_daily_gbdbub_plot_dataframe <- full_15min_gbdbub %>%
-  #selecting data that we neex
-  select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
+  #selecting data that we need
+  select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp) %>%
   filter(phase == "night") %>%
   #summarizing for one daily value
-  group_by(day, month, phase, zone, aspect) %>%
+  group_by(day, month, phase, zone, snow_phase, aspect) %>%
   summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
 ```
 
@@ -1280,7 +1280,23 @@ comb_gb_lineplot_bymonth <- ggarrange(
 comb_gb_lineplot_bymonth
 ```
 
-## GB DB UB Stats
+## Simple Stats Calcs
+
+### DTNT Stats
+
+```{r}
+stats_gbdbub <- full_15min_gbdbub %>%
+  group_by(zone, phase, snow_phase) %>%
+  summarize(
+    mean_gb_temp = mean(gb_temp, na.rm = TRUE), 
+    mean_db_temp = mean(db_temp, na.rm = TRUE), 
+    mean_ub_temp = mean(ub_temp, na.rm = TRUE)
+  )
+```
+
+### NS Stats
+
+### GB DB UB Stats
 
 ```{r}
 stats_gbdbub <- full_15min_gbdbub %>%
@@ -1296,7 +1312,7 @@ stats_gbdbub <- full_15min_gbdbub %>%
 #total range of temperatures for GB, DB and live trees, not accounting for day/night phase
 
 stats_totaltemprange_gbdbub <- full_15min_gbdbub %>%
-  group_by(zone, phase) %>%
+  group_by(zone, phase, snow_phase) %>%
   summarize(
     mean_gb_temp = mean(gb_temp, na.rm = TRUE), 
     mean_db_temp = mean(db_temp, na.rm = TRUE), 
@@ -1311,6 +1327,16 @@ stats_totaltemprange_gbdbub <- full_15min_gbdbub %>%
     db_temp_range = (max_db_temp - min_db_temp),
     ub_temp_range = (max_ub_temp - min_ub_temp),
   )
+
+stats_totalmax_gbdbub <- full_15min_gbdbub %>%
+  group_by(phase, snow_phase) %>%
+  summarize(
+    min_gb_temp = min(gb_temp, na.rm = TRUE), 
+    min_db_temp = min(db_temp, na.rm = TRUE), 
+    min_ub_temp = min(ub_temp, na.rm = TRUE),
+    max_gb_temp = max(gb_temp, na.rm = TRUE), 
+    max_db_temp = max(db_temp, na.rm = TRUE), 
+    max_ub_temp = max(ub_temp, na.rm = TRUE))
 ```
 
 ## Cumulative Tree LWout Plot
