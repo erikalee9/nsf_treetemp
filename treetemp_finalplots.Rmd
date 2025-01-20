@@ -46,6 +46,18 @@ brewer.pal(n = 8, name = "Dark2")
 # Loading in Data
 
 ```{r}
+p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
+  mutate(
+    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunrise = with_tz(sunrise, tz = "MST")
+  ) %>%
+   mutate(
+    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunset = with_tz(sunset, tz = "MST")
+  )
+```
+
+```{r}
 #new full dataframes to load - including burned and unburned/ all burn_status types together
 full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
@@ -65,16 +77,6 @@ full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
    mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
                                datetime_hour = force_tz(datetime_hour, tz = 'MST')) %>%
   mutate(day = as.Date(day, format = ("%Y-%m-%d")))
-
-p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
-  mutate(
-    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
-    sunrise = with_tz(sunrise, tz = "MST")
-  ) %>%
-   mutate(
-    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
-    sunset = with_tz(sunset, tz = "MST")
-  )
 
 full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
@@ -179,14 +181,6 @@ persb_wx_hourly_r <- read_csv('nsf/pers_burned/pers_burned_wx_hourly_r.csv') %>%
 persub_wx_hourly_r <- read_csv('nsf/pers_unburned/pers_unburned_wx_hourly_r.csv') %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = with_tz(datetime, tz = 'MST'))
-  
-p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
-  mutate(
-    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"), # Assuming data is in UTC
-    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
-    sunrise = with_tz(sunrise, "MST"),  # Convert to MST timezone
-    sunset = with_tz(sunset, "MST")     # Convert to MST timezone
-  )
 ```
 
 ```{r}
@@ -1320,7 +1314,8 @@ write_csv(stats_gbdbub_dtnt, "nsf/treetemp_data/stats_gbdbub_dtnt_simple.csv")
 #total range of temperatures for GB, DB and live trees, not accounting for day/night phase
 
 stats_totaltemprange_gbdbub <- full_15min_gbdbub %>%
-  group_by(zone, phase, snow_phase) %>%
+  group_by(zone, phase, snow_phase, aspect) %>%
+  filter(phase == "day") %>%
   summarize(
     mean_gb_temp = mean(gb_temp, na.rm = TRUE), 
     mean_db_temp = mean(db_temp, na.rm = TRUE), 
@@ -1345,6 +1340,59 @@ stats_totalmax_gbdbub <- full_15min_gbdbub %>%
     max_gb_temp = max(gb_temp, na.rm = TRUE), 
     max_db_temp = max(db_temp, na.rm = TRUE), 
     max_ub_temp = max(ub_temp, na.rm = TRUE))
+```
+
+```{r}
+stats_totaltemprange_ns<- full_15min_ns %>%
+  group_by(zone, phase, snow_phase, burn_status) %>%
+  filter(phase == "day") %>%
+  summarize(
+    mean_north_temp = mean(north_temp, na.rm = TRUE), 
+    mean_south_temp = mean(south_temp, na.rm = TRUE), 
+    min_north_temp = min(north_temp, na.rm = TRUE), 
+    min_south_temp = min(south_temp, na.rm = TRUE),
+    max_north_temp = max(north_temp, na.rm = TRUE), 
+    max_south_temp = max(south_temp, na.rm = TRUE),
+    north_temp_range = (max_north_temp - min_north_temp), 
+    south_temp_range = (max_south_temp - min_south_temp)
+  ) %>%
+  mutate(
+    min_aspect_range = abs(min_north_temp - min_south_temp), # Range of minimum temperatures
+    mean_aspect_range = abs(mean_north_temp - mean_south_temp), # Range of mean temperatures
+    max_aspect_range = abs(max_north_temp - max_south_temp) # Range of maximum temperatures
+  )
+```
+
+```{r}
+#GB Stats only
+stats_gb_charpattern <- full_hourly_gb %>%
+  group_by(zone, phase, snow_phase) %>%
+  filter(phase == "day") %>%
+  summarize(
+    mean_charred_temp = mean(charred_temp, na.rm = TRUE), 
+    mean_uncharred_temp = mean(uncharred_temp, na.rm = TRUE),
+    mean_north_temp = mean(north_temp, na.rm = TRUE),
+    mean_south_temp = mean(south_temp, na.rm = TRUE),
+    min_charred_temp = min(charred_temp, na.rm = TRUE), 
+    min_uncharred_temp = min(uncharred_temp, na.rm = TRUE),
+    min_north_temp = min(north_temp, na.rm = TRUE),
+    min_south_temp = min(south_temp, na.rm = TRUE),
+    max_charred_temp = max(charred_temp, na.rm = TRUE), 
+    max_uncharred_temp = max(uncharred_temp, na.rm = TRUE),
+    max_north_temp = max(north_temp, na.rm = TRUE),
+    max_south_temp = max(south_temp, na.rm = TRUE)) %>%
+  mutate(
+    overall_min_temp = pmap_dbl(
+      list(min_charred_temp, min_uncharred_temp, min_north_temp, min_south_temp),
+      ~ min(c(...), na.rm = TRUE)
+    )
+  ) %>%
+  mutate(
+    overall_max_temp = pmap_dbl(
+      list(max_charred_temp, max_uncharred_temp, max_north_temp, max_south_temp),
+      ~ max(c(...), na.rm = TRUE)
+    )
+  )
 ```
 
 ## Cumulative Tree LWout Plot
