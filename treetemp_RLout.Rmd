@@ -42,21 +42,46 @@ rm(list = ls())
 # Loading Full Datasets
 
 ```{r}
+p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
+  mutate(
+    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunrise = with_tz(sunrise, tz = "MST")
+  ) %>%
+   mutate(
+    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunset = with_tz(sunset, tz = "MST")
+  )
+```
+
+```{r}
 #new full dataframes to load - including burned and unburned/ all burn_status types together
 full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = with_tz(datetime, tz = 'MST')) %>%
-  mutate(day = as.Date(day, format = ("%Y-%m-%d")))
-
-full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
-   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime_hour = with_tz(datetime_hour, tz = 'MST')) %>%
-  mutate(day = as.Date(day, format = ("%Y-%m-%d")))
+  mutate(day = as.Date(day, format = ("%Y-%m-%d"))) %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  inner_join(p_b_solar_times, by = "day") %>%
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, north_temp, south_temp, ns_avg_temp, solarNoon, sunrise, sunset, dawn, dusk)
 
 full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = with_tz(datetime, tz = 'MST')) %>%
-  mutate(day = as.Date(day, format = ("%Y-%m-%d")))
+  mutate(day = as.Date(day, format = ("%Y-%m-%d"))) %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp, solarNoon, sunrise, sunset, dawn, dusk)
 
 full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv") %>%
   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
@@ -486,16 +511,6 @@ p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
 ```{r}
 ## use this dataset if I want to plot daily mean values!
 full_daily_ns_LWout <- full_15min_ns_LWout %>%
-  inner_join(p_b_solar_times, by = "day") %>%
-  #making sunrise/sunset columns correct timezone
-   mutate(
-    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
-    sunrise = with_tz(sunrise, tz = "MST")
-  ) %>%
-   mutate(
-    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
-    sunset = with_tz(sunset, tz = "MST")
-  ) %>%
   mutate(
     phase = case_when(
       datetime >= sunrise & datetime < sunset ~ "day",
@@ -1833,7 +1848,6 @@ full_sd_treeLWout <- filtered_all_aspects_snowdepths %>%
 
 ```{r}
 #making a daily average dataset for full_sd_treeLWout_plot
-
 daily_sd_treeLWout <- full_sd_treeLWout %>%
   group_by(day, month, phase, zone, burn_status, aspect) %>%
   summarize(snowcam_max_depth_m = mean(snowcam_max_depth_m), temp_C = mean(temp_C), temp_K = mean(temp_K), tree_circ = mean(tree_circ), LWout_wperm2 = mean(LWout_wperm2), LWout_MJperd = mean(LWout_MJperd))
@@ -1890,9 +1904,41 @@ TSZ_daily_sd_treeLWout_plot
 
 ```{r}
 #Combined Plot
-comb_daily_sd_treeLWout_plot <- ggarrange(PSZ_daily_sd_treeLWout_plot, TSZ_daily_sd_treeLWout_plot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+comb_daily_sd_treeLWout_lineplot <- ggarrange(PSZ_daily_sd_treeLWout_plot, TSZ_daily_sd_treeLWout_plot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
 
-comb_daily_sd_treeLWout_plot
+comb_daily_sd_treeLWout_lineplot
+```
+
+Boxplots of the above comparisons
+
+```{r}
+PSZ_daily_sd_treeLWout_boxplot <- ggplot(data = PSZ_daily_sd_treeLWout) +
+  geom_boxplot(aes(x = burn_status, y = LWout_MJperd, fill = burn_status)) + 
+  facet_wrap(~ phase) +
+  labs(title = "a) PSZ", x = NULL, y = "LWout (MJ/day)") +
+  scale_fill_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_y_continuous(limits = c(0, 15)) +
+  theme_bw()
+
+PSZ_daily_sd_treeLWout_boxplot
+```
+
+```{r}
+TSZ_daily_sd_treeLWout_boxplot <- ggplot(data = TSZ_daily_sd_treeLWout) +
+  geom_boxplot(aes(x = burn_status, y = LWout_MJperd, fill = burn_status)) + 
+  facet_wrap(~ phase) +
+  labs(title = "b) TSZ", x = "Burn Status", y = "LWout (MJ/day)") +
+  scale_fill_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_y_continuous(limits = c(0, 15)) +
+  theme_bw()
+
+TSZ_daily_sd_treeLWout_boxplot
+```
+
+```{r}
+comb_daily_sd_treeLWout_boxplot <- ggarrange(PSZ_daily_sd_treeLWout_boxplot, TSZ_daily_sd_treeLWout_boxplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+comb_daily_sd_treeLWout_boxplot
 ```
 
 \*\* as of 2025-01-13 - the above plots don't really make sense, need to look at day/night parsing closely before plotting, as it looks more like thePSZ is plotting the day of both PSZ and TSZ?
@@ -1901,37 +1947,147 @@ comb_daily_sd_treeLWout_plot
 
 2.  Linear to ground (GND = 0 C) - snow depth is based on max snow depth from snow cameras at each burned/unburned site!
 
-    \*\* or should I just do a total of 1 meter for snow depth so I can capture the entire gradient at each site? Because trans_ub doesn't have much snowpack
-
 ```{r}
-#create a separate snow depth based on snow depth from cameras
+full_sd_treeLWout_2 <- filtered_all_aspects_snowdepths %>%
+  #filtering out gb_w tree data
+  filter(tree_name != "gb_w") %>%
+  #filtering out charred/uncharred aspect
+  filter(!aspect %in% c("charred", "uncharred")) %>%
+  #adding in a Kelvin temp column
+  rename(temp_C_2 = temp) %>%
+  mutate(temp_K_2 = (temp_C_2 + 273.15)) %>%
+  #calculating LWout in Wperm^2 by burn_status
+  mutate(LWout_wperm2_2m = emissivity * stefan_boltzmann_constant * (temp_K_2^4)) %>%
+   # Define circ of each tree based on burn status
+ mutate(tree_circ = case_when(
+  zone == "PSZ" & burn_status == "green burn" ~ 0.4006,
+  zone == "PSZ" & burn_status == "dead burn" ~ 0.5576,
+  zone == "PSZ" & burn_status == "live" ~ 0.5027,
+  zone == "TSZ" & burn_status == "green burn" ~ 0.5812,
+  zone == "TSZ" & burn_status == "dead burn" ~ 0.5655,
+  zone == "TSZ" & burn_status == "live" ~ 0.5341,
+  TRUE ~ 0.5576
+)) %>%
+  #Defining m2
+   mutate(m2 = snowcam_max_depth_m * tree_circ) %>%
+  #calcuating Watz (power) - dividing by 2 here so that the only half the value is applied to the north/south aspects!
+  mutate(
+    Watz_2m = LWout_wperm2_2m * (m2/2),
+#converting from Wperm2 to MJ/day
+    LWout_MJperd_2m = Watz_2m * 86400 / 1e6) %>%
+  # NOW creating a linear regression of temperatures and LWout values to be applied to the 1.5, 1, 0.5 and 0m heights on tree
+  ## creating temp gradient
+  mutate(
+    temp_C_1_5 = temp_C_2 - (temp_C_2 / 2 * 0.5), # Linear decrease for 1.5m
+    temp_C_1 = temp_C_2 - (temp_C_2 / 2 * 1),     # Linear decrease for 1m
+    temp_C_0_5 = temp_C_2 - (temp_C_2 / 2 * 1.5), # Linear decrease for 0.5m
+    temp_C_0 = 0                               # 0m temp is constant at 0°C
+  ) %>%
+  mutate(temp_K_1_5 = (temp_C_1_5 + 273.15),
+         temp_K_1 = (temp_C_1 + 273.15),
+         temp_K_0_5 = (temp_C_0_5 + 273.15),
+         temp_K_0 = (temp_C_0 + 273.15)) %>%
+  mutate(LWout_wperm2_1_5m = emissivity * stefan_boltzmann_constant * (temp_K_1_5^4), LWout_wperm2_1m = emissivity * stefan_boltzmann_constant * (temp_K_1^4), LWout_wperm2_0_5m = emissivity * stefan_boltzmann_constant * (temp_K_0_5^4), LWout_wperm2_0m = emissivity * stefan_boltzmann_constant * (temp_K_0^4)) %>%
+  mutate(
+    Watz_1_5m = LWout_wperm2_1_5m * (m2/2),
+#converting from Wperm2 to MJ/day
+    LWout_MJperd_1_5m = Watz_1_5m * 86400 / 1e6, Watz_1m = LWout_wperm2_1m * (m2/2),
+#converting from Wperm2 to MJ/day
+    LWout_MJperd_1m = Watz_1m * 86400 / 1e6, Watz_0_5m = LWout_wperm2_0_5m * (m2/2),
+#converting from Wperm2 to MJ/day
+    LWout_MJperd_0_5m = Watz_0_5m * 86400 / 1e6, Watz_0m = LWout_wperm2_0m * (m2/2),
+#converting from Wperm2 to MJ/day
+    LWout_MJperd_0m = Watz_0m * 86400 / 1e6)%>%
+  select(datetime, day, month, phase, zone, burn_status, aspect, tree_name, snowcam_max_depth_m, temp_C_2, temp_C_1_5, temp_C_1, temp_C_0_5, temp_C_0, temp_K_2, temp_K_1_5, temp_K_1, temp_K_0_5, temp_K_0, tree_circ, LWout_wperm2_2m, LWout_wperm2_1_5m, LWout_wperm2_1m, LWout_wperm2_0_5m, LWout_wperm2_0m , m2, Watz_2m, Watz_1_5m, Watz_1m, Watz_0_5m, Watz_0m, LWout_MJperd_2m, LWout_MJperd_1_5m, LWout_MJperd_1m, LWout_MJperd_0_5m, LWout_MJperd_0m , everything())
 ```
 
 ```{r}
-# Constants
-stefan_boltzmann_constant <- 5.67e-8
-emissivity <- 0.97
-#snowdepth and circumference are in meters
-snowdepth <- 1
-# circumference is taken from diameter at breast height 
-p_db_circ <- 0.5576
-p_gb_circ <- 0.4006
-p_live_circ <- 0.5027
-t_db_circ <- 0.5655
-t_gb_circ <- 0.5812
-t_live_circ <- 0.5341
-
-#picking an average unit depth for snow depth of 1 meter
-#constant for m2 - can adjust this if I want to change the snowdepth!
-p_gb_m2 = snowdepth*p_gb_circ
-p_db_m2 = snowdepth*p_db_circ
-p_live_m2 = snowdepth*p_live_circ
-t_gb_m2 = snowdepth*t_gb_circ
-t_db_m2 = snowdepth*t_db_circ
-t_live_m2 = snowdepth*t_live_circ
+#making a daily average dataset for full_sd_treeLWout_plot
+daily_sd_treeLWout_2 <- full_sd_treeLWout_2 %>%
+  group_by(day, month, phase, zone, burn_status, aspect) %>%
+  summarize(snowcam_max_depth_m = mean(snowcam_max_depth_m),
+            temp_C_2 = mean(temp_C_2), 
+            temp_C_1_5 = mean(temp_C_1_5), 
+            temp_C_1 = mean(temp_C_1), 
+            temp_C_0_5 = mean(temp_C_0_5),
+            temp_C_0 = mean(temp_C_0),
+            temp_K_2 = mean(temp_K_2),
+            temp_K_1_5 = mean(temp_K_1_5),
+            temp_K_1 = mean(temp_K_1),
+            temp_K_0_5 = mean(temp_K_0_5),
+            temp_K_0 = mean(temp_K_0),
+            tree_circ = mean(tree_circ), 
+            LWout_wperm2_2m = mean(LWout_wperm2_2m),
+            LWout_wperm2_1_5m = mean(LWout_wperm2_1_5m),
+            LWout_wperm2_1m = mean(LWout_wperm2_1m),
+            LWout_wperm2_0_5m = mean(LWout_wperm2_0_5m),
+            LWout_wperm2_0m = mean(LWout_wperm2_0m),
+            LWout_MJperd_2m = mean(LWout_MJperd_2m),
+            LWout_MJperd_1_5m = mean(LWout_MJperd_1_5m),
+            LWout_MJperd_1m = mean(LWout_MJperd_1m),
+            LWout_MJperd_0_5m = mean(LWout_MJperd_0_5m),
+            LWout_MJperd_0m = mean(LWout_MJperd_0m))
 ```
 
-2.  Based on snow pit temperature gradient of snow?
+```{r}
+## use this dataframe to make zone datatables, then to graph!
+daily_sd_treeLWout_long_2 <- daily_sd_treeLWout_2 %>%
+  pivot_longer(
+    cols = starts_with("LWout_"), # Select all LWout columns
+    names_to = c("LWout_type", "depth"), # Create new columns for type and depth
+    names_pattern = "LWout_(.*)_(.*)m", # Regex to split names (e.g., "MJperd", "wperm2" and depth)
+    values_to = "LWout_value" # New column for values
+  ) %>%
+  filter(str_starts(LWout_type, "MJperd")) %>%
+  rename(LWout_MJperd = LWout_value, sensor_depth = depth) %>%
+  #editing the sensor depth column to accurately represent the 1.5 and 0.5 depths
+  mutate(
+    sensor_depth = case_when(
+      sensor_depth == 5 & LWout_type == "MJperd_1" ~ 1.5,
+      sensor_depth == 5 & LWout_type == "MJperd_0" ~ 0.5,
+      TRUE ~ as.numeric(sensor_depth) # Explicitly convert to numeric
+    )
+  )
+```
+
+```{r}
+PSZ_daily_sd_treeLWout_2 <- daily_sd_treeLWout_long_2 %>%
+  filter(zone == "PSZ", phase == "day")
+
+TSZ_daily_sd_treeLWout <- daily_sd_treeLWout_long_2 %>%
+  filter(zone == "TSZ", phase == "day")
+```
+
+```{r}
+#PSZ plot
+PSZ_daily_sd_treeLWout_scenario2_plot <- ggplot(data = PSZ_daily_sd_treeLWout_2) +
+  geom_line(aes(x = day, y = LWout_MJperd, color = burn_status, linetype = aspect), linewidth = 0.7) + 
+  facet_wrap(~ sensor_depth) +
+  labs(title = "a) PSZ", x = NULL, y = "LWout (MJ/day)") +
+  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) +
+  #scale_y_continuous(limits = c(0, 15)) +
+  theme_bw()
+
+PSZ_daily_sd_treeLWout_scenario2_plot
+```
+
+```{r}
+TSZ_daily_sd_treeLWout_scenario2_plot <- ggplot(data = TSZ_daily_sd_treeLWout_2) +
+  geom_line(aes(x = day, y = LWout_MJperd, color = burn_status, linetype = aspect), linewidth = 0.7) + 
+  facet_wrap(~ sensor_depth) +
+  labs(title = "b) TSZ", x = "Date", y = "LWout (MJ/day)") +
+  scale_color_manual(values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = adjustcolor("#2166AC", alpha = 0.7))) +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) +
+  #scale_y_continuous(limits = c(0, 15)) +
+  theme_bw()
+
+TSZ_daily_sd_treeLWout_scenario2_plot
+```
+
+3.  Snow Pit Temp
+
+    Based on snow pit temperature gradient of snow?
 
     \*\* SKIP THIS ONE FOR NOW!
 
