@@ -1814,6 +1814,8 @@ gbdbub_combined_plot
 
 1.  Apply T_tree to whole snow depth - snow depth is based on max snow depth from snow cameras at each burned/unburned site!
 
+    \*\* making a change here to save and commit
+
 ```{r}
 #removing gb_w tree from persistent zone, and removing charred/uncharred temps, as this will just be N/S comparisons
 full_sd_treeLWout <- filtered_all_aspects_snowdepths %>%
