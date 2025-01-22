@@ -30,6 +30,7 @@ library(kableExtra)
 library(pagedown)
 library(ggpubr)
 library(ggpattern)
+library(patchwork)
 
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
@@ -465,27 +466,7 @@ full_hourly_gb_K <- full_hourly_gb %>%
   left_join(full_snowcamdepths, by = c("day", "zone", "burn_status"))
 ```
 
-The following dataframe can be used for plotting comparison of GB-only aspect/char pattern comparisons
-
-\*\* Don't need to use this - we'll address gb char pattern in another, earlier assessment.
-
-```{r}
-full_hourly_gb_LWout <- full_hourly_gb_K %>%
-  mutate(
-    # Calculate longwave radiation in Wperm^2
-    n_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (north_temp_k^4), s_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (south_temp_k^4), c_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (charred_temp_k^4), uc_LWout_wperm2 = emissivity * stefan_boltzmann_constant * (uncharred_temp_k^4)) %>%
-  # Define tree_circ based on zone
-    mutate(gb_tree_circ = case_when(zone == "persistent" ~ 0.4006,
-zone == "transitional" ~ 0.5812, TRUE ~ 0.4006), 
-#calcuating Watz (power)- dividing m2 by 2 for the north/south aspect differences as we assume that the area is only 1/2 the tree by aspect
-    n_W =  n_LWout_wperm2 * ((gb_tree_circ*snowcam_max_depth_m)/2),
-    s_W =  s_LWout_wperm2 * ((gb_tree_circ*snowcam_max_depth_m)/2),
-c_W =  c_LWout_wperm2 * ((gb_tree_circ*snowcam_max_depth_m)/2),
-uc_W =  uc_LWout_wperm2 * ((gb_tree_circ*snowcam_max_depth_m)/2),
-#converting from Wperm2 to MJ/day
-    n_LWout_MJperd = n_W * 86400 / 1e6, 
-s_LWout_MJperd = s_W * 86400 / 1e6, c_LWout_MJperd = c_W * 86400 / 1e6, uc_LWout_MJperd = uc_W * 86400 / 1e6)
-```
+Exporting above LWout dataframes
 
 ```{r}
 #exporting above tree_LWout datasets to nsf/treetemp folder
@@ -723,63 +704,6 @@ cum_full_daily_treeLWout <- ggarrange(p_cum_dt_gbdbub_plot, t_cum_dt_gbdbub_plot
 cum_full_daily_treeLWout
 ```
 
-# Boxplots of Char Pattern Comparisons
-
-## GB Trees
-
-```{r}
-#making a daytime dataframe 
-full_hourly_gb_dt <- full_hourly_gb %>%
-  filter(phase == "day") %>%
-  rename(north = north_temp, south = south_temp, charred = charred_temp, uncharred = uncharred_temp) %>%
-  pivot_longer(cols = c(north, south, charred, uncharred),
-               names_to = "temp_type", values_to = "temperature") %>%
-  select(datetime_hour, day, month, phase, zone, burn_status, temp_type, temperature)
-
-#parsing into zone dataframes
-pers_full_hourly_gb_dt <- full_hourly_gb_dt %>%
-  filter(zone == "persistent") %>%
-  mutate(zone = "PSZ")
-
-trans_full_hourly_gb_dt <- full_hourly_gb_dt %>%
-  filter(zone == "transitional") %>%
-  mutate(zone = "TSZ")
-```
-
-```{r}
-#PSZ
-pers_dt_gb_aspect_comparison <- ggplot(pers_full_hourly_gb_dt) + 
-  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
-  facet_wrap(~ zone + month + phase, scales = "free") + 
-  scale_fill_manual(
-    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
-  theme_bw()
-
-pers_dt_gb_aspect_comparison
-```
-
-```{r}
-#TSZ
-trans_dt_gb_aspect_comparison <- ggplot(trans_full_hourly_gb_dt) + 
-  geom_boxplot(aes(x = temp_type, y = temperature, fill = temp_type)) + 
-  facet_wrap(~ zone + month + phase, scales = "free") + 
-  scale_fill_manual(
-    values = c("north" = "green", "south" = "red", "charred" = "black", "uncharred" = "grey"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect of Temp Sensor", y = "Temperature (°C)") +
-  theme_bw()
-
-trans_dt_gb_aspect_comparison
-```
-
-\*\* could just do box plots of statistically significant comparisons and put p-values on them?
-
-## GB Trees (N/S only)
-
 ```{r}
 #making a daytime dataframe 
 ##gb
@@ -958,863 +882,13 @@ gbdbub_full_ns_inter_plots <- ggarrange(full_ns_boxplots_gb_inter, full_ns_boxpl
 gbdbub_full_ns_inter_plots
 ```
 
-\*\* USE THE VERSION BELOW FOR COMBINED N/S PLOT, FACET WRAPPED BY MONTH!
-
-```{r}
-#horizontal stack version
-gbdbub_full_ns_inter_plots_h <- ggarrange(full_ns_boxplots_gb_inter, full_ns_boxplots_db_inter, full_ns_boxplots_ub_inter, nrow = 3, ncol = 1, common.legend = TRUE, legend = "bottom")
-
-gbdbub_full_ns_inter_plots_h
-```
-
-\*\* as of 2024-10-23 - don't have monthly zone p-values for green burned yet. Need to get these to finalize plots!
-
-```{r}
-#individual month plots
-feb_pers_gb_plot <- ggplot(feb_pers_gb) + 
-  geom_boxplot(aes(x = aspect, y = gb_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-feb_pers_gb_plot <- feb_pers_gb_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.01586", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-feb_pers_gb_plot
-```
-
-```{r}
-#individual month plots
-march_pers_gb_plot <- ggplot(march_pers_gb) + 
-  geom_boxplot(aes(x = aspect, y = gb_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-march_pers_gb_plot <- march_pers_gb_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.01586", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-march_pers_gb_plot
-```
-
-```{r}
-april_pers_gb_plot <- ggplot(april_pers_gb) + 
-  geom_boxplot(aes(x = aspect, y = gb_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-april_pers_gb_plot <- april_pers_gb_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.01586", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-april_pers_gb_plot
-```
-
-```{r}
-may_pers_gb_plot <- ggplot(may_pers_gb) + 
-  geom_boxplot(aes(x = aspect, y = gb_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-may_pers_gb_plot <- may_pers_gb_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.01586", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-may_pers_gb_plot
-```
-
-```{r}
-#combining individual month PSZ plots
-full_pers_gb_plots <- ggarrange(feb_pers_gb_plot, march_pers_gb_plot, april_pers_gb_plot, may_pers_gb_plot, nrow = 1, ncol = 4)
-
-full_pers_gb_plots
-```
-
-```{r}
-#individual month plots
-feb_trans_gb_plot <- ggplot(feb_trans_gb) + 
-  geom_boxplot(aes(x = aspect, y = gb_temp, fill = aspect), alpha = 0.6) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-feb_trans_gb_plot <- feb_trans_gb_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.01586", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-feb_trans_gb_plot
-```
-
-```{r}
-march_trans_gb_plot <- ggplot(march_trans_gb) + 
-  geom_boxplot(aes(x = aspect, y = gb_temp, fill = aspect), alpha = 0.6) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-march_trans_gb_plot <- feb_trans_gb_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.01586", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-march_trans_gb_plot
-```
-
-```{r}
-april_trans_gb_plot <- ggplot(april_trans_gb) + 
-  geom_boxplot(aes(x = aspect, y = gb_temp, fill = aspect), alpha = 0.6) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-april_trans_gb_plot <- april_trans_gb_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.01586", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-april_trans_gb_plot
-```
-
-```{r}
-may_trans_gb_plot <- ggplot(may_trans_gb) + 
-  geom_boxplot(aes(x = aspect, y = gb_temp, fill = aspect), alpha = 0.6) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-may_trans_gb_plot <- may_trans_gb_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.01586", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-may_trans_gb_plot
-```
-
-```{r}
-#combining individual month PSZ plots
-full_trans_gb_plots <- ggarrange(feb_trans_gb_plot, march_trans_gb_plot, april_trans_gb_plot, may_trans_gb_plot, nrow = 1, ncol = 4)
-
-full_trans_gb_plots
-```
-
-```{r}
-full_gb_plots <- ggarrange(full_pers_gb_plots, full_trans_gb_plots, nrow = 2, ncol = 1)
-
-#adjusting the labels so they are shared
-full_gb_plots <- annotate_figure(full_gb_plots,
-                                  left = textGrob("Temperature (°C)", gp = gpar(fontsize = 10), rot = 90),
-                                  bottom = textGrob("Aspect", gp = gpar(fontsize = 10)))
-
-
-full_gb_plots
-```
-
-## DB Trees
-
-```{r}
-#making a daytime dataframe 
-full_15min_db_dt <- full_15min_gbdbub %>%
-  filter(phase == "day") %>%
-  select(datetime, day, month, phase, zone, aspect, db_temp) %>%
-  mutate(zone = case_when(
-    zone == "persistent" ~ "PSZ", zone == "transitional" ~ "TSZ",
-    TRUE ~ zone  # This line ensures other zones are preserved
-  )) %>%
-  mutate(burn_status = "dead burn")
-
-#parsing into zone dataframes
-pers_full_15min_db_dt <- full_15min_db_dt %>%
-  filter(zone == "PSZ")
-
-#have to filter individually to add p-value to boxes
-feb_pers_db <- pers_full_15min_db_dt %>%
-  filter(month == "2")
-
-march_pers_db <- pers_full_15min_db_dt %>%
-  filter(month == "3")
-
-april_pers_db <- pers_full_15min_db_dt %>%
-  filter(month == "4")
-
-may_pers_db <- pers_full_15min_db_dt %>%
-  filter(month == "5")
-  
-
-trans_full_15min_db_dt <- full_15min_db_dt %>%
-  filter(zone == "TSZ")
-
-#have to filter individually to add p-value to boxes
-feb_trans_db <- trans_full_15min_db_dt %>%
-  filter(month == "2")
-
-march_trans_db <- trans_full_15min_db_dt %>%
-  filter(month == "3")
-
-april_trans_db <- trans_full_15min_db_dt %>%
-  filter(month == "4")
-
-may_trans_db <- trans_full_15min_db_dt %>%
-  filter(month == "5")
-```
-
-\*\* keep on working on the boxplot below! The data is stacking isntead of going next to each other. 2024-10-23
-
-```{r}
-
-full_15min_db_dt_plot <- ggplot(full_15min_db_dt) +
-  # Solid boxplots for 'persistent' zone
-  geom_boxplot(data = full_15min_db_dt[full_15min_db_dt$zone == "PSZ", ],
-               aes(x = aspect, y = db_temp, fill = aspect),
-               position = position_dodge(width = 0.8),  # Side-by-side
-               width = 0.4) +  # Adjust width for better spacing
-  # Patterned boxplots for 'transitional' zone
-  geom_boxplot_pattern(data = full_15min_db_dt[full_15min_db_dt$zone == "TSZ", ],
-                       aes(x = aspect, y = db_temp, fill = aspect, pattern = zone),
-                       position = position_dodge(width = 0.8),  # Match the position
-                       pattern = "stripe",
-                       pattern_density = 0.1,
-                       pattern_fill = NA,
-                       width = 0.4) +  # Adjust width for better spacing
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  facet_wrap(~ burn_status + month) + 
-  theme_bw() +
-  theme(legend.position = "bottom")
-
-# Print the final plot
-print(full_15min_db_dt_plot)
-```
-
-```{r}
-#PSZ
-pers_dt_db_aspect_comparison <- ggplot(pers_full_15min_db_dt) + 
-  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect)) + 
-  facet_wrap(~ zone + burn_status + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  theme_bw()
-
-pers_dt_db_aspect_comparison <- pers_dt_db_aspect_comparison + annotate("text", x = 5, y = 30, label = "p = 0.01586", size = 2, color = "black")
-
-pers_dt_db_aspect_comparison
-```
-
-```{r}
-#individual month plots
-feb_pers_db_plot <- ggplot(feb_pers_db) + 
-  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-feb_pers_db_plot <- feb_pers_db_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.01586", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-feb_pers_db_plot
-```
-
-```{r}
-#individual month plots
-march_pers_db_plot <- ggplot(march_pers_db) + 
-  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-march_pers_db_plot <- march_pers_db_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.00683", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-march_pers_db_plot
-```
-
-```{r}
-#individual month plots
-april_pers_db_plot <- ggplot(april_pers_db) + 
-  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw() + 
-  theme(legend.position = "none")
-
-#adding p-value
-april_pers_db_plot <- april_pers_db_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.1671", size = 3, color = "black", fontface = "bold") + 
-  labs(x = NULL, y = NULL)
-
-april_pers_db_plot
-```
-
-```{r}
-#individual month plots
-may_pers_db_plot <- ggplot(may_pers_db) + 
-  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw() +
-  theme(legend.position = "none")
-
-#adding p-value
-may_pers_db_plot <- may_pers_db_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.5876", size = 3, color = "black", fontface = "bold") + 
-  labs(x = NULL, y = NULL)
-
-may_pers_db_plot
-```
-
-```{r}
-#combining individual month PSZ plots
-full_pers_db_plots <- ggarrange(feb_pers_db_plot, march_pers_db_plot, april_pers_db_plot, may_pers_db_plot, nrow = 1, ncol = 4)
-
-full_pers_db_plots
-```
-
-```{r}
-#TSZ
-trans_dt_db_aspect_comparison <- ggplot(trans_full_15min_db_dt) + 
-  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  theme_bw()
-
-trans_dt_db_aspect_comparison
-```
-
-```{r}
-#individual month plots
-feb_trans_db_plot <- ggplot(feb_trans_db) + 
-  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect), alpha = 0.6) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-feb_trans_db_plot <- feb_trans_db_plot + 
-  annotate("text", x = 1, y = 35, label = " p = 0.000004", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-feb_trans_db_plot
-```
-
-```{r}
-## striped version
-feb_trans_db_plot_striped <- ggplot(feb_trans_db) + 
-  geom_boxplot_pattern(aes(x = aspect, y = db_temp, fill = aspect),
-                       pattern = "stripe",  # Use "stripe" pattern
-                       pattern_density = 0.1,  # Adjust density of stripes
-                       pattern_fill = "white",  # Fill color for stripes
-                       pattern_angle = 45) +  # Angle of the stripes
-  facet_wrap(~ zone + burn_status + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  theme_bw()
-
-feb_trans_db_plot_striped
-```
-
-```{r}
-march_trans_db_plot <- ggplot(march_trans_db) + 
-  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect), alpha = 0.6) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-march_trans_db_plot <- march_trans_db_plot + 
-  annotate("text", x = 1, y = 35, label = " p = 0.000001", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-march_trans_db_plot
-```
-
-```{r}
-march_trans_db_plot_striped <- ggplot(march_trans_db) + 
-  geom_boxplot_pattern(aes(x = aspect, y = db_temp, fill = aspect),
-                       pattern = "stripe",  # Use "stripe" pattern
-                       pattern_density = 0.1,  # Adjust density of stripes
-                       pattern_fill = "white",  # Fill color for stripes
-                       pattern_angle = 45) +  # Angle of the stripes
-  facet_wrap(~ zone + burn_status + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  theme_bw()
-
-march_trans_db_plot_striped
-```
-
-```{r}
-april_trans_db_plot <- ggplot(april_trans_db) + 
-  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect), alpha = 0.6) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-april_trans_db_plot <- april_trans_db_plot + 
-  annotate("text", x = 1, y = 35, label = " p = 0.000323", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-april_trans_db_plot
-```
-
-```{r}
-#striped version
-april_trans_db_plot_striped <- ggplot(april_trans_db) + 
-  geom_boxplot_pattern(aes(x = aspect, y = db_temp, fill = aspect),
-                       pattern = "stripe",  # Use "stripe" pattern
-                       pattern_density = 0.1,  # Adjust density of stripes
-                       pattern_fill = "white",  # Fill color for stripes
-                       pattern_angle = 45) +  # Angle of the stripes
-  facet_wrap(~ zone + burn_status + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  theme_bw()
-
-april_trans_db_plot_striped
-```
-
-```{r}
-may_trans_db_plot <- ggplot(may_trans_db) + 
-  geom_boxplot(aes(x = aspect, y = db_temp, fill = aspect), alpha = 0.6) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-may_trans_db_plot <- may_trans_db_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.5082", size = 3, color = "black", fontface = "bold") + 
-  theme(legend.position = "none") +
-  labs(x = NULL, y = NULL)
-
-may_trans_db_plot
-```
-
-```{r}
-may_trans_db_plot_striped <- ggplot(may_trans_db) + 
-  geom_boxplot_pattern(aes(x = aspect, y = db_temp, fill = aspect),
-                       pattern = "stripe",  # Use "stripe" pattern
-                       pattern_density = 0.1,  # Adjust density of stripes
-                       pattern_fill = "white",  # Fill color for stripes
-                       pattern_angle = 45) +  # Angle of the stripes
-  facet_wrap(~ zone + burn_status + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  theme_bw()
-
-may_trans_db_plot_striped
-```
-
-```{r}
-#combining individual month PSZ plots
-full_trans_db_plots <- ggarrange(feb_trans_db_plot, march_trans_db_plot, april_trans_db_plot, may_trans_db_plot, 
-                                  nrow = 1, ncol = 4)
-
-# Display the plot
-print(full_trans_db_plots)
-```
-
-```{r}
-full_db_plots <- ggarrange(full_pers_db_plots, full_trans_db_plots, nrow = 2, ncol = 1)
-
-#adjusting the labels so they are shared
-full_db_plots <- annotate_figure(full_db_plots,
-                                  left = textGrob("Temperature (°C)", gp = gpar(fontsize = 10), rot = 90),
-                                  bottom = textGrob("Aspect", gp = gpar(fontsize = 10)))
-
-
-full_db_plots
-```
-
-## Live Trees
-
-```{r}
-#making a daytime dataframe 
-full_15min_ub_dt <- full_15min_gbdbub %>%
-  filter(phase == "day") %>%
-  select(datetime, day, month, phase, zone, aspect, ub_temp) %>%
-  mutate(zone = case_when(
-    zone == "persistent" ~ "PSZ", zone == "transitional" ~ "TSZ",
-    TRUE ~ zone  # This line ensures other zones are preserved
-  )) %>%
-  mutate(burn_status = "live")
-
-#parsing into zone dataframes
-pers_full_15min_ub_dt <- full_15min_ub_dt %>%
-  filter(zone == "PSZ")
-
-#have to filter individually to add p-value to boxes
-feb_pers_ub <- pers_full_15min_ub_dt %>%
-  filter(month == "2")
-
-march_pers_ub <- pers_full_15min_ub_dt %>%
-  filter(month == "3")
-
-april_pers_ub <- pers_full_15min_ub_dt %>%
-  filter(month == "4")
-
-may_pers_ub <- pers_full_15min_ub_dt %>%
-  filter(month == "5")
-  
-
-trans_full_15min_ub_dt <- full_15min_ub_dt %>%
-  filter(zone == "TSZ")
-
-#have to filter individually to add p-value to boxes
-feb_trans_ub <- trans_full_15min_ub_dt %>%
-  filter(month == "2")
-
-march_trans_ub <- trans_full_15min_ub_dt %>%
-  filter(month == "3")
-
-april_trans_ub <- trans_full_15min_ub_dt %>%
-  filter(month == "4")
-
-may_trans_ub <- trans_full_15min_ub_dt %>%
-  filter(month == "5")
-```
-
-```{r}
-#individual month plots
-feb_pers_ub_plot <- ggplot(feb_pers_ub) + 
-  geom_boxplot(aes(x = aspect, y = ub_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-feb_pers_ub_plot <- feb_pers_ub_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.000004", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-feb_pers_ub_plot
-```
-
-```{r}
-march_pers_ub_plot <- ggplot(march_pers_ub) + 
-  geom_boxplot(aes(x = aspect, y = ub_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-march_pers_ub_plot <- march_pers_ub_plot + 
-  annotate("text", x = 1, y = 35, label = "p =0.0000007", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-march_pers_ub_plot
-```
-
-```{r}
-april_pers_ub_plot <- ggplot(april_pers_ub) + 
-  geom_boxplot(aes(x = aspect, y = ub_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-april_pers_ub_plot <- april_pers_ub_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.000323", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-april_pers_ub_plot
-```
-
-```{r}
-may_pers_ub_plot <- ggplot(may_pers_ub) + 
-  geom_boxplot(aes(x = aspect, y = ub_temp, fill = aspect)) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-may_pers_ub_plot <- may_pers_ub_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.5082", size = 3, color = "black", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-may_pers_ub_plot
-```
-
-```{r}
-#combining individual month PSZ plots
-full_pers_ub_plots <- ggarrange(feb_pers_ub_plot, march_pers_ub_plot, april_pers_ub_plot, may_pers_ub_plot, nrow = 1, ncol = 4)
-
-full_pers_ub_plots
-```
-
-Transitional Zone
-
-```{r}
-feb_trans_ub_plot <- ggplot(feb_trans_ub) + 
-  geom_boxplot(aes(x = aspect, y = ub_temp, fill = aspect), alpha = 0.6) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-feb_trans_ub_plot <- feb_trans_ub_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.003518", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-feb_trans_ub_plot
-```
-
-```{r}
-march_trans_ub_plot <- ggplot(march_trans_ub) + 
-  geom_boxplot(aes(x = aspect, y = ub_temp, fill = aspect), alpha = 0.6) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-march_trans_ub_plot <- march_trans_ub_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.000256", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-march_trans_ub_plot
-```
-
-```{r}
-april_trans_ub_plot <- ggplot(april_trans_ub) + 
-  geom_boxplot(aes(x = aspect, y = ub_temp, fill = aspect), alpha = 0.6) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-april_trans_ub_plot <- april_trans_ub_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.000256", size = 3, color = "red3", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-april_trans_ub_plot
-```
-
-```{r}
-may_trans_ub_plot <- ggplot(may_trans_ub) + 
-  geom_boxplot(aes(x = aspect, y = ub_temp, fill = aspect), alpha = 0.6) + 
-  facet_wrap(~ zone + month) + 
-  scale_fill_manual(
-    values = c("north" = "#2166AC", "south" = "#D95F02"),
-    name = "Aspect of Temp Sensor"  # Legend title
-  ) + 
-  labs(x = "Aspect", y = "Temperature (°C)") +
-  ylim(NA, 40) +
-  theme_bw()
-
-#adding p-value
-may_trans_ub_plot <- may_trans_ub_plot + 
-  annotate("text", x = 1, y = 35, label = "p = 0.62080", size = 3, color = "black", fontface = "bold") + 
-  theme(legend.position = "none") + 
-  labs(x = NULL, y = NULL)
-
-may_trans_ub_plot
-```
-
-```{r}
-#combining individual month PSZ plots
-full_trans_ub_plots <- ggarrange(feb_trans_ub_plot, march_trans_ub_plot, april_trans_ub_plot, may_trans_ub_plot, nrow = 1, ncol = 4)
-
-full_trans_ub_plots
-```
-
-```{r}
-#combining persistent and transitional zones
-full_ub_plots <- ggarrange(full_pers_ub_plots, full_trans_ub_plots, nrow = 2, ncol = 1)
-
-#adjusting the labels so they are shared
-full_ub_plots <- annotate_figure(full_ub_plots,
-                                  left = textGrob("Temperature (°C)", gp = gpar(fontsize = 10), rot = 90),
-                                  bottom = textGrob("Aspect", gp = gpar(fontsize = 10)))
-
-full_ub_plots
-```
-
-Full Combo
-
-```{r}
-gbdbub_combined_plot <- ggarrange(full_gb_plots, full_db_plots, full_ub_plots,
-                            ncol = 1, nrow = 3,  # Stack in a single column
-                            labels = c("a)", "b)", "c)"),  # Labeling the plots
-                            font.label = list(size = 14, face = "bold"))
-
-gbdbub_combined_plot
-```
-
 # LWout Scenarios
 
 \*\* keep working on these scenarios!
 
-1.  Apply T_tree to whole snow depth - snow depth is based on max snow depth from snow cameras at each burned/unburned site!
+## Scenario 1
 
-    \*\* making a change here to save and commit
+1.  Apply T_tree to whole snow depth - snow depth is based on max snow depth from snow cameras at each burned/unburned site!
 
 ```{r}
 #removing gb_w tree from persistent zone, and removing charred/uncharred temps, as this will just be N/S comparisons
@@ -1946,6 +1020,8 @@ comb_daily_sd_treeLWout_boxplot
 \*\* as of 2025-01-13 - the above plots don't really make sense, need to look at day/night parsing closely before plotting, as it looks more like thePSZ is plotting the day of both PSZ and TSZ?
 
 \*\*might need to plot the above data differently depending on how the next scenario turns out
+
+## Scenario 2
 
 2.  Linear to ground (GND = 0 C) - snow depth is based on max snow depth from snow cameras at each burned/unburned site!
 
@@ -2085,6 +1161,460 @@ TSZ_daily_sd_treeLWout_scenario2_plot <- ggplot(data = TSZ_daily_sd_treeLWout_2)
   theme_bw()
 
 TSZ_daily_sd_treeLWout_scenario2_plot
+```
+
+\*\* trying a different strategy for plotting to compare the depths visually better
+
+```{r}
+PSZ_daily_sd_treeLWout_2_gb <- PSZ_daily_sd_treeLWout_2 %>%
+  filter(burn_status == "green burn")
+
+PSZ_daily_sd_treeLWout_2_db <- PSZ_daily_sd_treeLWout_2 %>%
+  filter(burn_status == "dead burn")
+
+PSZ_daily_sd_treeLWout_2_live <- PSZ_daily_sd_treeLWout_2 %>%
+  filter(burn_status == "live")
+```
+
+```{r}
+TSZ_daily_sd_treeLWout_2_gb <- TSZ_daily_sd_treeLWout_2 %>%
+  filter(burn_status == "green burn")
+
+TSZ_daily_sd_treeLWout_2_db <- TSZ_daily_sd_treeLWout_2 %>%
+  filter(burn_status == "dead burn")
+
+TSZ_daily_sd_treeLWout_2_live <- TSZ_daily_sd_treeLWout_2 %>%
+  filter(burn_status == "live")
+```
+
+```{r}
+PSZ_daily_sd_GB_treeLWout_scenario2_plot <- ggplot(data = PSZ_daily_sd_treeLWout_2_gb) +
+  geom_line(aes(
+      x = day,
+      y = LWout_MJperd,
+      color = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0")), 
+      linetype = aspect), linewidth = 0.7) +
+ scale_color_manual(
+    values = c(
+      "2" = "#D95F02",    # Darkest color for 2m
+      "1.5" = "orange",  # Dark gray
+      "1" = "grey23",    # Medium gray
+      "0.5" = "skyblue4",  # Light gray
+      "0" = "#2166AC"     # Lightest color for 0m
+    ),
+      labels = c(
+      "2" = "2 m",
+      "1.5" = "1.5 m",
+      "1" = "1 m",
+      "0.5" = "0.5 m",
+      "0" = "0 m (GND)"
+    ), 
+    name = "sensor depth"
+  ) +
+  theme_bw() + 
+  labs(title = "a) PSZ GB", x = NULL, y = "LWout (MJ/day)") +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) +
+  scale_y_continuous(limits = c(0, 15)) +
+  theme_bw() +
+  facet_wrap(~aspect)
+
+PSZ_daily_sd_GB_treeLWout_scenario2_plot
+```
+
+```{r}
+PSZ_daily_sd_DB_treeLWout_scenario2_plot <- ggplot(data = PSZ_daily_sd_treeLWout_2_db) +
+  geom_line(aes(
+      x = day,
+      y = LWout_MJperd,
+      color = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0")), 
+      linetype = aspect), linewidth = 0.7) +
+ scale_color_manual(
+    values = c(
+      "2" = "#D95F02",    # Darkest color for 2m
+      "1.5" = "orange",  # Dark gray
+      "1" = "grey23",    # Medium gray
+      "0.5" = "skyblue4",  # Light gray
+      "0" = "#2166AC"     # Lightest color for 0m
+    ),
+      labels = c(
+      "2" = "2 m",
+      "1.5" = "1.5 m",
+      "1" = "1 m",
+      "0.5" = "0.5 m",
+      "0" = "0 m (GND)"
+    ), 
+    name = "sensor depth"
+  ) +
+  theme_bw() + 
+  labs(title = "b) PSZ DB", x = NULL, y = "LWout (MJ/day)") +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) +
+  scale_y_continuous(limits = c(0, 15)) +
+  theme_bw() +
+  facet_wrap(~aspect)
+
+PSZ_daily_sd_DB_treeLWout_scenario2_plot
+```
+
+```{r}
+PSZ_daily_sd_live_treeLWout_scenario2_plot <- ggplot(data = PSZ_daily_sd_treeLWout_2_live) +
+  geom_line(aes(
+      x = day,
+      y = LWout_MJperd,
+      color = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0")), 
+      linetype = aspect), linewidth = 0.7) +
+ scale_color_manual(
+    values = c(
+      "2" = "#D95F02",    # Darkest color for 2m
+      "1.5" = "orange",  # Dark gray
+      "1" = "grey23",    # Medium gray
+      "0.5" = "skyblue4",  # Light gray
+      "0" = "#2166AC"     # Lightest color for 0m
+    ),
+      labels = c(
+      "2" = "2 m",
+      "1.5" = "1.5 m",
+      "1" = "1 m",
+      "0.5" = "0.5 m",
+      "0" = "0 m (GND)"
+    ), 
+    name = "sensor depth"
+  ) +
+  theme_bw() + 
+  labs(title = "c) PSZ live", x = "Date", y = "LWout (MJ/day)") +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) +
+  scale_y_continuous(limits = c(0, 15)) +
+  theme_bw() +
+  facet_wrap(~aspect)
+
+PSZ_daily_sd_live_treeLWout_scenario2_plot
+```
+
+```{r}
+TSZ_daily_sd_GB_treeLWout_scenario2_plot <- ggplot(data = TSZ_daily_sd_treeLWout_2_gb) +
+  geom_line(aes(
+      x = day,
+      y = LWout_MJperd,
+      color = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0")), 
+      linetype = aspect), linewidth = 0.7) +
+ scale_color_manual(
+    values = c(
+      "2" = "#D95F02",    # Darkest color for 2m
+      "1.5" = "orange",  # Dark gray
+      "1" = "grey23",    # Medium gray
+      "0.5" = "skyblue4",  # Light gray
+      "0" = "#2166AC"     # Lightest color for 0m
+    ),
+      labels = c(
+      "2" = "2 m",
+      "1.5" = "1.5 m",
+      "1" = "1 m",
+      "0.5" = "0.5 m",
+      "0" = "0 m (GND)"
+    ), 
+    name = "sensor depth"
+  ) +
+  theme_bw() + 
+  labs(title = "d) TSZ GB", x = NULL, y = "LWout (MJ/day)") +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) +
+  scale_y_continuous(limits = c(0, 15)) +
+  theme_bw() +
+  facet_wrap(~aspect)
+
+TSZ_daily_sd_GB_treeLWout_scenario2_plot
+```
+
+```{r}
+TSZ_daily_sd_DB_treeLWout_scenario2_plot <- ggplot(data = TSZ_daily_sd_treeLWout_2_db) +
+  geom_line(aes(
+      x = day,
+      y = LWout_MJperd,
+      color = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0")), 
+      linetype = aspect), linewidth = 0.7) +
+ scale_color_manual(
+    values = c(
+      "2" = "#D95F02",    # Darkest color for 2m
+      "1.5" = "orange",  # Dark gray
+      "1" = "grey23",    # Medium gray
+      "0.5" = "skyblue4",  # Light gray
+      "0" = "#2166AC"     # Lightest color for 0m
+    ),
+      labels = c(
+      "2" = "2 m",
+      "1.5" = "1.5 m",
+      "1" = "1 m",
+      "0.5" = "0.5 m",
+      "0" = "0 m (GND)"
+    ), 
+    name = "sensor depth"
+  ) +
+  theme_bw() + 
+  labs(title = "e) TSZ DB", x = NULL, y = "LWout (MJ/day)") +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) +
+  scale_y_continuous(limits = c(0, 15)) +
+  theme_bw() +
+  facet_wrap(~aspect)
+
+TSZ_daily_sd_DB_treeLWout_scenario2_plot
+```
+
+```{r}
+TSZ_daily_sd_live_treeLWout_scenario2_plot <- ggplot(data = TSZ_daily_sd_treeLWout_2_live) +
+  geom_line(aes(
+      x = day,
+      y = LWout_MJperd,
+      color = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0")), 
+      linetype = aspect), linewidth = 0.7) +
+ scale_color_manual(
+    values = c(
+      "2" = "#D95F02",    # Darkest color for 2m
+      "1.5" = "orange",  # Dark gray
+      "1" = "grey23",    # Medium gray
+      "0.5" = "skyblue4",  # Light gray
+      "0" = "#2166AC"     # Lightest color for 0m
+    ),
+      labels = c(
+      "2" = "2 m",
+      "1.5" = "1.5 m",
+      "1" = "1 m",
+      "0.5" = "0.5 m",
+      "0" = "0 m (GND)"
+    ), 
+    name = "sensor depth"
+  ) +
+  theme_bw() + 
+  labs(title = "f) TSZ live", x = "Date", y = "LWout (MJ/day)") +
+  scale_linetype_manual(values = c("north" = "dashed", "south" = "solid")) +
+  scale_y_continuous(limits = c(0, 15)) +
+  theme_bw() +
+  facet_wrap(~aspect)
+
+TSZ_daily_sd_live_treeLWout_scenario2_plot
+```
+
+```{r}
+#PSZ vertical combination
+PSZ_daily_sd_scenario2 <- ggarrange(PSZ_daily_sd_GB_treeLWout_scenario2_plot, PSZ_daily_sd_DB_treeLWout_scenario2_plot, PSZ_daily_sd_live_treeLWout_scenario2_plot, nrow = 3, ncol = 1, common.legend = TRUE, legend = "right")
+
+PSZ_daily_sd_scenario2
+```
+
+```{r}
+#TSZ vertical combination
+TSZ_daily_sd_scenario2 <- ggarrange(TSZ_daily_sd_GB_treeLWout_scenario2_plot, TSZ_daily_sd_DB_treeLWout_scenario2_plot, TSZ_daily_sd_live_treeLWout_scenario2_plot, nrow = 3, ncol = 1, common.legend = TRUE, legend = "right")
+
+TSZ_daily_sd_scenario2
+```
+
+```{r}
+comb_daily_sd_treeLWout_lineplot_scenario2 <- ggarrange(PSZ_daily_sd_scenario2, TSZ_daily_sd_scenario2, nrow = 1, ncol = 2, common.legend = TRUE, legend = "right")
+
+comb_daily_sd_treeLWout_lineplot_scenario2
+```
+
+Boxplot of Scenario 2
+
+```{r}
+PSZ_daily_sd_treeLWout_2_gb_boxplot <- ggplot(data = PSZ_daily_sd_treeLWout_2_gb) +
+  geom_boxplot(aes(
+      x = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0")), 
+      y = LWout_MJperd, 
+      fill = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0"))
+    )) +
+  scale_fill_manual(
+    values = c(
+      "2" = "#D95F02",    # Darkest color for 2m
+      "1.5" = "orange",   # Dark gray
+      "1" = "grey23",     # Medium gray
+      "0.5" = "skyblue4", # Light gray
+      "0" = "#2166AC"     # Lightest color for 0m
+    ),
+    labels = c(
+      "2" = "2 m",
+      "1.5" = "1.5 m",
+      "1" = "1 m",
+      "0.5" = "0.5 m",
+      "0" = "0 m (GND)"
+    ), 
+    name = "Sensor Depth"
+  ) +
+  theme_bw() + 
+  labs(title = "a) PSZ GB", x = NULL, y = "LWout (MJ/day)") +
+  scale_y_continuous(limits = c(0, 15)) +
+  facet_wrap(~aspect)
+
+PSZ_daily_sd_treeLWout_2_gb_boxplot
+```
+
+```{r}
+PSZ_daily_sd_treeLWout_2_db_boxplot <- ggplot(data = PSZ_daily_sd_treeLWout_2_db) +
+  geom_boxplot(aes(
+      x = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0")), 
+      y = LWout_MJperd, 
+      fill = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0"))
+    )) +
+  scale_fill_manual(
+    values = c(
+      "2" = "#D95F02",    # Darkest color for 2m
+      "1.5" = "orange",   # Dark gray
+      "1" = "grey23",     # Medium gray
+      "0.5" = "skyblue4", # Light gray
+      "0" = "#2166AC"     # Lightest color for 0m
+    ),
+    labels = c(
+      "2" = "2 m",
+      "1.5" = "1.5 m",
+      "1" = "1 m",
+      "0.5" = "0.5 m",
+      "0" = "0 m (GND)"
+    ), 
+    name = "Sensor Depth"
+  ) +
+  theme_bw() + 
+  labs(title = "b) PSZ DB", x = NULL, y = "LWout (MJ/day)") +
+  scale_y_continuous(limits = c(0, 15)) +
+  facet_wrap(~aspect)
+
+PSZ_daily_sd_treeLWout_2_db_boxplot
+```
+
+```{r}
+PSZ_daily_sd_treeLWout_2_live_boxplot <- ggplot(data = PSZ_daily_sd_treeLWout_2_live) +
+  geom_boxplot(aes(
+      x = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0")), 
+      y = LWout_MJperd, 
+      fill = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0"))
+    )) +
+  scale_fill_manual(
+    values = c(
+      "2" = "#D95F02",    # Darkest color for 2m
+      "1.5" = "orange",   # Dark gray
+      "1" = "grey23",     # Medium gray
+      "0.5" = "skyblue4", # Light gray
+      "0" = "#2166AC"     # Lightest color for 0m
+    ),
+    labels = c(
+      "2" = "2 m",
+      "1.5" = "1.5 m",
+      "1" = "1 m",
+      "0.5" = "0.5 m",
+      "0" = "0 m (GND)"
+    ), 
+    name = "Sensor Depth"
+  ) +
+  theme_bw() + 
+  labs(title = "c) PSZ live", x = "Sensor Depth", y = "LWout (MJ/day)") +
+  scale_y_continuous(limits = c(0, 15)) +
+  facet_wrap(~aspect)
+
+PSZ_daily_sd_treeLWout_2_live_boxplot
+```
+
+```{r}
+TSZ_daily_sd_treeLWout_2_gb_boxplot <- ggplot(data = TSZ_daily_sd_treeLWout_2_gb) +
+  geom_boxplot(aes(
+      x = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0")), 
+      y = LWout_MJperd, 
+      fill = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0"))
+    )) +
+  scale_fill_manual(
+    values = c(
+      "2" = "#D95F02",    # Darkest color for 2m
+      "1.5" = "orange",   # Dark gray
+      "1" = "grey23",     # Medium gray
+      "0.5" = "skyblue4", # Light gray
+      "0" = "#2166AC"     # Lightest color for 0m
+    ),
+    labels = c(
+      "2" = "2 m",
+      "1.5" = "1.5 m",
+      "1" = "1 m",
+      "0.5" = "0.5 m",
+      "0" = "0 m (GND)"
+    ), 
+    name = "Sensor Depth"
+  ) +
+  theme_bw() + 
+  labs(title = "d) TSZ GB", x = NULL, y = "LWout (MJ/day)") +
+  scale_y_continuous(limits = c(0, 15)) +
+  facet_wrap(~aspect)
+
+TSZ_daily_sd_treeLWout_2_gb_boxplot
+```
+
+```{r}
+TSZ_daily_sd_treeLWout_2_db_boxplot <- ggplot(data = TSZ_daily_sd_treeLWout_2_db) +
+  geom_boxplot(aes(
+      x = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0")), 
+      y = LWout_MJperd, 
+      fill = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0"))
+    )) +
+  scale_fill_manual(
+    values = c(
+      "2" = "#D95F02",    # Darkest color for 2m
+      "1.5" = "orange",   # Dark gray
+      "1" = "grey23",     # Medium gray
+      "0.5" = "skyblue4", # Light gray
+      "0" = "#2166AC"     # Lightest color for 0m
+    ),
+    labels = c(
+      "2" = "2 m",
+      "1.5" = "1.5 m",
+      "1" = "1 m",
+      "0.5" = "0.5 m",
+      "0" = "0 m (GND)"
+    ), 
+    name = "Sensor Depth"
+  ) +
+  theme_bw() + 
+  labs(title = "e) TSZ DB", x = NULL, y = "LWout (MJ/day)") +
+  scale_y_continuous(limits = c(0, 15)) +
+  facet_wrap(~aspect)
+
+TSZ_daily_sd_treeLWout_2_db_boxplot
+```
+
+```{r}
+TSZ_daily_sd_treeLWout_2_live_boxplot <- ggplot(data = TSZ_daily_sd_treeLWout_2_live) +
+  geom_boxplot(aes(
+      x = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0")), 
+      y = LWout_MJperd, 
+      fill = factor(sensor_depth, levels = c("2", "1.5", "1", "0.5", "0"))
+    )) +
+  scale_fill_manual(
+    values = c(
+      "2" = "#D95F02",    # Darkest color for 2m
+      "1.5" = "orange",   # Dark gray
+      "1" = "grey23",     # Medium gray
+      "0.5" = "skyblue4", # Light gray
+      "0" = "#2166AC"     # Lightest color for 0m
+    ),
+    labels = c(
+      "2" = "2 m",
+      "1.5" = "1.5 m",
+      "1" = "1 m",
+      "0.5" = "0.5 m",
+      "0" = "0 m (GND)"
+    ), 
+    name = "Sensor Depth"
+  ) +
+  theme_bw() + 
+  labs(title = "f) TSZ live", x = "Sensor Depth", y = "LWout (MJ/day)") +
+  scale_y_continuous(limits = c(0, 15)) +
+  facet_wrap(~aspect)
+
+TSZ_daily_sd_treeLWout_2_live_boxplot
+```
+
+```{r}
+PSZ_daily_sd_tree_LWout_2_comb_boxplot <- ggarrange(PSZ_daily_sd_treeLWout_2_gb_boxplot, PSZ_daily_sd_treeLWout_2_db_boxplot, PSZ_daily_sd_treeLWout_2_live_boxplot, nrow = 3, ncol = 1, common.legend = TRUE, legend = "right")
+
+PSZ_daily_sd_tree_LWout_2_comb_boxplot
+```
+
+```{r}
+TSZ_daily_sd_tree_LWout_2_comb_boxplot <- ggarrange(TSZ_daily_sd_treeLWout_2_gb_boxplot, TSZ_daily_sd_treeLWout_2_db_boxplot, TSZ_daily_sd_treeLWout_2_live_boxplot, nrow = 3, ncol = 1, common.legend = TRUE, legend = "right")
+
+TSZ_daily_sd_tree_LWout_2_comb_boxplot
 ```
 
 3.  Snow Pit Temp
