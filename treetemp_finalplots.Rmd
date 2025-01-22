@@ -2205,3 +2205,273 @@ persb_treetempNR_lm_fit <- lm(mean_tree_temp ~ LWout_Avg, data = pers_b_dt_mean_
 # Extract the R^2 value
 persb_treetempNR_r_squared <- summary(persb_treetempNR_lm_fit)$r.squared
 ```
+
+## MAD/MRD Calcs
+
+Loading Data
+
+```{r}
+filtered_pers_b_aspects_r <- read_csv("nsf/treetemp_data/filtered_pers_b_aspects_r.csv") %>%
+  select(-sensor_id) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00") %>%
+  filter(tree_name != "gb_w", aspect != c("charred", "uncharred"))
+
+filtered_pers_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_pers_ub_aspects_r.csv") %>%
+  select(-sensor_id) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00")
+
+filtered_trans_b_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_b_aspects_r.csv") %>%
+  select(-sensor_id) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00") %>%
+  filter(tree_name != "gb_w", aspect != c("charred", "uncharred"))
+
+filtered_trans_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_ub_aspects_r.csv") %>%
+  select(-sensor_id) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00")
+```
+
+Data Wrangling
+
+```{r}
+pers_b_diff_results <- filtered_pers_b_aspects_r %>%
+  group_by(burn_status, aspect) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+
+pers_ub_diff_results <- filtered_pers_ub_aspects_r %>%
+  group_by(burn_status, aspect) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+```
+
+```{r}
+trans_b_diff_results <- filtered_pers_b_aspects_r %>%
+  group_by(burn_status, aspect) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+
+trans_ub_diff_results <- filtered_pers_ub_aspects_r %>%
+  group_by(burn_status, aspect) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+```
+
+Now doing stas as north vs south
+
+```{r}
+#creating a dataframe with individual tree temps by north and south aspect
+persb_n_aspects <- filtered_pers_b_aspects_r %>%
+  filter(aspect == "north") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+persb_s_aspects <- filtered_pers_b_aspects_r %>%
+  filter(aspect == "south") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+persb_ns_aspects <- persb_n_aspects %>%
+  inner_join(persb_s_aspects, by= c("datetime", "day", "month", "phase", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, tree_name, north, south) %>%
+  rename(north_temp = "north", south_temp = "south")
+```
+
+```{r}
+transb_n_aspects <- filtered_trans_b_aspects_r %>%
+  filter(aspect == "north") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+transb_s_aspects <- filtered_trans_b_aspects_r %>%
+  filter(aspect == "south") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+transb_ns_aspects <- transb_n_aspects %>%
+  inner_join(transb_s_aspects, by= c("datetime", "day", "month", "phase", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, tree_name, north, south) %>%
+  rename(north_temp = "north", south_temp = "south")
+```
+
+```{r}
+persub_n_aspects <- filtered_pers_ub_aspects_r %>%
+  filter(aspect == "north") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+persub_s_aspects <- filtered_pers_ub_aspects_r %>%
+  filter(aspect == "south") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+persub_ns_aspects <- persub_n_aspects %>%
+  inner_join(persub_s_aspects, by= c("datetime", "day", "month", "phase", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, tree_name, north, south) %>%
+  rename(north_temp = "north", south_temp = "south")
+```
+
+```{r}
+transub_n_aspects <- filtered_trans_ub_aspects_r %>%
+  filter(aspect == "north") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+transub_s_aspects <- filtered_trans_ub_aspects_r %>%
+  filter(aspect == "south") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+transub_ns_aspects <- transub_n_aspects %>%
+  inner_join(transub_s_aspects, by= c("datetime", "day", "month", "phase", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, tree_name, north, south) %>%
+  rename(north_temp = "north", south_temp = "south")
+```
+
+```{r}
+pers_b_ns_diff_results <- persb_ns_aspects %>%
+  group_by(burn_status) %>%
+  #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing one observation
+  filter((north_temp + south_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(north_temp - south_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
+
+pers_ub_ns_diff_results <- persub_ns_aspects %>%
+  group_by(burn_status) %>%
+  summarise(
+    mean_avg_diff = mean(abs(north_temp - south_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
+```
+
+```{r}
+trans_b_ns_diff_results <- transb_ns_aspects %>%
+  group_by(burn_status) %>%
+  summarise(
+    mean_avg_diff = mean(abs(north_temp - south_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
+
+trans_ub_ns_diff_results <- transub_ns_aspects %>%
+  group_by(burn_status) %>%
+  #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing two observations
+  filter((north_temp + south_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(north_temp - south_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
+```
+
+Now doing stas as gb vs db vs live
+
+```{r}
+pers_gb_aspects <- filtered_pers_b_aspects_r %>%
+  filter(burn_status == "green burn") %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(gb_temp = "green burn") %>%
+  select("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect", "tree_name", "gb_temp")
+
+pers_db_aspects <- filtered_pers_b_aspects_r %>%
+  filter(burn_status == "dead burn") %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(db_temp = "dead burn") %>%
+  select("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect", "tree_name", "db_temp")
+
+pers_ub_aspects <- filtered_pers_ub_aspects_r %>%
+  filter(burn_status == "live") %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(ub_temp = "live") %>%
+  select("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect", "tree_name", "ub_temp")
+
+pers_gbdbub_aspects <- pers_gb_aspects %>%
+  inner_join(pers_db_aspects,  by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(pers_ub_aspects, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect"))
+```
+
+```{r}
+#gb vs db
+pers_gb_db_diff_results <- pers_gbdbub_aspects %>%
+  group_by(aspect) %>%
+  filter((gb_temp + db_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(gb_temp - db_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(gb_temp - db_temp) / ((gb_temp + db_temp) / 2), na.rm = TRUE)
+  )
+
+# gb vs live
+pers_gb_live_diff_results <- pers_gbdbub_aspects %>%
+  group_by(aspect) %>%
+  filter((gb_temp + ub_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(gb_temp - ub_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(gb_temp - ub_temp) / ((gb_temp + ub_temp) / 2), na.rm = TRUE)
+  )
+
+# db vs live
+pers_db_live_diff_results <- pers_gbdbub_aspects %>%
+  group_by(aspect) %>%
+  filter((db_temp + ub_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(db_temp - ub_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(db_temp - ub_temp) / ((db_temp + ub_temp) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+trans_gb_aspects <- filtered_trans_b_aspects_r %>%
+  filter(burn_status == "green burn") %>%
+  filter(aspect %in% c("north", "south")) %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(gb_temp = "green burn") %>%
+  select("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect", "tree_name", "gb_temp")
+
+trans_db_aspects <- filtered_trans_b_aspects_r %>%
+  filter(burn_status == "dead burn") %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(db_temp = "dead burn") %>%
+  select("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect", "tree_name", "db_temp")
+
+trans_ub_aspects <- filtered_trans_ub_aspects_r %>%
+  filter(burn_status == "live") %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(ub_temp = "live") %>%
+  select("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect", "tree_name", "ub_temp")
+
+trans_gbdbub_aspects <- trans_gb_aspects %>%
+  inner_join(trans_db_aspects,  by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(trans_ub_aspects, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect"))
+```
+
+```{r}
+#gb vs db
+trans_gb_db_diff_results <- trans_gbdbub_aspects %>%
+  group_by(aspect) %>%
+  filter((gb_temp + db_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(gb_temp - db_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(gb_temp - db_temp) / ((gb_temp + db_temp) / 2), na.rm = TRUE)
+  )
+
+# gb vs live
+trans_gb_live_diff_results <- trans_gbdbub_aspects %>%
+  group_by(aspect) %>%
+  filter((gb_temp + ub_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(gb_temp - ub_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(gb_temp - ub_temp) / ((gb_temp + ub_temp) / 2), na.rm = TRUE)
+  )
+
+# db vs live
+trans_db_live_diff_results <- trans_gbdbub_aspects %>%
+  group_by(aspect) %>%
+  filter((db_temp + ub_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(db_temp - ub_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(db_temp - ub_temp) / ((db_temp + ub_temp) / 2), na.rm = TRUE)
+  )
+```
