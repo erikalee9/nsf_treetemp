@@ -58,7 +58,7 @@ pers_ub_aspects <- read_csv("nsf/105E_pers_unburned/105E_pers_ub_aspects.csv") %
 
 trans_ub_aspects <- read_csv("nsf/105E_trans_unburned/105E_trans_ub_aspects.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST'))
+                               datetime = with_tz(datetime, tz = 'MST'))
 ```
 
 Weather station data:
