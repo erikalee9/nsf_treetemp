@@ -26,6 +26,7 @@ library(patchwork)
 library(ggpubr)
 library(suncalc)
 library(ggpattern)
+library(hms)
 
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
@@ -269,10 +270,277 @@ filtered_persub_wx_hourly <- persub_wx_hourly_r %>%
   select(datetime, day, month, phase, zone, burn_status, NR_Avg_new, everything())
 ```
 
-\
+Raw Aspect Data with all sensors included
+
+```{r}
+filtered_pers_b_aspects_r <- read_csv("nsf/treetemp_data/filtered_pers_b_aspects_r.csv") %>%
+  select(-sensor_id) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00") %>%
+  filter(tree_name != "gb_w", aspect != c("charred", "uncharred"))
+
+filtered_pers_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_pers_ub_aspects_r.csv") %>%
+  select(-sensor_id) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00")
+
+filtered_trans_b_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_b_aspects_r.csv") %>%
+  select(-sensor_id) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00") %>%
+  filter(tree_name != "gb_w", aspect != c("charred", "uncharred"))
+
+filtered_trans_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_ub_aspects_r.csv") %>%
+  select(-sensor_id) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00")
+```
+
 TotalNetRad = (SWin -SWout) + (LWin - LWout) + LWout_tree)
 
 # Plotting
+
+## Individual Sensor Comparison Line Plot
+
+```{r}
+#datawrangling to get a dataframe with all temperatures for burned and unburned data
+full_pers_aspects <- rbind(filtered_pers_b_aspects_r, filtered_pers_ub_aspects_r)
+
+full_trans_aspects <- rbind(filtered_trans_b_aspects_r, filtered_trans_ub_aspects_r)
+```
+
+PSZ
+
+```{r}
+PSZ_single_day_sensor_comp_gb <- full_pers_aspects %>%
+  filter(burn_status == "green burn", datetime >= "2024-03-10 00:00:00" & datetime <= "2024-03-10 23:45:00")
+
+PSZ_single_day_sensor_comp_db <- full_pers_aspects %>%
+  filter(burn_status == "dead burn", datetime >= "2024-03-10 00:00:00" & datetime <= "2024-03-10 23:45:00")
+
+PSZ_single_day_sensor_comp_live <- full_pers_aspects %>%
+  filter(burn_status == "live", datetime >= "2024-03-10 00:00:00" & datetime <= "2024-03-10 23:45:00")
+```
+
+```{r}
+PSZ_db_singlesensor_comp_plot <- ggplot(data = PSZ_single_day_sensor_comp_db) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name), color = "#D95F02", linewidth = 0.7) +
+  scale_linetype_manual(
+    name = "Tree Name",                 # Legend title
+    values = c("db_n" = "dashed",       # Linetype mapping
+               "db_s" = "solid"),
+    labels = c("db_n" = "DB tree #1",    # Custom legend labels
+               "db_s" = "DB tree #2")
+  ) +
+  facet_wrap(~aspect) +
+  #sunrise time
+  geom_vline(xintercept = as.numeric(as.POSIXct("2024-03-10 06:30:00")), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #sunset time
+  geom_vline(xintercept = as.numeric(as.POSIXct("2024-03-10 18:15:00")), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  labs(title = "a) PSZ DB", x = NULL, y = "Temperature (°C)") +
+  scale_y_continuous(limits = c(-15, 31)) +  # Set the y-axis limits here
+  theme_bw()
+
+PSZ_db_singlesensor_comp_plot
+```
+
+```{r}
+PSZ_gb_singlesensor_comp_plot <- ggplot(data = PSZ_single_day_sensor_comp_gb) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name), color = "#1B7837", linewidth = 0.7) +
+  scale_linetype_manual(
+    name = "Tree Name",                 # Legend title
+    values = c("gb_e" = "dashed",       # Linetype mapping
+               "gb_s" = "solid"),
+    labels = c("gb_e" = "GB tree #1",    # Custom legend labels
+               "gb_s" = "GB tree #2")
+  ) +
+  facet_wrap(~aspect) +
+  #sunrise time
+  geom_vline(xintercept = as.numeric(as.POSIXct("2024-03-10 06:30:00")), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #sunset time
+  geom_vline(xintercept = as.numeric(as.POSIXct("2024-03-10 18:15:00")), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  labs(title = "b) PSZ GB", x = NULL, y = "Temperature (°C)") +
+   scale_y_continuous(limits = c(-15, 33)) +
+  theme_bw()
+
+PSZ_gb_singlesensor_comp_plot
+```
+
+```{r}
+PSZ_live_singlesensor_comp_plot <- ggplot(data = PSZ_single_day_sensor_comp_live) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name), color = "#2166AC", linewidth = 0.7, alpha = 0.8) +
+  scale_linetype_manual(
+    name = "Tree Name",                 # Legend title
+    values = c("ub_n" = "dashed",       # Linetype mapping
+               "ub_s" = "solid"),
+    labels = c("ub_n" = "live tree #1",    # Custom legend labels
+               "ub_s" = "live tree #2")
+  ) +
+  facet_wrap(~aspect) +
+  #sunrise time
+  geom_vline(xintercept = as.numeric(as.POSIXct("2024-03-10 06:30:00")), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #sunset time
+  geom_vline(xintercept = as.numeric(as.POSIXct("2024-03-10 18:15:00")), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  labs(title = "c) PSZ Live", x = "Date & Time (MST)", y = "Temperature (°C)") +
+   scale_y_continuous(limits = c(-15, 33)) +
+  theme_bw()
+
+PSZ_live_singlesensor_comp_plot
+```
+
+```{r}
+PSZ_comb_singlesensor_comp_lineplot <- ggarrange(PSZ_db_singlesensor_comp_plot, PSZ_gb_singlesensor_comp_plot, PSZ_live_singlesensor_comp_plot, nrow = 3, ncol = 1, legend = "right")
+
+PSZ_comb_singlesensor_comp_lineplot
+```
+
+TSZ
+
+```{r}
+TSZ_single_day_sensor_comp_gb <- full_trans_aspects %>%
+  filter(burn_status == "green burn", datetime >= "2024-03-10 00:00:00" & datetime <= "2024-03-10 23:45:00")
+
+TSZ_single_day_sensor_comp_db <- full_trans_aspects %>%
+  filter(burn_status == "dead burn", datetime >= "2024-03-10 00:00:00" & datetime <= "2024-03-10 23:45:00")
+
+TSZ_single_day_sensor_comp_live <- full_trans_aspects %>%
+  filter(burn_status == "live", datetime >= "2024-03-10 00:00:00" & datetime <= "2024-03-10 23:45:00")
+```
+
+```{r}
+TSZ_db_singlesensor_comp_plot <- ggplot(data = TSZ_single_day_sensor_comp_db) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name), color = "#D95F02", linewidth = 0.7) +
+  scale_linetype_manual(
+    name = "Tree Name",                 # Legend title
+    values = c("db_n" = "dashed",       # Linetype mapping
+               "db_s" = "solid"),
+    labels = c("db_n" = "DB tree #1",    # Custom legend labels
+               "db_s" = "DB tree #2")
+  ) +
+  facet_wrap(~aspect) +
+ #sunrise time
+  geom_vline(xintercept = as.numeric(as.POSIXct("2024-03-10 06:30:00")), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #sunset time
+  geom_vline(xintercept = as.numeric(as.POSIXct("2024-03-10 18:15:00")), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  labs(title = "d) TSZ DB", x = NULL, y = "Temperature (°C)") +
+  scale_y_continuous(limits = c(-15, 33)) +
+  theme_bw()
+
+TSZ_db_singlesensor_comp_plot
+```
+
+```{r}
+TSZ_gb_singlesensor_comp_plot <- ggplot(data = TSZ_single_day_sensor_comp_gb) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name), color = "#1B7837", linewidth = 0.7) +
+  scale_linetype_manual(
+    name = "Tree Name",                 # Legend title
+    values = c("gb_n" = "dashed",       # Linetype mapping
+               "gb_s" = "solid"),
+    labels = c("gb_n" = "GB tree #1",    # Custom legend labels
+               "gb_s" = "GB tree #2")
+  ) +
+  facet_wrap(~aspect) +
+ #sunrise time
+  geom_vline(xintercept = as.numeric(as.POSIXct("2024-03-10 06:30:00")), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #sunset time
+  geom_vline(xintercept = as.numeric(as.POSIXct("2024-03-10 18:15:00")), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  labs(title = "e) TSZ GB", x = NULL, y = "Temperature (°C)") +
+  scale_y_continuous(limits = c(-15, 33)) +
+  theme_bw()
+
+TSZ_gb_singlesensor_comp_plot
+```
+
+```{r}
+TSZ_live_singlesensor_comp_plot <- ggplot(data = TSZ_single_day_sensor_comp_live) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name), color = "#2166AC", linewidth = 0.7, alpha = 0.8) +
+  scale_linetype_manual(
+    name = "Tree Name",                 # Legend title
+    values = c("ub_w" = "dashed",       # Linetype mapping
+               "ub_e" = "solid"),
+    labels = c("ub_w" = "live tree #1",    # Custom legend labels
+               "ub_e" = "live tree #2")
+  ) +
+  facet_wrap(~aspect) +
+ #sunrise time
+  geom_vline(xintercept = as.numeric(as.POSIXct("2024-03-10 06:30:00")), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  #sunset time
+  geom_vline(xintercept = as.numeric(as.POSIXct("2024-03-10 18:15:00")), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) + 
+  labs(title = "f) TSZ Live", x = "Date & Time (MST)", y = "Temperature (°C)") +
+  scale_y_continuous(limits = c(-15, 33)) +
+  theme_bw()
+
+TSZ_live_singlesensor_comp_plot
+```
+
+```{r}
+TSZ_comb_singlesensor_comp_lineplot <- ggarrange(TSZ_db_singlesensor_comp_plot, TSZ_gb_singlesensor_comp_plot, TSZ_live_singlesensor_comp_plot, nrow = 3, ncol = 1, legend = "right")
+
+TSZ_comb_singlesensor_comp_lineplot
+```
+
+```{r}
+##Use this method of combining plots -> it solves the issue with repeated legends!
+comb_db_singlesensor_lineplot<- ggarrange(PSZ_db_singlesensor_comp_plot, TSZ_db_singlesensor_comp_plot, ncol = 2, nrow = 1, common.legend = TRUE, legend = "right")
+
+comb_db_singlesensor_lineplot
+
+comb_gb_singlesensor_lineplot<- ggarrange(PSZ_gb_singlesensor_comp_plot, TSZ_gb_singlesensor_comp_plot, ncol = 2, nrow = 1, common.legend = TRUE, legend = "right")
+
+comb_gb_singlesensor_lineplot
+
+comb_live_singlesensor_lineplot<- ggarrange(PSZ_live_singlesensor_comp_plot, TSZ_live_singlesensor_comp_plot, ncol = 2, nrow = 1, common.legend = TRUE, legend = "right")
+
+comb_live_singlesensor_lineplot
+```
+
+```{r}
+#final combined single day plot
+
+comb_singlesensor_lineplot <- ggarrange(comb_db_singlesensor_lineplot, comb_gb_singlesensor_lineplot, comb_live_singlesensor_lineplot, nrow = 3, ncol = 1, common.legend = TRUE, legend = "right")
+
+comb_singlesensor_lineplot
+```
 
 ## Daytime vs Nighttime Tree Temp Plot - GB/DB/UB with aspects
 
@@ -2207,36 +2475,6 @@ persb_treetempNR_r_squared <- summary(persb_treetempNR_lm_fit)$r.squared
 ```
 
 ## MAD/MRD Calcs
-
-Loading Data
-
-```{r}
-filtered_pers_b_aspects_r <- read_csv("nsf/treetemp_data/filtered_pers_b_aspects_r.csv") %>%
-  select(-sensor_id) %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST')) %>%
-  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00") %>%
-  filter(tree_name != "gb_w", aspect != c("charred", "uncharred"))
-
-filtered_pers_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_pers_ub_aspects_r.csv") %>%
-  select(-sensor_id) %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST')) %>%
-  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00")
-
-filtered_trans_b_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_b_aspects_r.csv") %>%
-  select(-sensor_id) %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST')) %>%
-  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00") %>%
-  filter(tree_name != "gb_w", aspect != c("charred", "uncharred"))
-
-filtered_trans_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_ub_aspects_r.csv") %>%
-  select(-sensor_id) %>%
-  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = force_tz(datetime, tz = 'MST')) %>%
-  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00")
-```
 
 Data Wrangling
 
