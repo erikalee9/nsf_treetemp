@@ -2713,3 +2713,150 @@ trans_db_live_diff_results <- trans_gbdbub_aspects %>%
     mean_relative_diff = mean(abs(db_temp - ub_temp) / ((db_temp + ub_temp) / 2), na.rm = TRUE)
   )
 ```
+
+Day vs Night Temperatures
+
+Day only and night only stats
+
+```{r}
+pers_b_dtnt_diff_results <- filtered_pers_b_aspects_r %>%
+  group_by(burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+
+pers_ub_dtnt_diff_results <- filtered_pers_ub_aspects_r %>%
+  group_by(burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+```
+
+```{r}
+trans_b_dtnt_diff_results <- filtered_trans_b_aspects_r %>%
+  group_by(burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+
+trans_ub_dtnt_diff_results <- filtered_trans_ub_aspects_r %>%
+  group_by(burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+```
+
+Day vs Night stats
+
+```{r}
+#creating a dataframe with individual columns for day and night temps by date
+persb_daytemp <- filtered_pers_b_aspects_r %>%
+  filter(phase == "day") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(daytemp = day)
+
+persb_nighttemp <- filtered_pers_b_aspects_r %>%
+  filter(phase == "night") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(nighttemp = night)
+
+persb_dtnt_aspects <- persb_daytemp %>%
+  inner_join(persb_nighttemp, by= c("daydate", "month", "aspect", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(daydate, month, aspect, zone, snow_phase, burn_status, tree_name, daytemp, nighttemp)
+```
+
+```{r}
+persub_daytemp <- filtered_pers_ub_aspects_r %>%
+  filter(phase == "day") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(daytemp = day)
+
+persub_nighttemp <- filtered_pers_ub_aspects_r %>%
+  filter(phase == "night") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(nighttemp = night)
+
+persub_dtnt_aspects <- persub_daytemp %>%
+  inner_join(persub_nighttemp, by= c("daydate", "month", "aspect", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(daydate, month, aspect, zone, snow_phase, burn_status, tree_name, daytemp, nighttemp)
+```
+
+```{r}
+pers_b_dtnt_comb_diff_results <- persb_dtnt_aspects %>%
+  group_by(burn_status) %>%
+  #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing one observation
+  filter((daytemp + nighttemp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(daytemp - nighttemp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(daytemp - nighttemp) / ((daytemp + nighttemp) / 2), na.rm = TRUE))
+
+pers_ub_dtnt_comb_diff_results <- persub_dtnt_aspects %>%
+  group_by(burn_status) %>%
+  #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing one observation
+  filter((daytemp + nighttemp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(daytemp - nighttemp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(daytemp - nighttemp) / ((daytemp + nighttemp) / 2), na.rm = TRUE))
+```
+
+```{r}
+transb_daytemp <- filtered_trans_b_aspects_r %>%
+  filter(phase == "day") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(daytemp = day)
+
+transb_nighttemp <- filtered_trans_b_aspects_r %>%
+  filter(phase == "night") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(nighttemp = night)
+
+transb_dtnt_aspects <- transb_daytemp %>%
+  inner_join(transb_nighttemp, by= c("daydate", "month", "aspect", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(daydate, month, aspect, zone, snow_phase, burn_status, tree_name, daytemp, nighttemp)
+```
+
+```{r}
+transub_daytemp <- filtered_trans_ub_aspects_r %>%
+  filter(phase == "day") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(daytemp = day)
+
+transub_nighttemp <- filtered_trans_ub_aspects_r %>%
+  filter(phase == "night") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(nighttemp = night)
+
+transub_dtnt_aspects <- transub_daytemp %>%
+  inner_join(transub_nighttemp, by= c("daydate", "month", "aspect", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(daydate, month, aspect, zone, snow_phase, burn_status, tree_name, daytemp, nighttemp)
+```
+
+```{r}
+trans_b_dtnt_comb_diff_results <- transb_dtnt_aspects %>%
+  group_by(burn_status) %>%
+  #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing one observation
+  filter((daytemp + nighttemp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(daytemp - nighttemp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(daytemp - nighttemp) / ((daytemp + nighttemp) / 2), na.rm = TRUE))
+
+trans_ub_dtnt_comb_diff_results <- transub_dtnt_aspects %>%
+  group_by(burn_status) %>%
+  #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing one observation
+  filter((daytemp + nighttemp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(daytemp - nighttemp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(daytemp - nighttemp) / ((daytemp + nighttemp) / 2), na.rm = TRUE))
+```
