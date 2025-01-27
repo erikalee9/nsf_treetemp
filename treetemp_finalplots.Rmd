@@ -565,77 +565,18 @@ nt_full_daily_gbdbub_plot_dataframe <- full_15min_gbdbub %>%
 ```
 
 ```{r}
-##don't need to include this
-wide_dt_gbdbub_temps <- dt_full_daily_gbdbub_plot_dataframe %>%
-  pivot_wider(names_from = phase, values_from = c(gb_temp, db_temp, ub_temp))
-
-wide_nt_gbdbub_temps <- nt_full_daily_gbdbub_plot_dataframe %>%
-  pivot_wider(names_from = phase, values_from = c(gb_temp, db_temp, ub_temp))
-
-wide_dtnt_gbdbub_temps <- wide_dt_gbdbub_temps %>%
-  inner_join(wide_nt_gbdbub_temps)
-```
-
-```{r}
-#daytime plot
-dt_treetemp_daily_gbdbub_lineplot <- ggplot(data = dt_full_daily_gbdbub_plot_dataframe) +
-  geom_line(aes(x = day, y = gb_temp, color = "green burn", linetype = aspect)) + 
-  geom_line(aes(x = day, y = db_temp, color = "dead burn", linetype = aspect)) +
-  geom_line(aes(x = day, y = ub_temp, color = "live", linetype = aspect), alpha = 0.8) +
-  facet_wrap(~zone) +
-  labs(title = "a) Day Temps", x = NULL, y = "Temperature (°C)") +
-  scale_color_manual(
-    name = "burn status",
-    values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = "#2166AC")
-  ) +
-  scale_linetype_manual(
-    name = "aspect", 
-    values = c("north" = "dashed", "south" = "solid"),
-    labels = c("north" = "North", "south" = "South")
-  ) +
-  scale_y_continuous(limits = c(-20, 20)) +  # Set the y-axis limits here
-  theme_bw()
-
-dt_treetemp_daily_gbdbub_lineplot
-```
-
-```{r}
-#daytime plot
-nt_treetemp_daily_gbdbub_lineplot <- ggplot(data = nt_full_daily_gbdbub_plot_dataframe) +
-  geom_line(aes(x = day, y = gb_temp, color = "green burn", linetype = aspect)) + 
-  geom_line(aes(x = day, y = db_temp, color = "dead burn", linetype = aspect)) +
-  geom_line(aes(x = day, y = ub_temp, color = "live", linetype = aspect), alpha = 0.8) +
-  facet_wrap(~zone) +
-  labs(title = "b) Night Temps", x = "Date", y = "Temperature (°C)") +
-  scale_color_manual(
-    name = "burn status",
-    values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = "#2166AC")
-  ) +
-  scale_linetype_manual(
-    name = "aspect", 
-    values = c("north" = "dashed", "south" = "solid"),
-    labels = c("north" = "North", "south" = "South")
-  ) +
-  #setting y-axis to match that of the daytime axis
- scale_y_continuous(limits = c(-20, 20)) +  # Set the y-axis limits here
-  theme_bw()
-
-nt_treetemp_daily_gbdbub_lineplot
-```
-
-```{r}
-#combining day and night plots
-dtnt_treetemp_lineplot <- ggarrange(dt_treetemp_daily_gbdbub_lineplot, nt_treetemp_daily_gbdbub_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
-
-dtnt_treetemp_lineplot
+stats_dtnt_byburnstatus <- full_15min_gbdbub %>%
+  group_by(zone, phase) %>%
+  summarize(mean_gb_temp = mean(gb_temp), mean_db_temp = mean(db_temp), mean_ub_temp = mean(ub_temp))
 ```
 
 \*\* as of 2025-01-13 - use the below plots instead of above plots!
 
 ```{r}
-#parsing by zone instead
+#parsing by zone instead - South Aspect only!
 #creating dataframe for this that has renamed zones - mean daily value!!
-PSZ_dtnt_daily_gbdbub_plot_dataframe <- full_pers_gbdbub_data %>%
+PSZ_s_dtnt_daily_gbdbub_plot_dataframe <- full_pers_gbdbub_data %>%
+  filter(aspect == "south") %>%
   #selecting data that we need
   select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
   #summarizing for one daily value
@@ -643,12 +584,32 @@ PSZ_dtnt_daily_gbdbub_plot_dataframe <- full_pers_gbdbub_data %>%
   summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
   
 
-TSZ_dtnt_daily_gbdbub_plot_dataframe <- full_trans_gbdbub_data %>%
-  #selecting data that we neex
+TSZ_s_dtnt_daily_gbdbub_plot_dataframe <- full_trans_gbdbub_data %>%
+  filter(aspect == "south") %>%
+  #selecting data that we need
   select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
   #summarizing for one daily value
   group_by(day, month, phase, zone, aspect) %>%
   summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+
+#North aspect only!
+PSZ_n_dtnt_daily_gbdbub_plot_dataframe <- full_pers_gbdbub_data %>%
+  filter(aspect == "north") %>%
+  #selecting data that we need
+  select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
+  #summarizing for one daily value
+  group_by(day, month, phase, zone, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+  
+
+TSZ_n_dtnt_daily_gbdbub_plot_dataframe <- full_trans_gbdbub_data %>%
+  filter(aspect == "north") %>%
+  #selecting data that we need
+  select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
+  #summarizing for one daily value
+  group_by(day, month, phase, zone, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+
 ```
 
 ```{r}
@@ -664,83 +625,166 @@ TSZ_meanminmax_stats <- full_trans_gbdbub_data %>%
   summarize(mean_temp = mean(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), max_temp = max(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), min_temp = min(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), temp_range = (max_temp - min_temp))
 ```
 
+South Aspect Only Plots!
+
 ```{r}
 #daytime plot
-PSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = PSZ_dtnt_daily_gbdbub_plot_dataframe ) +
-  geom_line(aes(x = day, y = gb_temp, color = "green burn", linetype = aspect)) + 
-  geom_line(aes(x = day, y = db_temp, color = "dead burn", linetype = aspect)) +
-  geom_line(aes(x = day, y = ub_temp, color = "live", linetype = aspect), alpha = 0.8) +
-  facet_wrap(~phase) +
+PSZ_s_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = PSZ_s_dtnt_daily_gbdbub_plot_dataframe ) +
+  geom_line(aes(x = day, y = gb_temp, color = "GB")) + 
+  geom_line(aes(x = day, y = db_temp, color = "DB")) +
+  geom_line(aes(x = day, y = ub_temp, color = "live"), alpha = 0.8) +
+  #facet_wrap(~phase) +
   labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
   scale_color_manual(
     name = "burn status",
-    values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = "#2166AC")
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = "#2166AC")
   ) +
-  scale_linetype_manual(
-    name = "aspect", 
-    values = c("north" = "dashed", "south" = "solid"),
-    labels = c("north" = "North", "south" = "South")
-  ) +
-  scale_y_continuous(limits = c(-20, 25)) +  # Set the y-axis limits here
+  #scale_linetype_manual(
+   # name = "aspect", 
+   # values = c("north" = "dashed", "south" = "solid"),
+   # labels = c("north" = "North", "south" = "South")
+#  ) +
+  scale_y_continuous(limits = c(-20, 28)) +  # Set the y-axis limits here
   theme_bw() + 
   #accumulation/ablation date destiction
-  geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
-             linetype = "solid",                # Dashed line
-             color = "grey23",                      # Line color
-             size = 0.4, alpha = 0.8) + 
+ # geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
+          #   linetype = "solid",                # Dashed line
+          #   color = "grey23",                      # Line color
+          #   size = 0.4, alpha = 0.8) + 
   #snowfree date
   geom_vline(xintercept = as.numeric(as.Date('2024-06-05')), 
              linetype = "dashed",                # Dashed line
              color = "grey23",                      # Line color
              size = 0.4, alpha = 0.8)
 
-PSZ_dtnt_treetemp_daily_gbdbub_lineplot
+PSZ_s_dtnt_treetemp_daily_gbdbub_lineplot
 ```
 
 ```{r}
 #TSZ plot 
-TSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_dtnt_daily_gbdbub_plot_dataframe ) +
-  geom_line(aes(x = day, y = gb_temp, color = "green burn", linetype = aspect)) + 
-  geom_line(aes(x = day, y = db_temp, color = "dead burn", linetype = aspect)) +
-  geom_line(aes(x = day, y = ub_temp, color = "live", linetype = aspect), alpha = 0.8) +
+TSZ_s_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_s_dtnt_daily_gbdbub_plot_dataframe ) +
+  geom_line(aes(x = day, y = gb_temp, color = "GB")) + 
+  geom_line(aes(x = day, y = db_temp, color = "DB")) +
+  geom_line(aes(x = day, y = ub_temp, color = "live"), alpha = 0.8) +
   facet_wrap(~phase) +
   labs(title = "b) TSZ", x = "Date", y = "Temperature (°C)") +
   scale_color_manual(
     name = "burn status",
-    values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = "#2166AC")
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = "#2166AC")
   ) +
-  scale_linetype_manual(
-    name = "aspect", 
-    values = c("north" = "dashed", "south" = "solid"),
-    labels = c("north" = "North", "south" = "South")
-  ) +
-  scale_y_continuous(limits = c(-20, 25)) +  # Set the y-axis limits here
-  theme_bw() + 
+  #scale_linetype_manual(
+   # name = "aspect", 
+   # values = c("north" = "dashed", "south" = "solid"),
+   # labels = c("north" = "North", "south" = "South")
+ # ) +
+  scale_y_continuous(limits = c(-20, 28)) +  # Set the y-axis limits here
+  theme_bw() +
   #accumulation/ablation date destiction
-  geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
-             linetype = "solid",                # Dashed line
-             color = "grey23",                      # Line color
-             size = 0.4, alpha = 0.8) + 
+ # geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
+          #   linetype = "solid",                # Dashed line
+          #   color = "grey23",                      # Line color
+          #   size = 0.4, alpha = 0.8) + 
   #snowfree date
   geom_vline(xintercept = as.numeric(as.Date('2024-05-25')), 
              linetype = "dashed",                # Dashed line
              color = "grey23",                      # Line color
              size = 0.4, alpha = 0.8)
 
-TSZ_dtnt_treetemp_daily_gbdbub_lineplot
+TSZ_s_dtnt_treetemp_daily_gbdbub_lineplot
 ```
 
 ```{r}
 #combining day and night plots
-final_dtnt_treetemp_lineplot <- ggarrange(
-  PSZ_dtnt_treetemp_daily_gbdbub_lineplot, 
-  TSZ_dtnt_treetemp_daily_gbdbub_lineplot, 
+final_s_dtnt_treetemp_lineplot <- ggarrange(
+  PSZ_s_dtnt_treetemp_daily_gbdbub_lineplot, 
+  TSZ_s_dtnt_treetemp_daily_gbdbub_lineplot, 
   nrow = 2, 
   ncol = 1, 
   common.legend = TRUE, 
   legend = "right"
 )
-print(final_dtnt_treetemp_lineplot)
+print(final_s_dtnt_treetemp_lineplot)
+```
+
+North Aspect Only Plots!
+
+```{r}
+#daytime plot
+PSZ_n_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = PSZ_n_dtnt_daily_gbdbub_plot_dataframe ) +
+  geom_line(aes(x = day, y = gb_temp, color = "GB")) + 
+  geom_line(aes(x = day, y = db_temp, color = "DB")) +
+  geom_line(aes(x = day, y = ub_temp, color = "live"), alpha = 0.8) +
+  facet_wrap(~phase) +
+  labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
+  scale_color_manual(
+    name = "burn status",
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = "#2166AC")
+  ) +
+  #scale_linetype_manual(
+   # name = "aspect", 
+   # values = c("north" = "dashed", "south" = "solid"),
+   # labels = c("north" = "North", "south" = "South")
+#  ) +
+  scale_y_continuous(limits = c(-20, 28)) +  # Set the y-axis limits here
+  theme_bw() + 
+  #accumulation/ablation date destiction
+ # geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
+          #   linetype = "solid",                # Dashed line
+          #   color = "grey23",                      # Line color
+          #   size = 0.4, alpha = 0.8) + 
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-06-05')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8)
+
+PSZ_n_dtnt_treetemp_daily_gbdbub_lineplot
+```
+
+```{r}
+#TSZ plot 
+TSZ_n_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_n_dtnt_daily_gbdbub_plot_dataframe ) +
+  geom_line(aes(x = day, y = gb_temp, color = "GB")) + 
+  geom_line(aes(x = day, y = db_temp, color = "DB")) +
+  geom_line(aes(x = day, y = ub_temp, color = "live"), alpha = 0.8) +
+  facet_wrap(~phase) +
+  labs(title = "b) TSZ", x = "Date", y = "Temperature (°C)") +
+  scale_color_manual(
+    name = "burn status",
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = "#2166AC")
+  ) +
+  #scale_linetype_manual(
+   # name = "aspect", 
+   # values = c("north" = "dashed", "south" = "solid"),
+   # labels = c("north" = "North", "south" = "South")
+ # ) +
+  scale_y_continuous(limits = c(-20, 28)) +  # Set the y-axis limits here
+  theme_bw() +
+  #accumulation/ablation date destiction
+ # geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
+          #   linetype = "solid",                # Dashed line
+          #   color = "grey23",                      # Line color
+          #   size = 0.4, alpha = 0.8) + 
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-25')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8)
+
+TSZ_n_dtnt_treetemp_daily_gbdbub_lineplot
+```
+
+```{r}
+#combining day and night plots
+final_n_dtnt_treetemp_lineplot <- ggarrange(
+  PSZ_n_dtnt_treetemp_daily_gbdbub_lineplot, 
+  TSZ_n_dtnt_treetemp_daily_gbdbub_lineplot, 
+  nrow = 2, 
+  ncol = 1, 
+  common.legend = TRUE, 
+  legend = "right"
+)
+print(final_n_dtnt_treetemp_lineplot)
 ```
 
 Box plot of the above data
@@ -879,7 +923,196 @@ comb_dtnt_boxplot
 
 ## GB Aspect/Char Pattern Comparison
 
-### Aspect-only Comparisons
+Lineplot of Aspect-only Comparisons - as of 2025.01.27 \*\* USE THESE NS Boxplots instead of the ones below!
+
+```{r}
+#Use this!
+pers_dt_ns_boxplot_data <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "day") %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp),  # Columns to reshape
+    names_to = "aspect",              # New column for burn status
+    values_to = "temp"                # New column for temperature values
+  ) %>%
+  mutate(
+    aspect = case_when(
+      aspect == "north_temp" ~ "north",
+      aspect == "south_temp" ~ "south",
+      TRUE ~ aspect  # Optional: Keep original value if no match
+    ),
+    aspect = factor(aspect, levels = c("north", "south")),  # Ensure 'north' comes before 'south'
+    burn_status = case_when(
+      burn_status == "live" ~ "live",
+      burn_status == "green burn" ~ "GB",
+      burn_status == "dead burn" ~ "DB",
+      TRUE ~ burn_status  # Keep any other values unchanged
+    ),
+    burn_status = factor(burn_status, levels = c("live", "GB", "DB"))  # Ensure the desired order
+  )
+
+#nt dataframe
+pers_nt_ns_boxplot_data <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "night") %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp),  # Columns to reshape
+    names_to = "aspect",              # New column for burn status
+    values_to = "temp"                # New column for temperature values
+  ) %>%
+  mutate(
+    aspect = case_when(
+      aspect == "north_temp" ~ "north",
+      aspect == "south_temp" ~ "south",
+      TRUE ~ aspect  # Optional: Keep original value if no match
+    ),
+    aspect = factor(aspect, levels = c("north", "south")),  # Ensure 'north' comes before 'south'
+    burn_status = case_when(
+      burn_status == "live" ~ "live",
+      burn_status == "green burn" ~ "GB",
+      burn_status == "dead burn" ~ "DB",
+      TRUE ~ burn_status  # Keep any other values unchanged
+    ),
+    burn_status = factor(burn_status, levels = c("live", "GB", "DB"))  # Ensure the desired order
+  )
+```
+
+```{r}
+#use this!
+trans_dt_ns_boxplot_data <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "day") %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp),  # Columns to reshape
+    names_to = "aspect",              # New column for burn status
+    values_to = "temp"                # New column for temperature values
+  ) %>%
+  mutate(
+    aspect = case_when(
+      aspect == "north_temp" ~ "north",
+      aspect == "south_temp" ~ "south",
+      TRUE ~ aspect  # Optional: Keep original value if no match
+    ),
+    aspect = factor(aspect, levels = c("north", "south")),  # Ensure 'north' comes before 'south'
+    burn_status = case_when(
+      burn_status == "live" ~ "live",
+      burn_status == "green burn" ~ "GB",
+      burn_status == "dead burn" ~ "DB",
+      TRUE ~ burn_status  # Keep any other values unchanged
+    ),
+    burn_status = factor(burn_status, levels = c("live", "GB", "DB"))  # Ensure the desired order
+  )
+
+#nighttime dataframe
+trans_nt_ns_boxplot_data <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "night") %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp),  # Columns to reshape
+    names_to = "aspect",              # New column for burn status
+    values_to = "temp"                # New column for temperature values
+  ) %>%
+  mutate(
+    aspect = case_when(
+      aspect == "north_temp" ~ "north",
+      aspect == "south_temp" ~ "south",
+      TRUE ~ aspect  # Optional: Keep original value if no match
+    ),
+    aspect = factor(aspect, levels = c("north", "south")),  # Ensure 'north' comes before 'south'
+    burn_status = case_when(
+      burn_status == "live" ~ "live",
+      burn_status == "green burn" ~ "GB",
+      burn_status == "dead burn" ~ "DB",
+      TRUE ~ burn_status  # Keep any other values unchanged
+    ),
+    burn_status = factor(burn_status, levels = c("live", "GB", "DB"))  # Ensure the desired order
+  )
+```
+
+```{r}
+#use this!
+pers_dt_ns_boxplot<- ggplot(pers_dt_ns_boxplot_data, aes(x = aspect, y = temp, fill = aspect)) +
+  geom_boxplot() +
+  facet_wrap(~ burn_status) +  # Facet by burn status
+  scale_fill_manual(values = c(scales::alpha("#2166AC", 0.8), "#D95F02")) +  # Custom colors for north and south
+  theme_bw() +
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) + 
+   scale_y_continuous(
+    limits = c(-25, 48))
+
+pers_dt_ns_boxplot
+```
+
+```{r}
+#use this!
+trans_dt_ns_boxplot<- ggplot(trans_dt_ns_boxplot_data, aes(x = aspect, y = temp, fill = aspect)) +
+  geom_boxplot() +
+  facet_wrap(~ burn_status) +  # Facet by burn status
+  scale_fill_manual(values = c(scales::alpha("#2166AC", 0.8), "#D95F02")) +  # Custom colors for north and south
+  theme_bw() +
+  labs(
+    title = "b) TSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) +
+   scale_y_continuous(
+    limits = c(-25, 48))
+
+trans_dt_ns_boxplot
+```
+
+```{r}
+#use this!
+comb_dt_ns_boxplot_V2 <- ggarrange(pers_dt_ns_boxplot, trans_dt_ns_boxplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+comb_dt_ns_boxplot_V2
+```
+
+Plotting NT to compare - not sure I am going to use the Nighttime boxplots?
+
+```{r}
+pers_nt_ns_boxplot<- ggplot(pers_nt_ns_boxplot_data, aes(x = aspect, y = temp, fill = aspect)) +
+  geom_boxplot() +
+  facet_wrap(~ burn_status) +  # Facet by burn status
+  scale_fill_manual(values = c(scales::alpha("#2166AC", 0.8), "#D95F02")) +  # Custom colors for north and south
+  theme_bw() +
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) + 
+   scale_y_continuous(
+    limits = c(-25, 48))
+
+pers_nt_ns_boxplot
+```
+
+```{r}
+trans_nt_ns_boxplot<- ggplot(trans_nt_ns_boxplot_data, aes(x = aspect, y = temp, fill = aspect)) +
+  geom_boxplot() +
+  facet_wrap(~ burn_status) +  # Facet by burn status
+  scale_fill_manual(values = c(scales::alpha("#2166AC", 0.8), "#D95F02")) +  # Custom colors for north and south
+  theme_bw() +
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) + 
+   scale_y_continuous(
+    limits = c(-25, 48))
+
+trans_nt_ns_boxplot
+```
+
+```{r}
+comb_nt_ns_boxplot_V2 <- ggarrange(pers_nt_ns_boxplot, trans_nt_ns_boxplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+comb_nt_ns_boxplot_V2
+```
+
+### Aspect-only Comparisons 
+
+\*\* as of 2025.01.27 - don't use these ns boxplots!
 
 ```{r}
 pers_dt_ns_boxplot_data <- full_15min_ns %>%
