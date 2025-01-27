@@ -845,12 +845,12 @@ final_pers_ub_temps <- final_pers_ub_temps %>%
 
 ```{r}
 full_pers_gbdbub_data <- final_pers_gbdb_temps %>%
-  full_join(final_pers_ub_temps)
+  left_join(final_pers_ub_temps)
 ```
 
 ```{r}
 full_trans_gbdbub_data <- final_trans_gbdb_temps %>%
-  full_join(final_trans_ub_temps)
+  left_join(final_trans_ub_temps)
 ```
 
 ```{r}
