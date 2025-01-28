@@ -132,7 +132,7 @@ transb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transb_snowd
   mutate(zone = "TSZ") %>%
   mutate(burn_status = "burned")
 
-persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_east_snowdepths.csv") %>%
+persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_high_east_snowdepths.csv") %>%
   rename(snowcam_max_depth_cm = "max_depth_cm") %>%
   mutate(day = as.Date(date)) %>%
   rename(treewell_developed = treewell_developement) %>%
@@ -1111,7 +1111,7 @@ comb_nt_ns_boxplot_V2 <- ggarrange(pers_nt_ns_boxplot, trans_nt_ns_boxplot, nrow
 comb_nt_ns_boxplot_V2
 ```
 
-### Aspect-only Comparisons 
+### Aspect-only Comparisons
 
 \*\* as of 2025.01.27 - don't use these ns boxplots!
 
@@ -3157,6 +3157,14 @@ transb_snowcamera_data_V2 <- transb_snowcamera_data %>%
   left_join(transb_wx_data_V2, by = c("day", "zone", "burn_status"))
 ```
 
+```{r}
+persb_treewell_dates <- persb_snowcamera_data_V2 %>%
+  filter(treewell_developed == "yes")
+
+transb_treewell_dates <- transb_snowcamera_data_V2 %>%
+  filter(treewell_developed == "yes")
+```
+
 Plotting
 
 \*\* need to add treewell development date points to burned dataframe below!
@@ -3166,13 +3174,16 @@ scaling_factor <- 0.08
 ```
 
 ```{r}
-PSZ_b_snowdepths_lineplot <- ggplot(data = persb_snowcamera_data_V2) + 
+PSZ_b_snowdepths_lineplot <- ggplot() + 
   # Burned snow depth
-  geom_line(aes(x = day, y = max_snowdepth_m, color = "Max Daily Snow Depth"), 
-            linetype = "solid", linewidth = 0.7) +
+  geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Max Daily Snow Depth"), 
+            linetype = "solid", linewidth = 0.9) +
   # Burned wx station air temp
-  geom_line(aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
+  geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
             linetype = "solid", linewidth = 0.7) + 
+  #treewell dates
+  geom_point(data = persb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
   labs(
     title = "a) PSZ",
     x = NULL,
@@ -3181,15 +3192,27 @@ PSZ_b_snowdepths_lineplot <- ggplot(data = persb_snowcamera_data_V2) +
   ) +
   scale_y_continuous(
     name = "Snow Depth (m)",
+    limits = c(-1, 2.4),
     sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis
   ) +
-  scale_color_manual(
+  scale_shape_manual(
     name = NULL,
-    values = c("Mean Daily Air Temp" = "#D95F02", "Max Daily Snow Depth" = alpha("#2166AC", 0.7)),
-    labels = c("Mean Daily Air Temp", "Max Daily Snow Depth")
-  ) +
+    values = c("Dates that treewells developed" = 16)) + 
+  scale_color_manual(
+  name = NULL,
+  values = c(
+    "Max Daily Snow Depth" = alpha("#2166AC", 0.7),  # Assign blue to snow depth
+    "Mean Daily Air Temp" = "#D95F02"               # Assign orange to air temp
+  ),
+  labels = c("Max Daily Snow Depth", "Mean Daily Air Temp")
+) + 
   facet_wrap(~burn_status, nrow = 2, strip.position = "right") +  # Move labels to the left
-  theme_bw()
+  theme_bw() +
+ #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-06-05')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8)
 
 PSZ_b_snowdepths_lineplot
 ```
@@ -3198,7 +3221,7 @@ PSZ_b_snowdepths_lineplot
 PSZ_ub_snowdepths_lineplot <- ggplot(data = pers_ub_daily_snowdepth_data_V2) + 
   # Burned snow depth
   geom_line(aes(x = day, y = max_snowdepth_m, color = "Max Daily Snow Depth"), 
-            linetype = "solid", linewidth = 0.7) +
+            linetype = "solid", linewidth = 0.9) +
   # Burned wx station air temp
   geom_line(aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
             linetype = "solid", linewidth = 0.7) + 
@@ -3208,15 +3231,109 @@ PSZ_ub_snowdepths_lineplot <- ggplot(data = pers_ub_daily_snowdepth_data_V2) +
   ) +
   scale_y_continuous(
     name = "Snow Depth (m)",
+    limits = c(-1, 2.4),
     sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis
-  ) +
+  ) + 
   scale_color_manual(
-    name = NULL,
-    values = c("Mean Daily Air Temp" = "#D95F02", "Max Daily Snow Depth" = alpha("#2166AC", 0.7)),
-    labels = c("Mean Daily Air Temp", "Max Daily Snow Depth")
-  ) +
-  facet_wrap(~burn_status, nrow = 2, strip.position = "right") +  # Move labels to the left
+  name = NULL,
+  values = c(
+    "Max Daily Snow Depth" = alpha("#2166AC", 0.7),  # Assign blue to snow depth
+    "Mean Daily Air Temp" = "#D95F02"               # Assign orange to air temp
+  ),
+  labels = c("Max Daily Snow Depth", "Mean Daily Air Temp")
+) + 
+  facet_wrap(~burn_status, nrow = 2, strip.position = "right") + 
+  # Move labels to the left
   theme_bw()
 
 PSZ_ub_snowdepths_lineplot
+```
+
+```{r}
+PSZ_comb_snowdepth_lineplot <- ggarrange(PSZ_b_snowdepths_lineplot, PSZ_ub_snowdepths_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+PSZ_comb_snowdepth_lineplot
+```
+
+```{r}
+TSZ_b_snowdepths_lineplot <- ggplot() + 
+  # Burned snow depth
+  geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Max Daily Snow Depth"), 
+            linetype = "solid", linewidth = 0.9) +
+  # Burned wx station air temp
+  geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
+            linetype = "solid", linewidth = 0.7) + 
+  geom_point(data = transb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  labs(
+    title = "b) TSZ",
+    x = NULL,
+    y = "Snow Depth (m)",
+    color = "Legend Title"  # Title of the legend
+  ) +
+  scale_shape_manual(
+    name = NULL,
+    values = c("Dates that treewells developed" = 16)) + 
+  scale_y_continuous(
+    name = "Snow Depth (m)",
+    limits = c(-1, 2.4),
+    sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis
+  ) +
+  scale_color_manual(
+  name = NULL,
+  values = c(
+    "Max Daily Snow Depth" = alpha("#2166AC", 0.7),  # Assign blue to snow depth
+    "Mean Daily Air Temp" = "#D95F02"               # Assign orange to air temp
+  ),
+  labels = c("Max Daily Snow Depth", "Mean Daily Air Temp")
+) +
+  facet_wrap(~burn_status, nrow = 2, strip.position = "right") +  # Move labels to the left
+  theme_bw()
+
+TSZ_b_snowdepths_lineplot
+```
+
+```{r}
+TSZ_ub_snowdepths_lineplot <- ggplot(data = trans_ub_daily_snowdepth_data_V2) + 
+  # Burned snow depth
+  geom_line(aes(x = day, y = max_snowdepth_m, color = "Max Daily Snow Depth"), 
+            linetype = "solid", linewidth = 0.9) +
+  # Burned wx station air temp
+  geom_line(aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
+            linetype = "solid", linewidth = 0.7) + 
+  labs(x = "Date",
+    y = "Snow Depth (m)",
+    color = "Legend Title"  # Title of the legend
+  ) +
+  scale_y_continuous(
+    name = "Snow Depth (m)",
+    limits = c(-1, 2.4),
+    sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis
+  ) +
+  scale_color_manual(
+  name = NULL,
+  values = c(
+    "Max Daily Snow Depth" = alpha("#2166AC", 0.7),  # Assign blue to snow depth
+    "Mean Daily Air Temp" = "#D95F02"               # Assign orange to air temp
+  ),
+  labels = c("Max Daily Snow Depth", "Mean Daily Air Temp")
+) +
+  facet_wrap(~burn_status, nrow = 2, strip.position = "right") + 
+  # Move labels to the left
+  theme_bw()
+
+TSZ_ub_snowdepths_lineplot
+```
+
+```{r}
+TSZ_comb_snowdepth_lineplot <- ggarrange(TSZ_b_snowdepths_lineplot, TSZ_ub_snowdepths_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+TSZ_comb_snowdepth_lineplot
+```
+
+```{r}
+#final combined plot
+final_comb_snowdepth_lineplot <- ggarrange(PSZ_comb_snowdepth_lineplot, TSZ_comb_snowdepth_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+final_comb_snowdepth_lineplot
 ```
