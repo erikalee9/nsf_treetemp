@@ -1597,8 +1597,7 @@ PSZ_gb_boxplot <- ggplot(data = pers_gb_boxplot_data) +
     x = NULL,
     y = "Temperature (°C)"
   ) +
-  theme_bw() +
-  facet_wrap(~snow_phase)
+  theme_bw()
 
 PSZ_gb_boxplot
 ```
@@ -1615,19 +1614,24 @@ TSZ_gb_boxplot <- ggplot(data = trans_gb_boxplot_data) +
   ) +  # Corrected the parenthesis here
   labs(
     title = "b) TSZ",
-    x = "Group",
+    x = NULL,
     y = "Temperature (°C)"
   ) +
-  theme_bw() +
-  facet_wrap(~snow_phase)
+  theme_bw()
 
 TSZ_gb_boxplot
 ```
 
 ```{r}
-comb_charpattern_boxplot <- ggarrange(PSZ_gb_boxplot, TSZ_gb_boxplot, ncol = 1, nrow = 2, common.legend = TRUE, legend = "right")
+comb_charpattern_boxplot <- ggarrange(PSZ_gb_boxplot, TSZ_gb_boxplot, ncol = 1, nrow = 2, common.legend = TRUE, legend = "none")
 
 comb_charpattern_boxplot
+```
+
+```{r}
+#stats
+TSZ_mean_gb_temp_results <- trans_gb_boxplot_data %>%
+  summarize(mean_charred = mean())
 ```
 
 Month separated plots
@@ -1890,7 +1894,7 @@ stats_totaltemprange_ns<- full_15min_ns %>%
 ```{r}
 #GB Stats only
 stats_gb_charpattern <- full_hourly_gb %>%
-  group_by(zone, phase, snow_phase) %>%
+  group_by(zone, phase) %>%
   filter(phase == "day") %>%
   summarize(
     mean_charred_temp = mean(charred_temp, na.rm = TRUE), 
