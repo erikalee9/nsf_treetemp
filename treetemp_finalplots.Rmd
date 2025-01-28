@@ -132,6 +132,28 @@ transb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transb_snowd
   mutate(zone = "TSZ") %>%
   mutate(burn_status = "burned")
 
+transub_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transub_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "max_depth_cm") %>%
+  mutate(day = as.Date(date, format = "%Y-%m-%d")) %>%
+  mutate(max_snowdepth_m = snowcam_max_depth_cm / 100) %>%
+  # Filtering to timerange for these plots
+  filter(day >= as.Date("2024-02-02") & day < as.Date("2024-07-01")) %>%
+  mutate(zone = "TSZ") %>%
+  mutate(burn_status = "unburned") %>%
+  select(-mortality)
+
+#Trans UB AG snow depths (closer location)
+AG_transub_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_transub_ag_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "max_depth_cm") %>%
+  mutate(day = as.Date(date, format = "%Y-%m-%d")) %>%
+  mutate(max_snowdepth_m = snowcam_max_depth_cm / 100) %>%
+  # Filtering to timerange for these plots
+  filter(day >= as.Date("2024-02-02") & day < as.Date("2024-07-01")) %>%
+  mutate(zone = "TSZ") %>%
+  mutate(burn_status = "unburned") %>%
+  select(-mortality)
+
+
 persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_high_east_snowdepths.csv") %>%
   rename(snowcam_max_depth_cm = "max_depth_cm") %>%
   mutate(day = as.Date(date)) %>%
@@ -3100,18 +3122,17 @@ trans_ub_dtnt_comb_diff_results <- transub_dtnt_aspects %>%
 Data Wrangling
 
 ```{r}
-#creating unburned daily max snow depth dataframes from weather data because the camera data isn't great
-trans_ub_daily_snowdepth_data_V1 <- filtered_transub_wx_15min %>%
-  group_by(day, phase, zone, burn_status) %>%
-  summarize(max_snowdepth_m = max(SnowDepth_m), mean_airtemp = mean(AirTC_Avg))
+#mountain campus snowcam snow depths
+transub_snowcamera_data_V2 <- transub_snowcamera_data %>%
+  filter(day < "2024-05-12")
 
-#this is the mean of day and night, to give proper mean daytime temps and maximum day and night snow depths! Use V2 for plotting
-trans_ub_daily_snowdepth_data_V2 <- trans_ub_daily_snowdepth_data_V1 %>%
-  group_by(day, zone, burn_status) %>%
-  summarize(max_snowdepth_m = max(max_snowdepth_m), mean_airtemp = max(mean_airtemp))
+#Use this dataset for trans UB snowdepths, as it's more accurate than mountain campus snow depths!
+AG_transub_snowcamera_data_V2 <- AG_transub_snowcamera_data %>%
+  filter(day < "2024-05-12")
 ```
 
 ```{r}
+#need to use weather data for trans ub snow depths
 pers_ub_daily_snowdepth_data_V1 <- filtered_persub_wx_hourly %>%
   group_by(day, phase, zone, burn_status) %>%
   summarize(max_snowdepth_m = max(SnowDepth_m), mean_airtemp = mean(AirTC_Avg))
@@ -3119,29 +3140,34 @@ pers_ub_daily_snowdepth_data_V1 <- filtered_persub_wx_hourly %>%
 #this is the mean of day and night, to give proper mean daytime temps and maximum day and night snow depths! Use V2 for plotting
 pers_ub_daily_snowdepth_data_V2 <- pers_ub_daily_snowdepth_data_V1 %>%
   group_by(day, zone, burn_status) %>%
-  summarize(max_snowdepth_m = max(max_snowdepth_m), mean_airtemp = max(mean_airtemp))
+  summarize(max_snowdepth_m = max(max_snowdepth_m), mean_airtemp = max(mean_airtemp)) %>%
+  filter(day <"2024-06-12")
 ```
+
+Air temp & NR data!
 
 ```{r}
 persb_wx_data <- filtered_persb_wx_hourly %>%
   group_by(day, phase, zone, burn_status) %>%
-  summarize(mean_airtemp = mean(AirTC_Avg))
+  summarize(mean_airtemp = mean(AirTC_Avg), mean_SW_net = mean(SWnet_Avg), mean_LW_net = mean(LWnet_Avg), mean_NR_Avg = mean(NR_Avg_new))
 
 #use V2 version
 persb_wx_data_V2 <- persb_wx_data %>%
   group_by(day, zone, burn_status) %>%
-  summarize(mean_airtemp = max(mean_airtemp))
+  summarize(mean_airtemp = max(mean_airtemp), mean_SW_net = mean(mean_SW_net), mean_LW_net = mean(mean_LW_net), mean_NR_Avg = mean(mean_NR_Avg)) %>%
+  filter(day <"2024-06-11")
 ```
 
 ```{r}
 transb_wx_data <- filtered_transb_wx_15min %>%
   group_by(day, phase, zone, burn_status) %>%
-  summarize(mean_airtemp = mean(AirTC_Avg))
+  summarize(mean_airtemp = mean(AirTC_Avg), mean_SW_net = mean(SWnet_Avg), mean_LW_net = mean(LWnet_Avg), mean_NR_Avg = mean(NR_Avg_new))
 
 #use V2 version
 transb_wx_data_V2 <- transb_wx_data %>%
   group_by(day, zone, burn_status) %>%
-  summarize(mean_airtemp = max(mean_airtemp)) 
+  summarize(mean_airtemp = max(mean_airtemp), mean_SW_net = mean(mean_SW_net), mean_LW_net = mean(mean_LW_net), mean_NR_Avg = mean(mean_NR_Avg)) %>%
+  filter(day <"2024-06-11")
 ```
 
 ```{r}
@@ -3149,25 +3175,29 @@ transb_wx_data_V2 <- transb_wx_data %>%
 persb_snowcamera_data_V2 <- persb_snowcamera_data %>%
   select(day, zone, burn_status, snowcam_max_depth_m, treewell_developed) %>%
   rename(max_snowdepth_m = snowcam_max_depth_m) %>%
-  left_join(persb_wx_data_V2, by = c("day", "zone", "burn_status"))
+  left_join(persb_wx_data_V2, by = c("day", "zone", "burn_status")) %>%
+  filter(day < "2024-05-29")
 
 transb_snowcamera_data_V2 <- transb_snowcamera_data %>%
   select(day, zone, burn_status, snowcam_max_depth_m, treewell_developed) %>%
   rename(max_snowdepth_m = snowcam_max_depth_m)  %>%
-  left_join(transb_wx_data_V2, by = c("day", "zone", "burn_status"))
+  left_join(transb_wx_data_V2, by = c("day", "zone", "burn_status")) %>%
+  filter(day < "2024-05-12")
 ```
 
 ```{r}
 persb_treewell_dates <- persb_snowcamera_data_V2 %>%
-  filter(treewell_developed == "yes")
+  filter(treewell_developed == "yes") %>%
+  filter(day < "2024-05-29")
 
 transb_treewell_dates <- transb_snowcamera_data_V2 %>%
-  filter(treewell_developed == "yes")
+  filter(treewell_developed == "yes") %>%
+  filter(day < "2024-05-12")
 ```
 
 Plotting
 
-\*\* need to add treewell development date points to burned dataframe below!
+Version with Air Temp!
 
 ```{r}
 scaling_factor <- 0.08
@@ -3176,12 +3206,14 @@ scaling_factor <- 0.08
 ```{r}
 PSZ_b_snowdepths_lineplot <- ggplot() + 
   # Burned snow depth
-  geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Max Daily Snow Depth"), 
-            linetype = "solid", linewidth = 0.9) +
+  geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned site"), linetype = "solid", linewidth = 1) +
+  # Unburned snow depth
+  geom_line(data = pers_ub_daily_snowdepth_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned site"), 
+            linetype = "solid", linewidth = 1) +
   # Burned wx station air temp
-  geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
-            linetype = "solid", linewidth = 0.7) + 
-  #treewell dates
+  geom_line(data = persb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
+            linetype = "solid", linewidth = 1) +
+  # Treewell dates
   geom_point(data = persb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
   labs(
@@ -3195,37 +3227,42 @@ PSZ_b_snowdepths_lineplot <- ggplot() +
     limits = c(-1, 2.4),
     sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis
   ) +
+  scale_x_date(
+    name = NULL,
+    limits = c(min(persb_wx_data_V2$day, na.rm = TRUE), max(persb_wx_data_V2$day, na.rm = TRUE)), 
+    expand = c(0, 0)) +
   scale_shape_manual(
     name = NULL,
     values = c("Dates that treewells developed" = 16)) + 
   scale_color_manual(
-  name = NULL,
-  values = c(
-    "Max Daily Snow Depth" = alpha("#2166AC", 0.7),  # Assign blue to snow depth
-    "Mean Daily Air Temp" = "#D95F02"               # Assign orange to air temp
-  ),
-  labels = c("Max Daily Snow Depth", "Mean Daily Air Temp")
-) + 
-  facet_wrap(~burn_status, nrow = 2, strip.position = "right") +  # Move labels to the left
-  theme_bw() +
- #snowfree date
-  geom_vline(xintercept = as.numeric(as.Date('2024-06-05')), 
-             linetype = "dashed",                # Dashed line
-             color = "grey23",                      # Line color
-             size = 0.4, alpha = 0.8)
+    name = NULL,
+    values = c(
+      "Burned site" = "#D95F02", 
+      "Unburned site" = "#2166AC", 
+      "Mean Daily Air Temp" = alpha("#666666", 0.7))) +
+  theme_bw() + 
+  theme(
+    legend.text = element_text(size = 10))
 
 PSZ_b_snowdepths_lineplot
 ```
 
 ```{r}
-PSZ_ub_snowdepths_lineplot <- ggplot(data = pers_ub_daily_snowdepth_data_V2) + 
+TSZ_b_snowdepths_lineplot <- ggplot() + 
   # Burned snow depth
-  geom_line(aes(x = day, y = max_snowdepth_m, color = "Max Daily Snow Depth"), 
-            linetype = "solid", linewidth = 0.9) +
+  geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned site"), linetype = "solid", linewidth = 1) +
+  # Unburned snow depth
+  geom_line(data = AG_transub_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned site"), 
+            linetype = "solid", linewidth = 1) +
   # Burned wx station air temp
-  geom_line(aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
-            linetype = "solid", linewidth = 0.7) + 
-  labs(x = "Date",
+  geom_line(data = transb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
+            linetype = "solid", linewidth = 1) +
+  # Treewell dates
+  geom_point(data = transb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  labs(
+    title = "b) TSZ",
+    x = "Date",
     y = "Snow Depth (m)",
     color = "Legend Title"  # Title of the legend
   ) +
@@ -3233,36 +3270,100 @@ PSZ_ub_snowdepths_lineplot <- ggplot(data = pers_ub_daily_snowdepth_data_V2) +
     name = "Snow Depth (m)",
     limits = c(-1, 2.4),
     sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis
-  ) + 
+  ) +
+  scale_x_date(
+    name = NULL,
+    limits = c(min(transb_wx_data_V2$day, na.rm = TRUE), max(transb_wx_data_V2$day, na.rm = TRUE)), 
+    expand = c(0, 0)) +
+  scale_shape_manual(
+    name = NULL,
+    values = c("Dates that treewells developed" = 16)) + 
   scale_color_manual(
-  name = NULL,
-  values = c(
-    "Max Daily Snow Depth" = alpha("#2166AC", 0.7),  # Assign blue to snow depth
-    "Mean Daily Air Temp" = "#D95F02"               # Assign orange to air temp
-  ),
-  labels = c("Max Daily Snow Depth", "Mean Daily Air Temp")
+    name = NULL,
+    values = c(
+      "Burned site" = "#D95F02", 
+      "Unburned site" = "#2166AC", 
+      "Mean Daily Air Temp" = alpha("#666666", 0.7))) +
+  theme_bw()  + 
+  theme(
+    legend.text = element_text(size = 10))
+
+TSZ_b_snowdepths_lineplot
+```
+
+```{r}
+#final combined plot
+final_comb_snowdepth_lineplot <- ggarrange(PSZ_b_snowdepths_lineplot, TSZ_b_snowdepths_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+final_comb_snowdepth_lineplot
+```
+
+Version with SWin instead of air temp
+
+```{r}
+SW_scalefactor <- 0.008
+```
+
+```{r}
+PSZ_SW_snowdepths_lineplot <- ggplot() + 
+  # Burned snow depth
+  geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned site"), linetype = "solid", linewidth = 1) +
+  # Unburned snow depth
+  geom_line(data = pers_ub_daily_snowdepth_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned site"), 
+            linetype = "solid", linewidth = 1) +
+  geom_bar(data = persb_wx_data_V2, 
+  aes(x = day, y = mean_SW_net * SW_scalefactor, fill = "Net SW"), 
+  stat = "identity",  # Use the y values directly
+  width = 0.8  # Adjust the width of the bars (optional)
 ) + 
-  facet_wrap(~burn_status, nrow = 2, strip.position = "right") + 
-  # Move labels to the left
+  # Treewell dates
+  geom_point(data = persb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Snow Depth (m)",
+    color = "Legend Title"  # Title of the legend
+  ) +
+  scale_y_continuous(
+    name = "Snow Depth (m)",
+    limits = c(-0.05, 2.4),
+    sec.axis = sec_axis(~ . / SW_scalefactor, name = "Radiation (W per m^2)")  # Secondary y-axis
+  ) +
+  scale_x_date(
+    name = NULL,
+    limits = c(min(persb_wx_data_V2$day, na.rm = TRUE), max(persb_wx_data_V2$day, na.rm = TRUE)), 
+    expand = c(0, 0)) +
+  scale_shape_manual(
+    name = NULL,
+    values = c("Dates that treewells developed" = 16)) + 
+  scale_color_manual(
+    name = NULL,
+    values = c(
+      "Burned site" = "#D95F02", 
+      "Unburned site" = "#2166AC")) +
+  scale_fill_manual(
+    name = NULL, 
+    values = c("Net SW" = alpha("#666666", 0.6))) +
   theme_bw()
 
-PSZ_ub_snowdepths_lineplot
+PSZ_SW_snowdepths_lineplot
 ```
 
 ```{r}
-PSZ_comb_snowdepth_lineplot <- ggarrange(PSZ_b_snowdepths_lineplot, PSZ_ub_snowdepths_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
-
-PSZ_comb_snowdepth_lineplot
-```
-
-```{r}
-TSZ_b_snowdepths_lineplot <- ggplot() + 
+TSZ_SW_snowdepths_lineplot <- ggplot() + 
+  #net SW bars
+  geom_bar(data = transb_wx_data_V2, 
+  aes(x = day, y = mean_SW_net * SW_scalefactor, fill = "Net SW"), 
+  stat = "identity",  # Use the y values directly
+  width = 0.8  # Adjust the width of the bars (optional)
+) + 
   # Burned snow depth
-  geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Max Daily Snow Depth"), 
-            linetype = "solid", linewidth = 0.9) +
-  # Burned wx station air temp
-  geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
-            linetype = "solid", linewidth = 0.7) + 
+  geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned site"), linetype = "solid", linewidth = 1) +
+  # Unburned snow depth
+  geom_line(data = trans_ub_daily_snowdepth_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned site"), 
+            linetype = "solid", linewidth = 1) +
+  # Treewell dates
   geom_point(data = transb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
   labs(
@@ -3271,69 +3372,65 @@ TSZ_b_snowdepths_lineplot <- ggplot() +
     y = "Snow Depth (m)",
     color = "Legend Title"  # Title of the legend
   ) +
+  scale_y_continuous(
+    name = "Snow Depth (m)",
+    limits = c(-0.05, 2.4),
+    sec.axis = sec_axis(~ . / SW_scalefactor, name = "Radiation (W per m^2)")  # Secondary y-axis
+  ) +
+  scale_x_date(
+    name = NULL,
+    limits = c(min(transb_wx_data_V2$day, na.rm = TRUE), max(transb_wx_data_V2$day, na.rm = TRUE)), 
+    expand = c(0, 0)) +
   scale_shape_manual(
     name = NULL,
     values = c("Dates that treewells developed" = 16)) + 
-  scale_y_continuous(
-    name = "Snow Depth (m)",
-    limits = c(-1, 2.4),
-    sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis
-  ) +
   scale_color_manual(
-  name = NULL,
-  values = c(
-    "Max Daily Snow Depth" = alpha("#2166AC", 0.7),  # Assign blue to snow depth
-    "Mean Daily Air Temp" = "#D95F02"               # Assign orange to air temp
-  ),
-  labels = c("Max Daily Snow Depth", "Mean Daily Air Temp")
-) +
-  facet_wrap(~burn_status, nrow = 2, strip.position = "right") +  # Move labels to the left
+    name = NULL,
+    values = c(
+      "Burned site" = "#D95F02", 
+      "Unburned site" = "#2166AC")) +
+  scale_fill_manual(
+    name = NULL, 
+    values = c("Net SW" = alpha("#666666", 0.6))) +
   theme_bw()
 
-TSZ_b_snowdepths_lineplot
+TSZ_SW_snowdepths_lineplot
 ```
 
 ```{r}
-TSZ_ub_snowdepths_lineplot <- ggplot(data = trans_ub_daily_snowdepth_data_V2) + 
-  # Burned snow depth
-  geom_line(aes(x = day, y = max_snowdepth_m, color = "Max Daily Snow Depth"), 
-            linetype = "solid", linewidth = 0.9) +
-  # Burned wx station air temp
-  geom_line(aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
-            linetype = "solid", linewidth = 0.7) + 
-  labs(x = "Date",
-    y = "Snow Depth (m)",
-    color = "Legend Title"  # Title of the legend
-  ) +
-  scale_y_continuous(
-    name = "Snow Depth (m)",
-    limits = c(-1, 2.4),
-    sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis
-  ) +
-  scale_color_manual(
-  name = NULL,
-  values = c(
-    "Max Daily Snow Depth" = alpha("#2166AC", 0.7),  # Assign blue to snow depth
-    "Mean Daily Air Temp" = "#D95F02"               # Assign orange to air temp
-  ),
-  labels = c("Max Daily Snow Depth", "Mean Daily Air Temp")
-) +
-  facet_wrap(~burn_status, nrow = 2, strip.position = "right") + 
-  # Move labels to the left
-  theme_bw()
+final_comb_SW_snowdepth_lineplot <- ggarrange(PSZ_SW_snowdepths_lineplot, TSZ_SW_snowdepths_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
 
-TSZ_ub_snowdepths_lineplot
+final_comb_SW_snowdepth_lineplot
+```
+
+### Snow Depth Stats
+
+```{r}
+persb_snowdepth_stats <- persb_snowcamera_data_V2 %>%
+  summarize(mean_snowdepth_m = mean(max_snowdepth_m), min_snowdepth_m = min(max_snowdepth_m), max_snowdepth_m = max(max_snowdepth_m))
 ```
 
 ```{r}
-TSZ_comb_snowdepth_lineplot <- ggarrange(TSZ_b_snowdepths_lineplot, TSZ_ub_snowdepths_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
-
-TSZ_comb_snowdepth_lineplot
+persub_snowdepth_stats <- pers_ub_daily_snowdepth_data_V2 %>%
+  ungroup() %>%  # Ensure there is no grouping
+  summarize(
+    mean_snowdepth_m = mean(max_snowdepth_m, na.rm = TRUE),
+    min_snowdepth_m = min(max_snowdepth_m, na.rm = TRUE),
+    max_snowdepth_m = max(max_snowdepth_m, na.rm = TRUE)
+  )
 ```
 
 ```{r}
-#final combined plot
-final_comb_snowdepth_lineplot <- ggarrange(PSZ_comb_snowdepth_lineplot, TSZ_comb_snowdepth_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+transb_snowdepth_stats <- transb_snowcamera_data_V2 %>%
+  summarize(mean_snowdepth_m = mean(max_snowdepth_m), min_snowdepth_m = min(max_snowdepth_m), max_snowdepth_m = max(max_snowdepth_m))
+```
 
-final_comb_snowdepth_lineplot
+```{r}
+transub_snowdepth_stats <- trans_ub_daily_snowdepth_data_V2 %>%
+  ungroup() %>%  # Ensure there is no grouping
+  summarize(
+    mean_snowdepth_m = mean(max_snowdepth_m, na.rm = TRUE),
+    min_snowdepth_m = min(max_snowdepth_m, na.rm = TRUE),
+    max_snowdepth_m = max(max_snowdepth_m, na.rm = TRUE)
+  )
 ```
