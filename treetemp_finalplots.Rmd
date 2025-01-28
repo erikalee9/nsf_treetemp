@@ -2751,6 +2751,22 @@ pers_ub_diff_results <- filtered_pers_ub_aspects_r %>%
 ```
 
 ```{r}
+daily_pers_b_diff_results <- filtered_pers_b_aspects_r %>%
+  group_by(day, burn_status, aspect) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+
+daily_pers_ub_diff_results <- filtered_pers_ub_aspects_r %>%
+  group_by(day, burn_status, aspect) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+```
+
+```{r}
 trans_b_diff_results <- filtered_pers_b_aspects_r %>%
   group_by(burn_status, aspect) %>%
   summarise(
