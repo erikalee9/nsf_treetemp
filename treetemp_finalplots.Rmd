@@ -339,14 +339,271 @@ full_trans_aspects <- rbind(filtered_trans_b_aspects_r, filtered_trans_ub_aspect
 PSZ
 
 ```{r}
-PSZ_single_day_sensor_comp_gb <- full_pers_aspects %>%
-  filter(burn_status == "green burn", datetime >= "2024-03-10 00:00:00" & datetime <= "2024-03-10 23:45:00")
+#accumulation dataframes
+PSZ_threeday_accu_comp <- full_pers_aspects %>%
+  filter(datetime >= "2024-02-10 00:00:00" & datetime <= "2024-02-12 23:45:00") %>%
+  mutate(tree_name = case_when(
+    tree_name == "gb_e" ~ "gb_n", TRUE ~ tree_name)) %>%
+  #changing tree names so I can plot line type with onyl 2 IDs
+  mutate(tree_name = case_when(
+      str_detect(tree_name, "_n$") ~ "Tree 1",  
+      str_detect(tree_name, "_s$") ~ "Tree 2",  
+      TRUE ~ tree_name  # Keep original if it doesn’t match
+    ),
+    burn_status = case_when(
+    burn_status == "green burn" ~ "GB", 
+    burn_status == "dead burn" ~ "DB",
+    burn_status == "live" ~ "live",
+    TRUE ~ burn_status))
 
+TSZ_threeday_accu_comp <- full_trans_aspects %>%
+  filter(datetime >= "2024-02-10 00:00:00" & datetime <= "2024-02-12 23:45:00") %>%
+   mutate(tree_name = case_when(
+    tree_name == "ub_e" ~ "ub_n",
+    tree_name == "ub_w" ~ "ub_s", TRUE ~ tree_name)) %>%
+  #changing tree names so I can plot line type with onyl 2 IDs
+  mutate(tree_name = case_when(
+      str_detect(tree_name, "_n$") ~ "Tree 1",  
+      str_detect(tree_name, "_s$") ~ "Tree 2",  
+      TRUE ~ tree_name  # Keep original if it doesn’t match
+    ),
+    burn_status = case_when(
+    burn_status == "green burn" ~ "GB", 
+    burn_status == "dead burn" ~ "DB",
+    burn_status == "live" ~ "live",
+    TRUE ~ burn_status))
+```
+
+```{r}
+#Ablation dataframes
+PSZ_threeday_abla_comp <- full_pers_aspects %>%
+  #had to offset the datetime for some reason, but it is still giving me the correct three-day range if I run it like this!
+  filter(datetime >= "2024-05-10 01:00:00" & datetime <= "2024-05-13 00:00:00") %>%
+  mutate(tree_name = case_when(
+    tree_name == "gb_e" ~ "gb_n", TRUE ~ tree_name)) %>%
+  #changing tree names so I can plot line type with onyl 2 IDs
+  mutate(tree_name = case_when(
+      str_detect(tree_name, "_n$") ~ "Tree 1",  
+      str_detect(tree_name, "_s$") ~ "Tree 2",  
+      TRUE ~ tree_name  # Keep original if it doesn’t match
+    ),
+    burn_status = case_when(
+    burn_status == "green burn" ~ "GB", 
+    burn_status == "dead burn" ~ "DB",
+    burn_status == "live" ~ "live",
+    TRUE ~ burn_status))
+
+TSZ_threeday_abla_comp <- full_trans_aspects %>%
+ filter(datetime >= "2024-05-10 01:00:00" & datetime <= "2024-05-13 00:00:00") %>%
+   mutate(tree_name = case_when(
+    tree_name == "ub_e" ~ "ub_n",
+    tree_name == "ub_w" ~ "ub_s", TRUE ~ tree_name)) %>%
+  #changing tree names so I can plot line type with onyl 2 IDs
+  mutate(tree_name = case_when(
+      str_detect(tree_name, "_n$") ~ "Tree 1",  
+      str_detect(tree_name, "_s$") ~ "Tree 2",  
+      TRUE ~ tree_name  # Keep original if it doesn’t match
+    ),
+    burn_status = case_when(
+    burn_status == "green burn" ~ "GB", 
+    burn_status == "dead burn" ~ "DB",
+    burn_status == "live" ~ "live",
+    TRUE ~ burn_status))
+```
+
+```{r}
+#single day dataframes - NOT USING as of now
 PSZ_single_day_sensor_comp_db <- full_pers_aspects %>%
   filter(burn_status == "dead burn", datetime >= "2024-03-10 00:00:00" & datetime <= "2024-03-10 23:45:00")
 
 PSZ_single_day_sensor_comp_live <- full_pers_aspects %>%
   filter(burn_status == "live", datetime >= "2024-03-10 00:00:00" & datetime <= "2024-03-10 23:45:00")
+```
+
+Accumulation Three Day Plots
+
+```{r}
+#three day lineplot PSZ
+PSZ_threeday_accu_comp_lineplot <- ggplot(data = PSZ_threeday_accu_comp) + 
+        # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name, color = burn_status), linewidth = 0.7) +
+  facet_wrap(~aspect) +
+  scale_linetype_manual(
+    name = "Individual tree",  # New legend title (showing as 'Tree' instead of 'Tree Name')
+    values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
+    labels = c("Tree 1", "Tree 2")  # Ensuring the legend shows the correct labels
+  ) + 
+  scale_color_manual(
+    name = "Burn status",
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
+ scale_y_continuous(limits = c(-25, 25)) +  # Set the y-axis limits here
+  theme_bw() +
+  labs(title = "a) PSZ Accumulation", x = NULL, y = "Temperature (°C)") +
+  theme(
+    strip.text = element_text(size = 12),  # Facet title size
+    axis.title = element_text(size = 12),  # Axis title size
+    axis.text = element_text(size = 12),  # Axis tick labels
+    legend.title = element_text(size = 12),  # Legend title size
+    legend.text = element_text(size = 11)  # Legend labels size
+  )
+  
+  
+PSZ_threeday_accu_comp_lineplot
+```
+
+```{r}
+#three day lineplot TSZ
+TSZ_threeday_accu_comp_lineplot <- ggplot(data = TSZ_threeday_accu_comp) + 
+      # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name, color = burn_status), linewidth = 0.7) +
+  facet_wrap(~aspect) +
+  scale_linetype_manual(
+    name = "Individual tree",  # New legend title (showing as 'Tree' instead of 'Tree Name')
+    values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
+    labels = c("Tree 1", "Tree 2")  # Ensuring the legend shows the correct labels
+  ) + 
+  scale_color_manual(
+    name = "Burn status",
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
+ scale_y_continuous(limits = c(-25, 25)) +  # Set the y-axis limits here
+  theme_bw() +
+  labs(title = "b) TSZ Accumulation", x = NULL, y = "Temperature (°C)") +
+ theme(
+    strip.text = element_text(size = 12),  # Facet title size
+    axis.title = element_text(size = 12),  # Axis title size
+    axis.text = element_text(size = 12),  # Axis tick labels
+    legend.title = element_text(size = 12),  # Legend title size
+    legend.text = element_text(size = 11)  # Legend labels size
+  )
+  
+TSZ_threeday_accu_comp_lineplot
+```
+
+Ablation Three Day Plots
+
+```{r}
+#three day lineplot PSZ
+PSZ_threeday_abla_comp_lineplot <- ggplot(data = PSZ_threeday_abla_comp) + 
+        # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name, color = burn_status), linewidth = 0.7) +
+  facet_wrap(~aspect) +
+  scale_linetype_manual(
+    name = "Individual tree",  # New legend title (showing as 'Tree' instead of 'Tree Name')
+    values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
+    labels = c("Tree 1", "Tree 2")  # Ensuring the legend shows the correct labels
+  ) + 
+  scale_color_manual(
+    name = "Burn status",
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
+ scale_y_continuous(limits = c(-15, 35)) +  # Set the y-axis limits here
+  theme_bw() +
+  labs(title = "a) PSZ Ablation", x = NULL, y = "Temperature (°C)") +
+  theme(
+    strip.text = element_text(size = 12),  # Facet title size
+    axis.title = element_text(size = 12),  # Axis title size
+    axis.text = element_text(size = 12),  # Axis tick labels
+    legend.title = element_text(size = 12),  # Legend title size
+    legend.text = element_text(size = 11)  # Legend labels size
+  )
+  
+  
+PSZ_threeday_abla_comp_lineplot
+```
+
+```{r}
+TSZ_threeday_abla_comp_lineplot <- ggplot(data = TSZ_threeday_abla_comp) + 
+        # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name, color = burn_status), linewidth = 0.7) +
+ facet_wrap(~aspect) +
+  scale_linetype_manual(
+    name = "Individual tree",  # New legend title (showing as 'Tree' instead of 'Tree Name')
+    values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
+    labels = c("Tree 1", "Tree 2")  # Ensuring the legend shows the correct labels
+  ) + 
+  scale_color_manual(
+    name = "Burn status",
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
+ scale_y_continuous(limits = c(-15, 35)) +  # Set the y-axis limits here
+  theme_bw() +
+  labs(title = "b) TSZ Ablation", x = NULL, y = "Temperature (°C)") +
+  theme(
+    strip.text = element_text(size = 12),  # Facet title size
+    axis.title = element_text(size = 12),  # Axis title size
+    axis.text = element_text(size = 12),  # Axis tick labels
+    legend.title = element_text(size = 12),  # Legend title size
+    legend.text = element_text(size = 11)  # Legend labels size
+  )
+  
+  
+TSZ_threeday_abla_comp_lineplot
+```
+
+```{r}
+#full combined accumulation and ablation plots!
+comb_threeday_sensor_comp_lineplot <- ggarrange(PSZ_threeday_accu_comp_lineplot, PSZ_threeday_abla_comp_lineplot, TSZ_threeday_accu_comp_lineplot, TSZ_threeday_abla_comp_lineplot, nrow = 2, ncol = 2, common.legend = TRUE, legend = "right")
+
+comb_threeday_sensor_comp_lineplot
+```
+
+```{r}
+#use this plot!
+ggsave(
+  filename = "comb_threeday_sensor_comp_lineplot.png",  # File name
+  plot = comb_threeday_sensor_comp_lineplot,           # The arranged plot object
+  width = 18,                                          # Adjust width as needed
+  height = 15,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
+```
+
+Accumulation only combined plot
+
+```{r}
+#full combined accumulation and ablation plots!
+comb_threeday_accu_comp_lineplot <- ggarrange(PSZ_threeday_accu_comp_lineplot, TSZ_threeday_accu_comp_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+comb_threeday_accu_comp_lineplot
+```
+
+```{r}
+#use this plot!
+ggsave(
+  filename = "comb_threeday_accu_comp_lineplot.png",  # File name
+  plot = comb_threeday_accu_comp_lineplot,           # The arranged plot object
+  width = 14,                                          # Adjust width as needed
+  height = 8,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
+```
+
+Ablation only combined plot
+
+```{r}
+#full combined accumulation and ablation plots!
+comb_threeday_abla_comp_lineplot <- ggarrange(PSZ_threeday_abla_comp_lineplot, TSZ_threeday_abla_comp_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+comb_threeday_abla_comp_lineplot
+```
+
+```{r}
+ggsave(
+  filename = "comb_threeday_abla_comp_lineplot.png",  # File name
+  plot = comb_threeday_accu_comp_lineplot,           # The arranged plot object
+  width = 14,                                          # Adjust width as needed
+  height = 8,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
+```
+
+```{r}
+```
+
+```{r}
+
 ```
 
 ```{r}
@@ -616,6 +873,25 @@ stats_dtnt_byburnstatus <- full_15min_gbdbub %>%
 \*\* as of 2025-01-13 - use the below plots instead of above plots!
 
 ```{r}
+#both aspects combined
+PSZ_dtnt_daily_gbdbub_plot_dataframe <- full_pers_gbdbub_data %>%
+  #selecting data that we need
+  select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
+  #summarizing for one daily value
+  group_by(day, month, phase, zone, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+  
+
+TSZ_dtnt_daily_gbdbub_plot_dataframe <- full_trans_gbdbub_data %>%
+  #selecting data that we need
+  select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
+  #summarizing for one daily value
+  group_by(day, month, phase, zone, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+```
+
+```{r}
+## NOT USING THESE AS OF NOW
 #parsing by zone instead - South Aspect only!
 #creating dataframe for this that has renamed zones - mean daily value!!
 PSZ_s_dtnt_daily_gbdbub_plot_dataframe <- full_pers_gbdbub_data %>%
@@ -666,6 +942,82 @@ PSZ_meanminmax_stats <- full_pers_gbdbub_data %>%
 TSZ_meanminmax_stats <- full_trans_gbdbub_data %>%
   group_by(snow_phase, phase, aspect) %>%
   summarize(mean_temp = mean(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), max_temp = max(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), min_temp = min(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), temp_range = (max_temp - min_temp))
+```
+
+Line Plots of mean daily temps, not separated by aspect!
+
+```{r}
+PSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = PSZ_dtnt_daily_gbdbub_plot_dataframe ) +
+  geom_line(aes(x = day, y = gb_temp, color = "GB"), linewidth = 0.7) + 
+  geom_line(aes(x = day, y = db_temp, color = "DB"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = ub_temp, color = "live"), linewidth = 0.7, alpha = 0.8) +
+  facet_wrap(~phase) +
+  labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
+  scale_color_manual(
+    name = "burn status",
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = "#2166AC")
+  ) +
+  scale_y_continuous(limits = c(-20, 28)) +  # Set the y-axis limits here
+  theme_bw() + 
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-29')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) +
+   theme(
+    strip.text = element_text(size = 12),  # Facet title size
+    axis.title = element_text(size = 12),  # Axis title size
+    axis.text = element_text(size = 12),  # Axis tick labels
+    legend.title = element_text(size = 12),  # Legend title size
+    legend.text = element_text(size = 11)  # Legend labels size
+  )
+
+PSZ_dtnt_treetemp_daily_gbdbub_lineplot
+```
+
+```{r}
+TSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_dtnt_daily_gbdbub_plot_dataframe ) +
+  geom_line(aes(x = day, y = gb_temp, color = "GB"), linewidth = 0.7) + 
+  geom_line(aes(x = day, y = db_temp, color = "DB"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = ub_temp, color = "live"), linewidth = 0.7, alpha = 0.8) +
+  facet_wrap(~phase) +
+  labs(title = "b) TSZ", x = NULL, y = "Temperature (°C)") +
+  scale_color_manual(
+    name = "burn status",
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = "#2166AC")
+  ) +
+  scale_y_continuous(limits = c(-20, 28)) +  # Set the y-axis limits here
+  theme_bw() + 
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-12')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) +
+   theme(
+    strip.text = element_text(size = 12),  # Facet title size
+    axis.title = element_text(size = 12),  # Axis title size
+    axis.text = element_text(size = 12),  # Axis tick labels
+    legend.title = element_text(size = 12),  # Legend title size
+    legend.text = element_text(size = 11)  # Legend labels size
+  )
+
+TSZ_dtnt_treetemp_daily_gbdbub_lineplot
+```
+
+```{r}
+comb_dtnt_daily_lineplot <- ggarrange(PSZ_dtnt_treetemp_daily_gbdbub_lineplot, TSZ_dtnt_treetemp_daily_gbdbub_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+comb_dtnt_daily_lineplot
+```
+
+```{r}
+ggsave(
+  filename = "comb_dtnt_daily_lineplot.png",
+  plot = comb_dtnt_daily_lineplot,           
+  width = 12,                                         
+  height = 8,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
 ```
 
 South Aspect Only Plots!
@@ -862,7 +1214,7 @@ dt_t_treetemp_daily_gbdbub_boxplot <- ggplot(data = dt_full_daily_gbdbub_boxplot
 dt_t_treetemp_daily_gbdbub_boxplot
 ```
 
-### DTNT Boxplots
+### DTNT Boxplots - USE THESE!
 
 ```{r}
 #PSZ boxplot dataframes
@@ -882,7 +1234,7 @@ PSZ_dtnt_data <- full_pers_gbdbub_data %>%
   )
 
 #TSZ
-TSZ_dtnt_data_V2 <- full_trans_gbdbub_data %>%
+TSZ_dtnt_data <- full_trans_gbdbub_data %>%
   pivot_longer(
     cols = c(gb_temp, db_temp, ub_temp),  # Columns to reshape
     names_to = "burn_status",            # New column for burn status
@@ -899,69 +1251,85 @@ TSZ_dtnt_data_V2 <- full_trans_gbdbub_data %>%
 ```
 
 ```{r}
-PSZ_dtnt_data$snow_phase <- fct_relevel(PSZ_dtnt_data$snow_phase, "accumulation", "ablation")
-
-#PSZ day/night boxplots
 PSZ_dtnt_boxplot <- ggplot(data = PSZ_dtnt_data) + 
-  geom_boxplot(aes(x = phase, y = temp, fill = burn_status)) +
+  geom_boxplot(aes(x = interaction(phase, burn_status, sep = "_"), y = temp, fill = burn_status, alpha = phase),
+               position = position_dodge(width = 0.75)) +
   scale_fill_manual(
     name = "Burn Status",
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = adjustcolor("#2166AC", alpha.f = 0.8)), 
     labels = c("GB" = "GB", "DB" = "DB", "live" = "Live")
   ) +
+  scale_alpha_manual(
+    values = c("day" = 1, "night" = 0.5)  # Day = full opacity, Night = faded
+  ) +
+  scale_x_discrete(
+    labels = rep(c("Day", "Night"), times = length(unique(PSZ_dtnt_data$burn_status)))  # Alternates Day, Night for each burn_status
+  ) +
   labs(
     title = "a) PSZ",
-    x = NULL,
+    x = NULL,  
     y = "Temperature (°C)"
   ) +
-  scale_alpha_manual(
-    name = "Burn Status",
-    values = c("GB" = 1, "DB" = 1, "live" = 0.5)  # Adjust alpha for "live"
-  ) +
-  #facet_wrap(~aspect) +
   scale_y_continuous(
-    limits = c(-25, 40)  # Set y-axis limits from 0 to 30
+    limits = c(-25, 40)  
   ) +
   theme_bw() +
-  facet_wrap(~snow_phase)
+  theme(
+    axis.text.x = element_text(size = 11),  
+    axis.ticks.x = element_line()  
+  ) +
+  guides(alpha = "none")  # Remove alpha (phase) from legend
 
 PSZ_dtnt_boxplot
 ```
 
 ```{r}
-TSZ_dtnt_data_V2$snow_phase <- fct_relevel(TSZ_dtnt_data_V2$snow_phase, "accumulation", "ablation")
-
-#TSZ day/night boxplots
 TSZ_dtnt_boxplot <- ggplot(data = TSZ_dtnt_data) + 
-  geom_boxplot(aes(x = phase, y = temp, fill = burn_status)) +
+  geom_boxplot(aes(x = interaction(phase, burn_status, sep = "_"), y = temp, fill = burn_status, alpha = phase),
+               position = position_dodge(width = 0.75)) +
   scale_fill_manual(
     name = "Burn Status",
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = adjustcolor("#2166AC", alpha.f = 0.8)), 
     labels = c("GB" = "GB", "DB" = "DB", "live" = "Live")
   ) +
+  scale_alpha_manual(
+    values = c("day" = 1, "night" = 0.5)  # Day = full opacity, Night = faded
+  ) +
+  scale_x_discrete(
+    labels = rep(c("Day", "Night"), times = length(unique(TSZ_dtnt_data$burn_status)))  # Alternates Day, Night for each burn_status
+  ) +
   labs(
     title = "b) TSZ",
-    x = NULL,
+    x = NULL,  
     y = "Temperature (°C)"
   ) +
-  scale_alpha_manual(
-    name = "Burn Status",
-    values = c("GB" = 1, "DB" = 1, "live" = 0.5)  # Adjust alpha for "live"
-  ) +
-  #facet_wrap(~aspect) +
   scale_y_continuous(
-    limits = c(-25, 40)  # Set y-axis limits from 0 to 30
+    limits = c(-25, 40)  
   ) +
   theme_bw() +
-  facet_wrap(~snow_phase)
+  theme(
+    axis.text.x = element_text(size = 11),  
+    axis.ticks.x = element_line()  
+  ) +
+  guides(alpha = "none")  # Remove alpha (phase) from legend
 
 TSZ_dtnt_boxplot
 ```
 
 ```{r}
-comb_dtnt_boxplot <- ggarrange(PSZ_dtnt_boxplot,  TSZ_dtnt_boxplot, ncol = 1, nrow = 2, common.legend = TRUE, legend = "right")
+comb_dtnt_boxplot <- ggarrange(PSZ_dtnt_boxplot,  TSZ_dtnt_boxplot, ncol = 1, nrow = 2, common.legend = TRUE, legend = "bottom")
 
 comb_dtnt_boxplot
+```
+
+```{r}
+ggsave(
+  filename = "comb_dtnt_boxplot.png",  # File name
+  plot = comb_dtnt_boxplot,           # The arranged plot object
+  width = 7,                                          # Adjust width as needed
+  height = 10,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
 ```
 
 ## GB Aspect/Char Pattern Comparison
@@ -3025,7 +3393,7 @@ pers_gbdbub_aspects <- pers_gb_aspects %>%
 ```{r}
 #gb vs db
 pers_gb_db_diff_results <- pers_gbdbub_aspects %>%
-  group_by(aspect) %>%
+  #group_by(aspect) %>%
   filter((gb_temp + db_temp) != 0) %>%
   summarise(
     mean_avg_diff = mean(abs(gb_temp - db_temp), na.rm = TRUE),
@@ -3034,7 +3402,7 @@ pers_gb_db_diff_results <- pers_gbdbub_aspects %>%
 
 # gb vs live
 pers_gb_live_diff_results <- pers_gbdbub_aspects %>%
-  group_by(aspect) %>%
+  #group_by(aspect) %>%
   filter((gb_temp + ub_temp) != 0) %>%
   summarise(
     mean_avg_diff = mean(abs(gb_temp - ub_temp), na.rm = TRUE),
@@ -3043,7 +3411,7 @@ pers_gb_live_diff_results <- pers_gbdbub_aspects %>%
 
 # db vs live
 pers_db_live_diff_results <- pers_gbdbub_aspects %>%
-  group_by(aspect) %>%
+  #group_by(aspect) %>%
   filter((db_temp + ub_temp) != 0) %>%
   summarise(
     mean_avg_diff = mean(abs(db_temp - ub_temp), na.rm = TRUE),
@@ -3079,7 +3447,7 @@ trans_gbdbub_aspects <- trans_gb_aspects %>%
 ```{r}
 #gb vs db
 trans_gb_db_diff_results <- trans_gbdbub_aspects %>%
-  group_by(aspect) %>%
+  #group_by(aspect) %>%
   filter((gb_temp + db_temp) != 0) %>%
   summarise(
     mean_avg_diff = mean(abs(gb_temp - db_temp), na.rm = TRUE),
@@ -3088,7 +3456,7 @@ trans_gb_db_diff_results <- trans_gbdbub_aspects %>%
 
 # gb vs live
 trans_gb_live_diff_results <- trans_gbdbub_aspects %>%
-  group_by(aspect) %>%
+ # group_by(aspect) %>%
   filter((gb_temp + ub_temp) != 0) %>%
   summarise(
     mean_avg_diff = mean(abs(gb_temp - ub_temp), na.rm = TRUE),
@@ -3097,7 +3465,7 @@ trans_gb_live_diff_results <- trans_gbdbub_aspects %>%
 
 # db vs live
 trans_db_live_diff_results <- trans_gbdbub_aspects %>%
-  group_by(aspect) %>%
+  #group_by(aspect) %>%
   filter((db_temp + ub_temp) != 0) %>%
   summarise(
     mean_avg_diff = mean(abs(db_temp - ub_temp), na.rm = TRUE),
