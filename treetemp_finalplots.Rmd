@@ -565,6 +565,26 @@ comb_singlesensor_lineplot <- ggarrange(comb_db_singlesensor_lineplot, comb_gb_s
 comb_singlesensor_lineplot
 ```
 
+```{r}
+comb_singlesensor_lineplot <- comb_singlesensor_lineplot + 
+  theme(
+    legend.background = element_rect(fill = "white", color = "black"),  # White background with black border
+    legend.box.background = element_rect(fill = "white", color = "black")  # Ensures the entire legend box is white
+  ) + 
+  theme(
+    legend.text = element_text(size = 10))
+
+comb_singlesensor_lineplot
+
+ggsave(
+  filename = "comb_singlesensor_lineplot.png",  # File name with extension
+  plot = comb_singlesensor_lineplot,  # The arranged plot object
+  width = 17,  # Set width (adjust as needed)
+  height = 10,  # Set height (adjust as needed)
+  dpi = 600  # High resolution for publication-quality output
+)
+```
+
 ## Daytime vs Nighttime Tree Temp Plot - GB/DB/UB with aspects
 
 ```{r}
@@ -948,10 +968,96 @@ comb_dtnt_boxplot
 
 Lineplot of Aspect-only Comparisons - as of 2025.01.27 \*\* USE THESE NS Boxplots instead of the ones below!
 
+### NS Comparison
+
+Lineplot
+
+```{r}
+#PSZ lineplot data
+PSZ_mean_ns_lineplot_data <- full_15min_ns %>%
+  filter(zone == "PSZ") %>%
+  mutate(
+    burn_status = case_when(
+      burn_status == "live" ~ "live",
+      burn_status == "green burn" ~ "GB",
+      burn_status == "dead burn" ~ "DB",
+      TRUE ~ burn_status  # Keep any other values unchanged
+    )) %>%
+  group_by(day, zone, burn_status) %>%
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp))
+```
+
+```{r}
+#TSZ lineplot data
+TSZ_mean_ns_lineplot_data <- full_15min_ns %>%
+  filter(zone == "TSZ") %>%
+  mutate(
+    burn_status = case_when(
+      burn_status == "live" ~ "live",
+      burn_status == "green burn" ~ "GB",
+      burn_status == "dead burn" ~ "DB",
+      TRUE ~ burn_status  # Keep any other values unchanged
+    )) %>%
+  group_by(day, zone, burn_status) %>%
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp))
+```
+
+```{r}
+PSZ_meandaily_ns_lineplot <- ggplot(data = PSZ_mean_ns_lineplot_data) + 
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.8) +
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.8) +
+  facet_wrap(~burn_status, nrow = 3) +
+  labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
+  scale_color_manual(
+    name = "Aspect", 
+    values = c("north" = scales::alpha("#2166AC", 0.8), "south" = "#D95F02"),
+    labels = c("north" = "North", "south" = "South")
+  ) +
+  theme_bw() + 
+  #ablation
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
+             linetype = "solid", color = "grey23", size = 0.4, alpha = 0.8) +
+  # Snow-free date line
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-29')), 
+             linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8)
+
+PSZ_meandaily_ns_lineplot
+```
+
+```{r}
+TSZ_meandaily_ns_lineplot <- ggplot(data = TSZ_mean_ns_lineplot_data) + 
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.8) +
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.8) +
+  facet_wrap(~burn_status, nrow = 3) +
+  labs(title = "b) TSZ", x = NULL, y = "Temperature (°C)") +
+  scale_color_manual(
+    name = "Aspect", 
+    values = c("north" = scales::alpha("#2166AC", 0.8), "south" = "#D95F02"),
+    labels = c("north" = "North", "south" = "South")
+  ) +
+  theme_bw() + 
+  #ablation season beginning
+  geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
+             linetype = "solid", color = "grey23", size = 0.4, alpha = 0.8) +
+  # Snow-free date line
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-12')), 
+             linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8)
+
+TSZ_meandaily_ns_lineplot
+```
+
+```{r}
+comb_mean_ns_lineplot <- ggarrange(PSZ_meandaily_ns_lineplot, TSZ_meandaily_ns_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+comb_mean_ns_lineplot
+```
+
+Boxplots - USE THESE!
+
 ```{r}
 #Use this!
 pers_dt_ns_boxplot_data <- full_15min_ns %>%
-  filter(zone == "PSZ", phase == "day") %>%
+  filter(zone == "PSZ") %>%
   pivot_longer(
     cols = c(north_temp, south_temp),  # Columns to reshape
     names_to = "aspect",              # New column for burn status
@@ -1001,7 +1107,7 @@ pers_nt_ns_boxplot_data <- full_15min_ns %>%
 ```{r}
 #use this!
 trans_dt_ns_boxplot_data <- full_15min_ns %>%
-  filter(zone == "TSZ", phase == "day") %>%
+  filter(zone == "TSZ") %>%
   pivot_longer(
     cols = c(north_temp, south_temp),  # Columns to reshape
     names_to = "aspect",              # New column for burn status
@@ -1061,7 +1167,10 @@ pers_dt_ns_boxplot<- ggplot(pers_dt_ns_boxplot_data, aes(x = aspect, y = temp, f
     y = "Temperature (°C)"
   ) + 
    scale_y_continuous(
-    limits = c(-25, 48))
+    limits = c(-25, 48)) + 
+  theme(
+    legend.text = element_text(size = 10))
+
 
 pers_dt_ns_boxplot
 ```
@@ -1079,14 +1188,17 @@ trans_dt_ns_boxplot<- ggplot(trans_dt_ns_boxplot_data, aes(x = aspect, y = temp,
     y = "Temperature (°C)"
   ) +
    scale_y_continuous(
-    limits = c(-25, 48))
+    limits = c(-25, 48)) + 
+  theme(
+    legend.text = element_text(size = 10))
+
 
 trans_dt_ns_boxplot
 ```
 
 ```{r}
-#use this!
-comb_dt_ns_boxplot_V2 <- ggarrange(pers_dt_ns_boxplot, trans_dt_ns_boxplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+#use this! Not only daytime anymore, but instead includes all day and night values!! 
+comb_dt_ns_boxplot_V2 <- ggarrange(pers_dt_ns_boxplot, trans_dt_ns_boxplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
 
 comb_dt_ns_boxplot_V2
 ```
@@ -1105,7 +1217,10 @@ pers_nt_ns_boxplot<- ggplot(pers_nt_ns_boxplot_data, aes(x = aspect, y = temp, f
     y = "Temperature (°C)"
   ) + 
    scale_y_continuous(
-    limits = c(-25, 48))
+    limits = c(-25, 48)) + 
+  theme(
+    legend.text = element_text(size = 10))
+
 
 pers_nt_ns_boxplot
 ```
@@ -1822,7 +1937,7 @@ stats_gbdbub <- full_15min_gbdbub %>%
 
 ```{r}
 stats_gbdbub_dtnt <- full_15min_gbdbub %>%
-  group_by(zone, phase, snow_phase) %>%
+  group_by(zone, phase, aspect, snow_phase) %>%
   summarize(
     mean_gb_temp = mean(gb_temp, na.rm = TRUE), 
     mean_db_temp = mean(db_temp, na.rm = TRUE), 
