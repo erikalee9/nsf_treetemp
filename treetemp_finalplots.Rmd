@@ -3937,3 +3937,239 @@ transub_snowdepth_stats <- trans_ub_daily_snowdepth_data_V2 %>%
     max_snowdepth_m = max(max_snowdepth_m, na.rm = TRUE)
   )
 ```
+
+# T-Test Stats
+
+## Day/Night
+
+```{r}
+#dataframes
+PSZ_dtnt_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "PSZ") %>%
+  group_by(zone, datetime, day, phase) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+
+TSZ_dtnt_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "TSZ") %>%
+  group_by(zone, datetime, day, phase) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+```
+
+```{r}
+#DB dataframes
+PSZ_db_dtnt_dataframes <- PSZ_dtnt_dataframe %>%
+  select(zone, datetime, day, phase, db_temp) %>%
+  group_by(zone, day, phase) %>%
+  rename(date = "day") %>%
+  summarize(temp = mean(db_temp, na.rm = TRUE)) %>%  # Ensure grouping is removed
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(day_temp = day, night_temp = night)
+
+TSZ_db_dtnt_dataframes <- TSZ_dtnt_dataframe %>%
+  select(zone, datetime, day, phase, db_temp) %>%
+  group_by(zone, day, phase) %>%
+  rename(date = "day") %>%
+  summarize(temp = mean(db_temp, na.rm = TRUE)) %>%  # Ensure grouping is removed
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(day_temp = day, night_temp = night)
+```
+
+```{r}
+#GB dataframes
+PSZ_gb_dtnt_dataframes <- PSZ_dtnt_dataframe %>%
+  select(zone, datetime, day, phase, gb_temp) %>%
+  group_by(zone, day, phase) %>%
+  rename(date = "day") %>%
+  summarize(temp = mean(gb_temp, na.rm = TRUE)) %>%  # Ensure grouping is removed
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(day_temp = day, night_temp = night)
+
+TSZ_gb_dtnt_dataframes <- TSZ_dtnt_dataframe %>%
+  select(zone, datetime, day, phase, gb_temp) %>%
+  group_by(zone, day, phase) %>%
+  rename(date = "day") %>%
+  summarize(temp = mean(gb_temp, na.rm = TRUE)) %>%  # Ensure grouping is removed
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(day_temp = day, night_temp = night)
+```
+
+```{r}
+#GB dataframes
+PSZ_ub_dtnt_dataframes <- PSZ_dtnt_dataframe %>%
+  select(zone, datetime, day, phase, ub_temp) %>%
+  group_by(zone, day, phase) %>%
+  rename(date = "day") %>%
+  summarize(temp = mean(ub_temp, na.rm = TRUE)) %>%  # Ensure grouping is removed
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(day_temp = day, night_temp = night)
+
+TSZ_ub_dtnt_dataframes <- TSZ_dtnt_dataframe %>%
+  select(zone, datetime, day, phase, ub_temp) %>%
+  group_by(zone, day, phase) %>%
+  rename(date = "day") %>%
+  summarize(temp = mean(ub_temp, na.rm = TRUE)) %>%  # Ensure grouping is removed
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(day_temp = day, night_temp = night)
+```
+
+T-Tests
+
+```{r}
+p_db_dtnt_ttest_results <- t.test(PSZ_db_dtnt_dataframes$day_temp, PSZ_db_dtnt_dataframes$night_temp)
+
+p_db_dtnt_ttest_results
+```
+
+```{r}
+t_db_dtnt_ttest_results <- t.test(TSZ_db_dtnt_dataframes$day_temp, TSZ_db_dtnt_dataframes$night_temp)
+
+t_db_dtnt_ttest_results
+```
+
+```{r}
+p_gb_dtnt_ttest_results <- t.test(PSZ_gb_dtnt_dataframes$day_temp, PSZ_gb_dtnt_dataframes$night_temp)
+
+p_gb_dtnt_ttest_results
+```
+
+```{r}
+t_gb_dtnt_ttest_results <- t.test(TSZ_gb_dtnt_dataframes$day_temp, TSZ_gb_dtnt_dataframes$night_temp)
+
+t_gb_dtnt_ttest_results
+```
+
+```{r}
+p_ub_dtnt_ttest_results <- t.test(PSZ_ub_dtnt_dataframes$day_temp, PSZ_ub_dtnt_dataframes$night_temp)
+
+p_ub_dtnt_ttest_results
+```
+
+```{r}
+t_ub_dtnt_ttest_results <- t.test(TSZ_ub_dtnt_dataframes$day_temp, TSZ_ub_dtnt_dataframes$night_temp)
+
+t_ub_dtnt_ttest_results
+```
+
+N/S
+
+```{r}
+#dataframes
+#dataframes
+PSZ_db_accu_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "accumulation", burn_status == "dead burn")
+
+PSZ_db_abla_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "ablation", burn_status == "dead burn")
+
+TSZ_db_accu_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "accumulation", burn_status == "dead burn")
+
+TSZ_db_abla_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "ablation", burn_status == "dead burn")
+```
+
+```{r}
+PSZ_gb_accu_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "accumulation", burn_status == "green burn")
+
+PSZ_gb_abla_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "ablation", burn_status == "green burn")
+
+TSZ_gb_accu_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "accumulation", burn_status == "green burn")
+
+TSZ_gb_abla_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "ablation", burn_status == "green burn")
+```
+
+```{r}
+PSZ_ub_accu_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "accumulation", burn_status == "live")
+
+PSZ_ub_abla_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "ablation", burn_status == "live")
+
+TSZ_ub_accu_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "accumulation", burn_status == "live")
+
+TSZ_ub_abla_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "ablation", burn_status == "live")
+```
+
+T-tests DB
+
+```{r}
+p_db_accu_ns_ttest_results <- t.test(PSZ_db_accu_ns_dataframe$north_temp, PSZ_db_accu_ns_dataframe$south_temp)
+
+p_db_accu_ns_ttest_results
+```
+
+```{r}
+p_db_abla_ns_ttest_results <- t.test(PSZ_db_abla_ns_dataframe$north_temp, PSZ_db_abla_ns_dataframe$south_temp)
+
+p_db_abla_ns_ttest_results
+```
+
+```{r}
+t_db_accu_ns_ttest_results <- t.test(TSZ_db_accu_ns_dataframe$north_temp, TSZ_db_accu_ns_dataframe$south_temp)
+
+t_db_accu_ns_ttest_results
+```
+
+```{r}
+t_db_abla_ns_ttest_results <- t.test(TSZ_db_abla_ns_dataframe$north_temp, TSZ_db_abla_ns_dataframe$south_temp)
+
+t_db_abla_ns_ttest_results
+```
+
+T-tests GB
+
+```{r}
+p_gb_accu_ns_ttest_results <- t.test(PSZ_gb_accu_ns_dataframe$north_temp, PSZ_gb_accu_ns_dataframe$south_temp)
+
+p_gb_accu_ns_ttest_results
+```
+
+```{r}
+p_gb_abla_ns_ttest_results <- t.test(PSZ_gb_abla_ns_dataframe$north_temp, PSZ_gb_abla_ns_dataframe$south_temp)
+
+p_gb_abla_ns_ttest_results
+```
+
+```{r}
+t_gb_accu_ns_ttest_results <- t.test(TSZ_gb_accu_ns_dataframe$north_temp, TSZ_gb_accu_ns_dataframe$south_temp)
+
+t_gb_accu_ns_ttest_results
+```
+
+```{r}
+t_gb_abla_ns_ttest_results <- t.test(TSZ_gb_abla_ns_dataframe$north_temp, TSZ_gb_abla_ns_dataframe$south_temp)
+
+t_gb_abla_ns_ttest_results
+```
+
+T-tests Live
+
+```{r}
+p_ub_accu_ns_ttest_results <- t.test(PSZ_ub_accu_ns_dataframe$north_temp, PSZ_ub_accu_ns_dataframe$south_temp)
+
+p_ub_accu_ns_ttest_results
+```
+
+```{r}
+p_ub_abla_ns_ttest_results <- t.test(PSZ_ub_abla_ns_dataframe$north_temp, PSZ_ub_abla_ns_dataframe$south_temp)
+
+p_ub_abla_ns_ttest_results
+```
+
+```{r}
+t_ub_accu_ns_ttest_results <- t.test(TSZ_ub_accu_ns_dataframe$north_temp, TSZ_ub_accu_ns_dataframe$south_temp)
+
+t_ub_accu_ns_ttest_results
+```
+
+```{r}
+t_ub_abla_ns_ttest_results <- t.test(TSZ_ub_abla_ns_dataframe$north_temp, TSZ_ub_abla_ns_dataframe$south_temp)
+
+t_ub_abla_ns_ttest_results
+```
