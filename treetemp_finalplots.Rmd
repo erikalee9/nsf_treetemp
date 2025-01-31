@@ -600,13 +600,6 @@ ggsave(
 ```
 
 ```{r}
-```
-
-```{r}
-
-```
-
-```{r}
 PSZ_db_singlesensor_comp_plot <- ggplot(data = PSZ_single_day_sensor_comp_db) +
   geom_line(aes(x = datetime, y = temp, linetype = tree_name), color = "#D95F02", linewidth = 0.7) +
   scale_linetype_manual(
@@ -948,6 +941,8 @@ Line Plots of mean daily temps, not separated by aspect!
 
 ```{r}
 PSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = PSZ_dtnt_daily_gbdbub_plot_dataframe ) +
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
   geom_line(aes(x = day, y = gb_temp, color = "GB"), linewidth = 0.7) + 
   geom_line(aes(x = day, y = db_temp, color = "DB"), linewidth = 0.7) +
   geom_line(aes(x = day, y = ub_temp, color = "live"), linewidth = 0.7, alpha = 0.8) +
@@ -977,6 +972,8 @@ PSZ_dtnt_treetemp_daily_gbdbub_lineplot
 
 ```{r}
 TSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_dtnt_daily_gbdbub_plot_dataframe ) +
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
   geom_line(aes(x = day, y = gb_temp, color = "GB"), linewidth = 0.7) + 
   geom_line(aes(x = day, y = db_temp, color = "DB"), linewidth = 0.7) +
   geom_line(aes(x = day, y = ub_temp, color = "live"), linewidth = 0.7, alpha = 0.8) +
@@ -1338,7 +1335,7 @@ Lineplot of Aspect-only Comparisons - as of 2025.01.27 \*\* USE THESE NS Boxplot
 
 ### NS Comparison
 
-Lineplot
+Lineplot - as of 2024-01-31 \*\* USE THIS LINEPLOT!
 
 ```{r}
 #PSZ lineplot data
@@ -1372,6 +1369,8 @@ TSZ_mean_ns_lineplot_data <- full_15min_ns %>%
 
 ```{r}
 PSZ_meandaily_ns_lineplot <- ggplot(data = PSZ_mean_ns_lineplot_data) + 
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
   geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.8) +
   geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.8) +
   facet_wrap(~burn_status, nrow = 3) +
@@ -1394,6 +1393,8 @@ PSZ_meandaily_ns_lineplot
 
 ```{r}
 TSZ_meandaily_ns_lineplot <- ggplot(data = TSZ_mean_ns_lineplot_data) + 
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
   geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.8) +
   geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.8) +
   facet_wrap(~burn_status, nrow = 3) +
