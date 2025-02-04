@@ -3703,12 +3703,19 @@ Plotting
 
 Version with Air Temp!
 
+\*\* Still need to double check Dan's snow depth data for PSZ unburned site! as of 2025-02-04
+
 ```{r}
 scaling_factor <- 0.08
 ```
 
 ```{r}
 PSZ_b_snowdepths_lineplot <- ggplot() + 
+  #manual snow survery date
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-03')), 
+             linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
   # Burned snow depth
   geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned site"), linetype = "solid", linewidth = 1) +
   # Unburned snow depth
@@ -3753,6 +3760,11 @@ PSZ_b_snowdepths_lineplot
 
 ```{r}
 TSZ_b_snowdepths_lineplot <- ggplot() + 
+  #manual snow survery date
+  geom_vline(xintercept = as.numeric(as.Date('2024-04-12')), 
+             linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+   # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
   # Burned snow depth
   geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned site"), linetype = "solid", linewidth = 1) +
   # Unburned snow depth
