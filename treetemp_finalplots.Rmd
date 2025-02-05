@@ -154,7 +154,7 @@ AG_transub_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_transub_ag_sn
   select(-mortality)
 
 
-persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_high_east_snowdepths.csv") %>%
+persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_east_snowdepths.csv") %>%
   rename(snowcam_max_depth_cm = "max_depth_cm") %>%
   mutate(day = as.Date(date)) %>%
   rename(treewell_developed = treewell_developement) %>%
@@ -195,7 +195,9 @@ transub_wx_15min_r <- read_csv('nsf/trans_unburned/trans_unburned_wx_15min_r.csv
 
 persb_wx_hourly_r <- read_csv('nsf/pers_burned/pers_burned_wx_hourly_r.csv') %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = with_tz(datetime, tz = 'MST'))
+                               datetime = with_tz(datetime, tz = 'MST')) %>%
+    #removing data with low quality snow depth
+  mutate(SnowDepth_m = ifelse(Q_Avg < 180, NA, SnowDepth_m))
 
 #persub_wx_15min_r <- read_csv('nsf/pers_unburned/pers_unburned_wx_15min_r.csv') %>%
   #mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
@@ -204,7 +206,11 @@ persb_wx_hourly_r <- read_csv('nsf/pers_burned/pers_burned_wx_hourly_r.csv') %>%
 #use hourly unburned and burned for PSZ
 persub_wx_hourly_r <- read_csv('nsf/pers_unburned/pers_unburned_wx_hourly_r.csv') %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime = with_tz(datetime, tz = 'MST'))
+                               datetime = with_tz(datetime, tz = 'MST')) %>%
+  #snowdepth adjustment
+  mutate(SnowDepth_m = SnowDepth_m - 0.024) %>%
+  #removing data with low quality snow depth
+  mutate(SnowDepth_m = ifelse(Q_Avg < 180, NA, SnowDepth_m))
 ```
 
 ```{r}
@@ -288,6 +294,8 @@ filtered_persub_wx_hourly <- persub_wx_hourly_r %>%
       datetime >= sunset ~ "night",
       TRUE ~ NA_character_)) %>%
   mutate(zone = "PSZ", burn_status = "unburned") %>%
+  #dropping NA values for snow depths with low quality readings
+  drop_na() %>%
   #adding in my own calculated NR_Avg column
   mutate(NR_Avg_new = (SWin_Avg - SWout_Avg) + (LWin_Avg - LWout_Avg)) %>%
   select(datetime, day, month, phase, zone, burn_status, NR_Avg_new, everything())
@@ -1341,6 +1349,7 @@ Lineplot - as of 2024-01-31 \*\* USE THIS LINEPLOT!
 #PSZ lineplot data
 PSZ_mean_ns_lineplot_data <- full_15min_ns %>%
   filter(zone == "PSZ") %>%
+  mutate(day = as.Date(day)) %>%
   mutate(
     burn_status = case_when(
       burn_status == "live" ~ "live",
@@ -1350,6 +1359,35 @@ PSZ_mean_ns_lineplot_data <- full_15min_ns %>%
     )) %>%
   group_by(day, zone, burn_status) %>%
   summarize(north_temp = mean(north_temp), south_temp = mean(south_temp))
+
+#making a GBDB only dataframe to deal with live data gap issue
+PSZ_DBGB_mean_ns_lineplot_data <- PSZ_mean_ns_lineplot_data %>%
+  filter(burn_status %in% c("GB", "DB"))
+
+PSZ_UB_mean_ns_lineplot_data <- PSZ_mean_ns_lineplot_data %>%
+  filter(burn_status == "live") %>%
+  complete(
+    day = seq(as.Date("2024-02-02"), as.Date("2024-07-01"), by = "1 day"),
+    fill = list(north_temp = NA, south_temp = NA)
+  )
+```
+
+```{r}
+# Create a full sequence of dates
+all_dates <- tibble(day = seq(from = as.Date("2024-02-02"), 
+                              to = as.Date("2024-06-30"), by = "1 day"))
+
+# Filter for 'live' burn_status, then left_join to add missing dates
+PSZ_UB_mean_ns_lineplot_data <- PSZ_mean_ns_lineplot_data %>%
+  filter(burn_status == "live") %>%
+  full_join(all_dates, by = "day") %>%
+  arrange(day) %>%
+  mutate(zone = "PSZ", burn_status = "live")
+```
+
+```{r}
+#rejoining to make combined dataframe
+PSZ_mean_ns_lineplot_data_V2 <- rbind(PSZ_DBGB_mean_ns_lineplot_data, PSZ_UB_mean_ns_lineplot_data)
 ```
 
 ```{r}
@@ -1368,11 +1406,13 @@ TSZ_mean_ns_lineplot_data <- full_15min_ns %>%
 ```
 
 ```{r}
-PSZ_meandaily_ns_lineplot <- ggplot(data = PSZ_mean_ns_lineplot_data) + 
+PSZ_meandaily_ns_lineplot <- ggplot(data = PSZ_mean_ns_lineplot_data_V2) + 
   # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
-  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.8) +
-  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.8) +
+  # Line plot for GB and DB data 
+  geom_line(aes(x = day, y = north_temp, color = "north", group = burn_status), linewidth = 0.8, na.rm = TRUE) +
+    # Line plot for GB and DB data 
+  geom_line(aes(x = day, y = south_temp, color = "south", group = burn_status), linewidth = 0.8, na.rm = TRUE) +
   facet_wrap(~burn_status, nrow = 3) +
   labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
   scale_color_manual(
@@ -1381,12 +1421,13 @@ PSZ_meandaily_ns_lineplot <- ggplot(data = PSZ_mean_ns_lineplot_data) +
     labels = c("north" = "North", "south" = "South")
   ) +
   theme_bw() + 
-  #ablation
+  # Ablation date
   geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
              linetype = "solid", color = "grey23", size = 0.4, alpha = 0.8) +
   # Snow-free date line
   geom_vline(xintercept = as.numeric(as.Date('2024-05-29')), 
              linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8)
+
 
 PSZ_meandaily_ns_lineplot
 ```
@@ -1419,6 +1460,17 @@ TSZ_meandaily_ns_lineplot
 comb_mean_ns_lineplot <- ggarrange(PSZ_meandaily_ns_lineplot, TSZ_meandaily_ns_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
 
 comb_mean_ns_lineplot
+```
+
+```{r}
+#use this plot!
+ggsave(
+  filename = "comb_mean_ns_lineplot.png",  # File name
+  plot = comb_mean_ns_lineplot,           # The arranged plot object
+  width = 7.5,                                          # Adjust width as needed
+  height = 9,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
 ```
 
 Boxplots - USE THESE!
@@ -3706,7 +3758,7 @@ Version with Air Temp!
 \*\* Still need to double check Dan's snow depth data for PSZ unburned site! as of 2025-02-04
 
 ```{r}
-scaling_factor <- 0.08
+scaling_factor <- 0.07
 ```
 
 ```{r}
@@ -3735,22 +3787,26 @@ PSZ_b_snowdepths_lineplot <- ggplot() +
   ) +
   scale_y_continuous(
     name = "Snow Depth (m)",
-    limits = c(-1, 2.4),
+    limits = c(-1, 2),
     sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis
   ) +
   scale_x_date(
     name = NULL,
     limits = c(min(persb_wx_data_V2$day, na.rm = TRUE), max(persb_wx_data_V2$day, na.rm = TRUE)), 
     expand = c(0, 0)) +
+  scale_color_manual(
+  name = NULL,
+  values = c(
+    "Burned site" = "#D95F02", 
+    "Unburned site" = "#2166AC", 
+    "Mean Daily Air Temp" = alpha("#666666", 0.7)
+  ),
+    # Sets legend order
+  breaks = c("Burned site", "Unburned site", "Mean Daily Air Temp")
+) +
   scale_shape_manual(
     name = NULL,
     values = c("Dates that treewells developed" = 16)) + 
-  scale_color_manual(
-    name = NULL,
-    values = c(
-      "Burned site" = "#D95F02", 
-      "Unburned site" = "#2166AC", 
-      "Mean Daily Air Temp" = alpha("#666666", 0.7))) +
   theme_bw() + 
   theme(
     legend.text = element_text(size = 10))
@@ -3784,22 +3840,26 @@ TSZ_b_snowdepths_lineplot <- ggplot() +
   ) +
   scale_y_continuous(
     name = "Snow Depth (m)",
-    limits = c(-1, 2.4),
+    limits = c(-1, 2),
     sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis
   ) +
   scale_x_date(
     name = NULL,
     limits = c(min(transb_wx_data_V2$day, na.rm = TRUE), max(transb_wx_data_V2$day, na.rm = TRUE)), 
     expand = c(0, 0)) +
+  scale_color_manual(
+  name = NULL,
+  values = c(
+    "Burned site" = "#D95F02", 
+    "Unburned site" = "#2166AC", 
+    "Mean Daily Air Temp" = alpha("#666666", 0.7)
+  ),
+    # Sets legend order
+  breaks = c("Burned site", "Unburned site", "Mean Daily Air Temp")
+) +
   scale_shape_manual(
     name = NULL,
     values = c("Dates that treewells developed" = 16)) + 
-  scale_color_manual(
-    name = NULL,
-    values = c(
-      "Burned site" = "#D95F02", 
-      "Unburned site" = "#2166AC", 
-      "Mean Daily Air Temp" = alpha("#666666", 0.7))) +
   theme_bw()  + 
   theme(
     legend.text = element_text(size = 10))
@@ -3812,6 +3872,14 @@ TSZ_b_snowdepths_lineplot
 final_comb_snowdepth_lineplot <- ggarrange(PSZ_b_snowdepths_lineplot, TSZ_b_snowdepths_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
 
 final_comb_snowdepth_lineplot
+```
+
+```{r}
+ggsave(filename = "final_comb_snowdepth_lineplot.png", 
+       plot = final_comb_snowdepth_lineplot, 
+       width = 10, 
+       height = 7, 
+       dpi = 600)
 ```
 
 Version with SWin instead of air temp
