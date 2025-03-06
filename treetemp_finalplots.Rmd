@@ -442,8 +442,10 @@ PSZ_threeday_accu_comp_lineplot <- ggplot(data = PSZ_threeday_accu_comp) +
     values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
     labels = c("Tree 1", "Tree 2")  # Ensuring the legend shows the correct labels
   ) + 
+  #remove the linetype legend
+  guides(linetype = "none") + 
   scale_color_manual(
-    name = "Burn status",
+    name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
  scale_y_continuous(limits = c(-25, 25)) +  # Set the y-axis limits here
   theme_bw() +
@@ -468,16 +470,18 @@ TSZ_threeday_accu_comp_lineplot <- ggplot(data = TSZ_threeday_accu_comp) +
   geom_line(aes(x = datetime, y = temp, linetype = tree_name, color = burn_status), linewidth = 0.7) +
   facet_wrap(~aspect) +
   scale_linetype_manual(
-    name = "Individual tree",  # New legend title (showing as 'Tree' instead of 'Tree Name')
+   name = "Individual tree",  # New legend title (showing as 'Tree' instead of 'Tree Name')
     values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
     labels = c("Tree 1", "Tree 2")  # Ensuring the legend shows the correct labels
   ) + 
+  #remove the linetype legend
+  guides(linetype = "none") + 
   scale_color_manual(
-    name = "Burn status",
+    name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
  scale_y_continuous(limits = c(-25, 25)) +  # Set the y-axis limits here
   theme_bw() +
-  labs(title = "b) TSZ Accumulation", x = NULL, y = "Temperature (°C)") +
+  labs(title = "b) TSZ Accumulation", x = "Date", y = "Temperature (°C)") +
  theme(
     strip.text = element_text(size = 12),  # Facet title size
     axis.title = element_text(size = 12),  # Axis title size
@@ -503,8 +507,10 @@ PSZ_threeday_abla_comp_lineplot <- ggplot(data = PSZ_threeday_abla_comp) +
     values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
     labels = c("Tree 1", "Tree 2")  # Ensuring the legend shows the correct labels
   ) + 
+  #remove the linetype legend
+  guides(linetype = "none") + 
   scale_color_manual(
-    name = "Burn status",
+    name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
  scale_y_continuous(limits = c(-15, 35)) +  # Set the y-axis limits here
   theme_bw() +
@@ -532,12 +538,14 @@ TSZ_threeday_abla_comp_lineplot <- ggplot(data = TSZ_threeday_abla_comp) +
     values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
     labels = c("Tree 1", "Tree 2")  # Ensuring the legend shows the correct labels
   ) + 
+    #remove the linetype legend
+  guides(linetype = "none") + 
   scale_color_manual(
-    name = "Burn status",
+    name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
  scale_y_continuous(limits = c(-15, 35)) +  # Set the y-axis limits here
   theme_bw() +
-  labs(title = "b) TSZ Ablation", x = NULL, y = "Temperature (°C)") +
+  labs(title = "b) TSZ Ablation", x = "Date", y = "Temperature (°C)") +
   theme(
     strip.text = element_text(size = 12),  # Facet title size
     axis.title = element_text(size = 12),  # Axis title size
@@ -552,7 +560,7 @@ TSZ_threeday_abla_comp_lineplot
 
 ```{r}
 #full combined accumulation and ablation plots!
-comb_threeday_sensor_comp_lineplot <- ggarrange(PSZ_threeday_accu_comp_lineplot, PSZ_threeday_abla_comp_lineplot, TSZ_threeday_accu_comp_lineplot, TSZ_threeday_abla_comp_lineplot, nrow = 2, ncol = 2, common.legend = TRUE, legend = "right")
+comb_threeday_sensor_comp_lineplot <- ggarrange(PSZ_threeday_accu_comp_lineplot, PSZ_threeday_abla_comp_lineplot, TSZ_threeday_accu_comp_lineplot, TSZ_threeday_abla_comp_lineplot, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
 
 comb_threeday_sensor_comp_lineplot
 ```
@@ -572,7 +580,7 @@ Accumulation only combined plot
 
 ```{r}
 #full combined accumulation and ablation plots!
-comb_threeday_accu_comp_lineplot <- ggarrange(PSZ_threeday_accu_comp_lineplot, TSZ_threeday_accu_comp_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+comb_threeday_accu_comp_lineplot <- ggarrange(PSZ_threeday_accu_comp_lineplot, TSZ_threeday_accu_comp_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
 
 comb_threeday_accu_comp_lineplot
 ```
@@ -583,7 +591,7 @@ ggsave(
   filename = "comb_threeday_accu_comp_lineplot.png",  # File name
   plot = comb_threeday_accu_comp_lineplot,           # The arranged plot object
   width = 14,                                          # Adjust width as needed
-  height = 8,                                         # Adjust height as needed
+  height = 8,                                        # Adjust height as needed
   dpi = 600                                            # High resolution
 )
 ```
@@ -592,7 +600,7 @@ Ablation only combined plot
 
 ```{r}
 #full combined accumulation and ablation plots!
-comb_threeday_abla_comp_lineplot <- ggarrange(PSZ_threeday_abla_comp_lineplot, TSZ_threeday_abla_comp_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+comb_threeday_abla_comp_lineplot <- ggarrange(PSZ_threeday_abla_comp_lineplot, TSZ_threeday_abla_comp_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
 
 comb_threeday_abla_comp_lineplot
 ```
@@ -600,7 +608,7 @@ comb_threeday_abla_comp_lineplot
 ```{r}
 ggsave(
   filename = "comb_threeday_abla_comp_lineplot.png",  # File name
-  plot = comb_threeday_accu_comp_lineplot,           # The arranged plot object
+  plot = comb_threeday_abla_comp_lineplot,           # The arranged plot object
   width = 14,                                          # Adjust width as needed
   height = 8,                                         # Adjust height as needed
   dpi = 600                                            # High resolution
@@ -957,7 +965,7 @@ PSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = PSZ_dtnt_daily_gbdbub_p
   facet_wrap(~phase) +
   labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
   scale_color_manual(
-    name = "burn status",
+    name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = "#2166AC")
   ) +
   scale_y_continuous(limits = c(-20, 28)) +  # Set the y-axis limits here
@@ -986,9 +994,9 @@ TSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_dtnt_daily_gbdbub_p
   geom_line(aes(x = day, y = db_temp, color = "DB"), linewidth = 0.7) +
   geom_line(aes(x = day, y = ub_temp, color = "live"), linewidth = 0.7, alpha = 0.8) +
   facet_wrap(~phase) +
-  labs(title = "b) TSZ", x = NULL, y = "Temperature (°C)") +
+  labs(title = "b) TSZ", x = "Date", y = "Temperature (°C)") +
   scale_color_manual(
-    name = "burn status",
+    name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = "#2166AC")
   ) +
   scale_y_continuous(limits = c(-20, 28)) +  # Set the y-axis limits here
@@ -1010,7 +1018,7 @@ TSZ_dtnt_treetemp_daily_gbdbub_lineplot
 ```
 
 ```{r}
-comb_dtnt_daily_lineplot <- ggarrange(PSZ_dtnt_treetemp_daily_gbdbub_lineplot, TSZ_dtnt_treetemp_daily_gbdbub_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+comb_dtnt_daily_lineplot <- ggarrange(PSZ_dtnt_treetemp_daily_gbdbub_lineplot, TSZ_dtnt_treetemp_daily_gbdbub_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
 
 comb_dtnt_daily_lineplot
 ```
@@ -1019,8 +1027,8 @@ comb_dtnt_daily_lineplot
 ggsave(
   filename = "comb_dtnt_daily_lineplot.png",
   plot = comb_dtnt_daily_lineplot,           
-  width = 12,                                         
-  height = 8,                                         # Adjust height as needed
+  #width = 12,                                         
+  #height = 8,                                         # Adjust height as needed
   dpi = 600                                            # High resolution
 )
 ```
@@ -1260,7 +1268,7 @@ PSZ_dtnt_boxplot <- ggplot(data = PSZ_dtnt_data) +
   geom_boxplot(aes(x = interaction(phase, burn_status, sep = "_"), y = temp, fill = burn_status, alpha = phase),
                position = position_dodge(width = 0.75)) +
   scale_fill_manual(
-    name = "Burn Status",
+    name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = adjustcolor("#2166AC", alpha.f = 0.8)), 
     labels = c("GB" = "GB", "DB" = "DB", "live" = "Live")
   ) +
@@ -1293,7 +1301,7 @@ TSZ_dtnt_boxplot <- ggplot(data = TSZ_dtnt_data) +
   geom_boxplot(aes(x = interaction(phase, burn_status, sep = "_"), y = temp, fill = burn_status, alpha = phase),
                position = position_dodge(width = 0.75)) +
   scale_fill_manual(
-    name = "Burn Status",
+    name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = adjustcolor("#2166AC", alpha.f = 0.8)), 
     labels = c("GB" = "GB", "DB" = "DB", "live" = "Live")
   ) +
@@ -1416,7 +1424,7 @@ PSZ_meandaily_ns_lineplot <- ggplot(data = PSZ_mean_ns_lineplot_data_V2) +
   facet_wrap(~burn_status, nrow = 3) +
   labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
   scale_color_manual(
-    name = "Aspect", 
+    name = NULL, 
     values = c("north" = scales::alpha("#2166AC", 0.8), "south" = "#D95F02"),
     labels = c("north" = "North", "south" = "South")
   ) +
@@ -1439,9 +1447,9 @@ TSZ_meandaily_ns_lineplot <- ggplot(data = TSZ_mean_ns_lineplot_data) +
   geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.8) +
   geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.8) +
   facet_wrap(~burn_status, nrow = 3) +
-  labs(title = "b) TSZ", x = NULL, y = "Temperature (°C)") +
+  labs(title = "b) TSZ", x = "Date", y = "Temperature (°C)") +
   scale_color_manual(
-    name = "Aspect", 
+    name = NULL, 
     values = c("north" = scales::alpha("#2166AC", 0.8), "south" = "#D95F02"),
     labels = c("north" = "North", "south" = "South")
   ) +
@@ -1457,7 +1465,7 @@ TSZ_meandaily_ns_lineplot
 ```
 
 ```{r}
-comb_mean_ns_lineplot <- ggarrange(PSZ_meandaily_ns_lineplot, TSZ_meandaily_ns_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+comb_mean_ns_lineplot <- ggarrange(PSZ_meandaily_ns_lineplot, TSZ_meandaily_ns_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
 
 comb_mean_ns_lineplot
 ```
@@ -1468,7 +1476,7 @@ ggsave(
   filename = "comb_mean_ns_lineplot.png",  # File name
   plot = comb_mean_ns_lineplot,           # The arranged plot object
   width = 7.5,                                          # Adjust width as needed
-  height = 9,                                         # Adjust height as needed
+  height = 10,                                         # Adjust height as needed
   dpi = 600                                            # High resolution
 )
 ```
@@ -3769,12 +3777,12 @@ PSZ_b_snowdepths_lineplot <- ggplot() +
   # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
   # Burned snow depth
-  geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned site"), linetype = "solid", linewidth = 1) +
+  geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned snow depth"), linetype = "solid", linewidth = 1) +
   # Unburned snow depth
-  geom_line(data = pers_ub_daily_snowdepth_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned site"), 
+  geom_line(data = pers_ub_daily_snowdepth_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned snow depth"), 
             linetype = "solid", linewidth = 1) +
   # Burned wx station air temp
-  geom_line(data = persb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
+  geom_line(data = persb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean daily air temp"), 
             linetype = "solid", linewidth = 1) +
   # Treewell dates
   geom_point(data = persb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
@@ -3797,16 +3805,17 @@ PSZ_b_snowdepths_lineplot <- ggplot() +
   scale_color_manual(
   name = NULL,
   values = c(
-    "Burned site" = "#D95F02", 
-    "Unburned site" = "#2166AC", 
-    "Mean Daily Air Temp" = alpha("#666666", 0.7)
+    "Burned snow depth" = "#D95F02", 
+    "Unburned snow depth" = "#2166AC", 
+    "Mean daily air temp" = alpha("#666666", 0.7)
   ),
     # Sets legend order
-  breaks = c("Burned site", "Unburned site", "Mean Daily Air Temp")
+  breaks = c("Burned snow depth", "Unburned snow depth", "Mean daily air temp")
 ) +
   scale_shape_manual(
     name = NULL,
     values = c("Dates that treewells developed" = 16)) + 
+  guides(shape = "none") + 
   theme_bw() + 
   theme(
     legend.text = element_text(size = 10))
@@ -3822,12 +3831,12 @@ TSZ_b_snowdepths_lineplot <- ggplot() +
    # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
   # Burned snow depth
-  geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned site"), linetype = "solid", linewidth = 1) +
+  geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned snow depth"), linetype = "solid", linewidth = 1) +
   # Unburned snow depth
-  geom_line(data = AG_transub_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned site"), 
+  geom_line(data = AG_transub_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned snow depth"), 
             linetype = "solid", linewidth = 1) +
   # Burned wx station air temp
-  geom_line(data = transb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
+  geom_line(data = transb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean daily air temp"), 
             linetype = "solid", linewidth = 1) +
   # Treewell dates
   geom_point(data = transb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
@@ -3850,16 +3859,17 @@ TSZ_b_snowdepths_lineplot <- ggplot() +
   scale_color_manual(
   name = NULL,
   values = c(
-    "Burned site" = "#D95F02", 
-    "Unburned site" = "#2166AC", 
-    "Mean Daily Air Temp" = alpha("#666666", 0.7)
+    "Burned snow depth" = "#D95F02", 
+    "Unburned snow depth" = "#2166AC", 
+    "Mean daily air temp" = alpha("#666666", 0.7)
   ),
     # Sets legend order
-  breaks = c("Burned site", "Unburned site", "Mean Daily Air Temp")
+  breaks = c("Burned snow depth", "Unburned snow depth", "Mean daily air temp")
 ) +
   scale_shape_manual(
     name = NULL,
     values = c("Dates that treewells developed" = 16)) + 
+  guides(shape = "none") + 
   theme_bw()  + 
   theme(
     legend.text = element_text(size = 10))
@@ -3869,7 +3879,7 @@ TSZ_b_snowdepths_lineplot
 
 ```{r}
 #final combined plot
-final_comb_snowdepth_lineplot <- ggarrange(PSZ_b_snowdepths_lineplot, TSZ_b_snowdepths_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+final_comb_snowdepth_lineplot <- ggarrange(PSZ_b_snowdepths_lineplot, TSZ_b_snowdepths_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
 
 final_comb_snowdepth_lineplot
 ```
@@ -3877,8 +3887,8 @@ final_comb_snowdepth_lineplot
 ```{r}
 ggsave(filename = "final_comb_snowdepth_lineplot.png", 
        plot = final_comb_snowdepth_lineplot, 
-       width = 10, 
-       height = 7, 
+       width = 7, 
+       height = 6, 
        dpi = 600)
 ```
 
