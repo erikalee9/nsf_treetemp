@@ -444,6 +444,10 @@ PSZ_threeday_accu_comp_lineplot <- ggplot(data = PSZ_threeday_accu_comp) +
   ) + 
   #remove the linetype legend
   guides(linetype = "none") + 
+  scale_x_datetime(
+    breaks = as.POSIXct(c("2024-02-10 12:00:00", "2024-02-11 12:00:00", "2024-02-12 12:00:00"), tz = "MST"),
+    labels = c("Feb 10th", "Feb 11th", "Feb 12th")
+  ) +
   scale_color_manual(
     name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
@@ -451,11 +455,11 @@ PSZ_threeday_accu_comp_lineplot <- ggplot(data = PSZ_threeday_accu_comp) +
   theme_bw() +
   labs(title = "a) PSZ Accumulation", x = NULL, y = "Temperature (°C)") +
   theme(
-    strip.text = element_text(size = 12),  # Facet title size
-    axis.title = element_text(size = 12),  # Axis title size
-    axis.text = element_text(size = 12),  # Axis tick labels
-    legend.title = element_text(size = 12),  # Legend title size
-    legend.text = element_text(size = 11)  # Legend labels size
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
   )
   
   
@@ -476,6 +480,10 @@ TSZ_threeday_accu_comp_lineplot <- ggplot(data = TSZ_threeday_accu_comp) +
   ) + 
   #remove the linetype legend
   guides(linetype = "none") + 
+  scale_x_datetime(
+    breaks = as.POSIXct(c("2024-02-10 12:00:00", "2024-02-11 12:00:00", "2024-02-12 12:00:00"), tz = "MST"),
+    labels = c("Feb 10th", "Feb 11th", "Feb 12th")
+  ) +
   scale_color_manual(
     name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
@@ -483,11 +491,11 @@ TSZ_threeday_accu_comp_lineplot <- ggplot(data = TSZ_threeday_accu_comp) +
   theme_bw() +
   labs(title = "b) TSZ Accumulation", x = "Date", y = "Temperature (°C)") +
  theme(
-    strip.text = element_text(size = 12),  # Facet title size
-    axis.title = element_text(size = 12),  # Axis title size
-    axis.text = element_text(size = 12),  # Axis tick labels
-    legend.title = element_text(size = 12),  # Legend title size
-    legend.text = element_text(size = 11)  # Legend labels size
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
   )
   
 TSZ_threeday_accu_comp_lineplot
@@ -509,18 +517,22 @@ PSZ_threeday_abla_comp_lineplot <- ggplot(data = PSZ_threeday_abla_comp) +
   ) + 
   #remove the linetype legend
   guides(linetype = "none") + 
+  scale_x_datetime(
+    breaks = as.POSIXct(c("2024-05-10 12:00:00", "2024-05-11 12:00:00", "2024-05-12 12:00:00"), tz = "MST"),
+    labels = c("May 10th", "May 11th", "May 12th")
+  ) +
   scale_color_manual(
     name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
  scale_y_continuous(limits = c(-15, 35)) +  # Set the y-axis limits here
   theme_bw() +
   labs(title = "a) PSZ Ablation", x = NULL, y = "Temperature (°C)") +
-  theme(
-    strip.text = element_text(size = 12),  # Facet title size
-    axis.title = element_text(size = 12),  # Axis title size
-    axis.text = element_text(size = 12),  # Axis tick labels
-    legend.title = element_text(size = 12),  # Legend title size
-    legend.text = element_text(size = 11)  # Legend labels size
+ theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
   )
   
   
@@ -540,6 +552,10 @@ TSZ_threeday_abla_comp_lineplot <- ggplot(data = TSZ_threeday_abla_comp) +
   ) + 
     #remove the linetype legend
   guides(linetype = "none") + 
+  scale_x_datetime(
+    breaks = as.POSIXct(c("2024-05-10 12:00:00", "2024-05-11 12:00:00", "2024-05-12 12:00:00"), tz = "MST"),
+    labels = c("May 10th", "May 11th", "May 12th")
+  ) +
   scale_color_manual(
     name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
@@ -547,11 +563,11 @@ TSZ_threeday_abla_comp_lineplot <- ggplot(data = TSZ_threeday_abla_comp) +
   theme_bw() +
   labs(title = "b) TSZ Ablation", x = "Date", y = "Temperature (°C)") +
   theme(
-    strip.text = element_text(size = 12),  # Facet title size
-    axis.title = element_text(size = 12),  # Axis title size
-    axis.text = element_text(size = 12),  # Axis tick labels
-    legend.title = element_text(size = 12),  # Legend title size
-    legend.text = element_text(size = 11)  # Legend labels size
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
   )
   
   
@@ -590,8 +606,8 @@ comb_threeday_accu_comp_lineplot
 ggsave(
   filename = "comb_threeday_accu_comp_lineplot.png",  # File name
   plot = comb_threeday_accu_comp_lineplot,           # The arranged plot object
-  width = 14,                                          # Adjust width as needed
-  height = 8,                                        # Adjust height as needed
+ width = 7,                                          # Adjust width as needed
+  height = 7,                                        # Adjust height as needed
   dpi = 600                                            # High resolution
 )
 ```
@@ -609,8 +625,8 @@ comb_threeday_abla_comp_lineplot
 ggsave(
   filename = "comb_threeday_abla_comp_lineplot.png",  # File name
   plot = comb_threeday_abla_comp_lineplot,           # The arranged plot object
-  width = 14,                                          # Adjust width as needed
-  height = 8,                                         # Adjust height as needed
+  width = 7,                                          # Adjust width as needed
+  height = 7,                                         # Adjust height as needed
   dpi = 600                                            # High resolution
 )
 ```
@@ -959,8 +975,8 @@ Line Plots of mean daily temps, not separated by aspect!
 PSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = PSZ_dtnt_daily_gbdbub_plot_dataframe ) +
   # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
-  geom_line(aes(x = day, y = gb_temp, color = "GB"), linewidth = 0.7) + 
-  geom_line(aes(x = day, y = db_temp, color = "DB"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = db_temp, color = "DB"), alpha = 0.9, linewidth = 0.7) +
+  geom_line(aes(x = day, y = gb_temp, color = "GB"), alpha = 0.9, linewidth = 0.7) + 
   geom_line(aes(x = day, y = ub_temp, color = "live"), linewidth = 0.7, alpha = 0.8) +
   facet_wrap(~phase) +
   labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
@@ -976,11 +992,11 @@ PSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = PSZ_dtnt_daily_gbdbub_p
              color = "grey23",                      # Line color
              size = 0.4, alpha = 0.8) +
    theme(
-    strip.text = element_text(size = 12),  # Facet title size
-    axis.title = element_text(size = 12),  # Axis title size
-    axis.text = element_text(size = 12),  # Axis tick labels
-    legend.title = element_text(size = 12),  # Legend title size
-    legend.text = element_text(size = 11)  # Legend labels size
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
   )
 
 PSZ_dtnt_treetemp_daily_gbdbub_lineplot
@@ -990,8 +1006,8 @@ PSZ_dtnt_treetemp_daily_gbdbub_lineplot
 TSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_dtnt_daily_gbdbub_plot_dataframe ) +
   # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
-  geom_line(aes(x = day, y = gb_temp, color = "GB"), linewidth = 0.7) + 
-  geom_line(aes(x = day, y = db_temp, color = "DB"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = db_temp, color = "DB"), alpha = 0.9, linewidth = 0.7) +
+  geom_line(aes(x = day, y = gb_temp, color = "GB"), alpha = 0.9, linewidth = 0.7) + 
   geom_line(aes(x = day, y = ub_temp, color = "live"), linewidth = 0.7, alpha = 0.8) +
   facet_wrap(~phase) +
   labs(title = "b) TSZ", x = "Date", y = "Temperature (°C)") +
@@ -1007,11 +1023,11 @@ TSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_dtnt_daily_gbdbub_p
              color = "grey23",                      # Line color
              size = 0.4, alpha = 0.8) +
    theme(
-    strip.text = element_text(size = 12),  # Facet title size
-    axis.title = element_text(size = 12),  # Axis title size
-    axis.text = element_text(size = 12),  # Axis tick labels
-    legend.title = element_text(size = 12),  # Legend title size
-    legend.text = element_text(size = 11)  # Legend labels size
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
   )
 
 TSZ_dtnt_treetemp_daily_gbdbub_lineplot
@@ -1027,8 +1043,8 @@ comb_dtnt_daily_lineplot
 ggsave(
   filename = "comb_dtnt_daily_lineplot.png",
   plot = comb_dtnt_daily_lineplot,           
-  #width = 12,                                         
-  #height = 8,                                         # Adjust height as needed
+  width = 7,                                         
+  height = 7,                                         # Adjust height as needed
   dpi = 600                                            # High resolution
 )
 ```
@@ -1222,6 +1238,13 @@ dt_t_treetemp_daily_gbdbub_boxplot <- ggplot(data = dt_full_daily_gbdbub_boxplot
     name = "burn status",
     values = c("green burn" = "#1B7837", "dead burn" = "#D95F02", "live" = "#2166AC"),
     labels = c("green burn" = "Green Burn", "dead burn" = "Dead Burn", "live" = "Live")
+  ) + 
+  theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
   )
 
 dt_t_treetemp_daily_gbdbub_boxplot
@@ -1286,11 +1309,14 @@ PSZ_dtnt_boxplot <- ggplot(data = PSZ_dtnt_data) +
   scale_y_continuous(
     limits = c(-25, 40)  
   ) +
-  theme_bw() +
   theme(
-    axis.text.x = element_text(size = 11),  
-    axis.ticks.x = element_line()  
-  ) +
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10), 
+    axis.ticks.x = element_line()) + 
+  theme_bw() +
   guides(alpha = "none")  # Remove alpha (phase) from legend
 
 PSZ_dtnt_boxplot
@@ -1321,9 +1347,13 @@ TSZ_dtnt_boxplot <- ggplot(data = TSZ_dtnt_data) +
   ) +
   theme_bw() +
   theme(
-    axis.text.x = element_text(size = 11),  
-    axis.ticks.x = element_line()  
-  ) +
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10), 
+    axis.ticks.x = element_line()) + 
+  theme_bw() +
   guides(alpha = "none")  # Remove alpha (phase) from legend
 
 TSZ_dtnt_boxplot
@@ -1340,7 +1370,7 @@ ggsave(
   filename = "comb_dtnt_boxplot.png",  # File name
   plot = comb_dtnt_boxplot,           # The arranged plot object
   width = 7,                                          # Adjust width as needed
-  height = 10,                                         # Adjust height as needed
+  height = 9,                                         # Adjust height as needed
   dpi = 600                                            # High resolution
 )
 ```
@@ -1434,7 +1464,13 @@ PSZ_meandaily_ns_lineplot <- ggplot(data = PSZ_mean_ns_lineplot_data_V2) +
              linetype = "solid", color = "grey23", size = 0.4, alpha = 0.8) +
   # Snow-free date line
   geom_vline(xintercept = as.numeric(as.Date('2024-05-29')), 
-             linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8)
+             linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8) + 
+  theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10))
 
 
 PSZ_meandaily_ns_lineplot
@@ -1459,7 +1495,13 @@ TSZ_meandaily_ns_lineplot <- ggplot(data = TSZ_mean_ns_lineplot_data) +
              linetype = "solid", color = "grey23", size = 0.4, alpha = 0.8) +
   # Snow-free date line
   geom_vline(xintercept = as.numeric(as.Date('2024-05-12')), 
-             linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8)
+             linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8) + 
+    theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10))
 
 TSZ_meandaily_ns_lineplot
 ```
@@ -1475,8 +1517,8 @@ comb_mean_ns_lineplot
 ggsave(
   filename = "comb_mean_ns_lineplot.png",  # File name
   plot = comb_mean_ns_lineplot,           # The arranged plot object
-  width = 7.5,                                          # Adjust width as needed
-  height = 10,                                         # Adjust height as needed
+  width = 7,                                          # Adjust width as needed
+  height = 9,                                         # Adjust height as needed
   dpi = 600                                            # High resolution
 )
 ```
@@ -3289,13 +3331,6 @@ pers_b_diff_results <- filtered_pers_b_aspects_r %>%
     mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
     mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
   )
-
-pers_ub_diff_results <- filtered_pers_ub_aspects_r %>%
-  group_by(burn_status, aspect) %>%
-  summarise(
-    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
-    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
-  )
 ```
 
 ```{r}
@@ -3775,7 +3810,7 @@ PSZ_b_snowdepths_lineplot <- ggplot() +
   geom_vline(xintercept = as.numeric(as.Date('2024-05-03')), 
              linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
   # Bold line at y = 0
-  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
   # Burned snow depth
   geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), linetype = "solid", linewidth = 0.8) +
   # Unburned snow depth
@@ -3817,7 +3852,12 @@ PSZ_b_snowdepths_lineplot <- ggplot() +
   guides(shape = "none") + 
   theme_bw() + 
   theme(
-    legend.text = element_text(size = 10))
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
+  )
 
 PSZ_b_snowdepths_lineplot
 ```
@@ -3828,7 +3868,7 @@ TSZ_b_snowdepths_lineplot <- ggplot() +
   geom_vline(xintercept = as.numeric(as.Date('2024-04-12')), 
              linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
    # Bold line at y = 0
-  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
   # Burned snow depth
   geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), linetype = "solid", linewidth = 0.8) +
   # Unburned snow depth
@@ -3869,9 +3909,15 @@ TSZ_b_snowdepths_lineplot <- ggplot() +
     name = NULL,
     values = c("Dates that treewells developed" = 16)) + 
   guides(shape = "none") + 
-  theme_bw()  + 
-  theme(
-    legend.text = element_text(size = 10))
+  theme_bw() + 
+   theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
+  )
+
 
 TSZ_b_snowdepths_lineplot
 ```
