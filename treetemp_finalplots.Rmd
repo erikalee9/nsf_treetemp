@@ -460,6 +460,10 @@ PSZ_threeday_accu_comp_lineplot <- ggplot(data = PSZ_threeday_accu_comp) +
     axis.text = element_text(size = 11),  # Axis tick labels
     legend.title = element_text(size = 11),  # Legend title size
     legend.text = element_text(size = 10)  # Legend labels size
+  ) + 
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
   )
   
   
@@ -496,6 +500,10 @@ TSZ_threeday_accu_comp_lineplot <- ggplot(data = TSZ_threeday_accu_comp) +
     axis.text = element_text(size = 11),  # Axis tick labels
     legend.title = element_text(size = 11),  # Legend title size
     legend.text = element_text(size = 10)  # Legend labels size
+  ) + 
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
   )
   
 TSZ_threeday_accu_comp_lineplot
@@ -533,6 +541,10 @@ PSZ_threeday_abla_comp_lineplot <- ggplot(data = PSZ_threeday_abla_comp) +
     axis.text = element_text(size = 11),  # Axis tick labels
     legend.title = element_text(size = 11),  # Legend title size
     legend.text = element_text(size = 10)  # Legend labels size
+  ) + 
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
   )
   
   
@@ -568,6 +580,10 @@ TSZ_threeday_abla_comp_lineplot <- ggplot(data = TSZ_threeday_abla_comp) +
     axis.text = element_text(size = 11),  # Axis tick labels
     legend.title = element_text(size = 11),  # Legend title size
     legend.text = element_text(size = 10)  # Legend labels size
+  ) + 
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
   )
   
   
@@ -997,7 +1013,10 @@ PSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = PSZ_dtnt_daily_gbdbub_p
     axis.text = element_text(size = 11),  # Axis tick labels
     legend.title = element_text(size = 11),  # Legend title size
     legend.text = element_text(size = 10)  # Legend labels size
-  )
+  ) + 
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"))
 
 PSZ_dtnt_treetemp_daily_gbdbub_lineplot
 ```
@@ -1028,7 +1047,10 @@ TSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_dtnt_daily_gbdbub_p
     axis.text = element_text(size = 11),  # Axis tick labels
     legend.title = element_text(size = 11),  # Legend title size
     legend.text = element_text(size = 10)  # Legend labels size
-  )
+  ) + 
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"))
 
 TSZ_dtnt_treetemp_daily_gbdbub_lineplot
 ```
@@ -1044,7 +1066,7 @@ ggsave(
   filename = "comb_dtnt_daily_lineplot.png",
   plot = comb_dtnt_daily_lineplot,           
   width = 7,                                         
-  height = 7,                                         # Adjust height as needed
+  height = 9.5,                                         # Adjust height as needed
   dpi = 600                                            # High resolution
 )
 ```
@@ -1455,7 +1477,7 @@ PSZ_meandaily_ns_lineplot <- ggplot(data = PSZ_mean_ns_lineplot_data_V2) +
   labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
   scale_color_manual(
     name = NULL, 
-    values = c("north" = scales::alpha("#2166AC", 0.8), "south" = "#D95F02"),
+    values = c("north" = scales::alpha("blue2", 0.8), "south" = "orangered3"),
     labels = c("north" = "North", "south" = "South")
   ) +
   theme_bw() + 
@@ -1470,7 +1492,12 @@ PSZ_meandaily_ns_lineplot <- ggplot(data = PSZ_mean_ns_lineplot_data_V2) +
     axis.title = element_text(size = 11),  # Axis title size
     axis.text = element_text(size = 11),  # Axis tick labels
     legend.title = element_text(size = 11),  # Legend title size
-    legend.text = element_text(size = 10))
+    legend.text = element_text(size = 10)) + 
+  #manually setting the length of legend lines
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
+  )
 
 
 PSZ_meandaily_ns_lineplot
@@ -1486,7 +1513,7 @@ TSZ_meandaily_ns_lineplot <- ggplot(data = TSZ_mean_ns_lineplot_data) +
   labs(title = "b) TSZ", x = "Date", y = "Temperature (°C)") +
   scale_color_manual(
     name = NULL, 
-    values = c("north" = scales::alpha("#2166AC", 0.8), "south" = "#D95F02"),
+   values = c("north" = scales::alpha("blue2", 0.8), "south" = "orangered3"),
     labels = c("north" = "North", "south" = "South")
   ) +
   theme_bw() + 
@@ -1501,7 +1528,12 @@ TSZ_meandaily_ns_lineplot <- ggplot(data = TSZ_mean_ns_lineplot_data) +
     axis.title = element_text(size = 11),  # Axis title size
     axis.text = element_text(size = 11),  # Axis tick labels
     legend.title = element_text(size = 11),  # Legend title size
-    legend.text = element_text(size = 10))
+    legend.text = element_text(size = 10)) + 
+  #manually setting the length of legend lines
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
+  )
 
 TSZ_meandaily_ns_lineplot
 ```
@@ -1517,6 +1549,28 @@ comb_mean_ns_lineplot
 ggsave(
   filename = "comb_mean_ns_lineplot.png",  # File name
   plot = comb_mean_ns_lineplot,           # The arranged plot object
+  width = 7,                                          # Adjust width as needed
+  height = 9,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
+```
+
+```{r}
+#individually saving to separate plots
+#use this plot!
+ggsave(
+  filename = "PSZ_meandaily_ns_lineplot.png",  # File name
+  plot = PSZ_meandaily_ns_lineplot,           # The arranged plot object
+  width = 7,                                          # Adjust width as needed
+  height = 9,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
+```
+
+```{r}
+ggsave(
+  filename = "TSZ_meandaily_ns_lineplot.png",  # File name
+  plot = TSZ_meandaily_ns_lineplot,           # The arranged plot object
   width = 7,                                          # Adjust width as needed
   height = 9,                                         # Adjust height as needed
   dpi = 600                                            # High resolution
@@ -3841,7 +3895,7 @@ PSZ_b_snowdepths_lineplot <- ggplot() +
   name = NULL,
   values = c(
     "Burned Snow Depth" = "#D95F02", 
-    "Unburned Snow Depth" = "#2166AC", 
+    "Unburned Snow Depth" = alpha("#2166AC",0.9),
     "Mean Daily Air Temp" = alpha("#666666", 0.7)),
     # Sets legend order
   breaks = c("Burned Snow Depth", "Unburned Snow Depth", "Mean Daily Air Temp")
@@ -3856,8 +3910,9 @@ PSZ_b_snowdepths_lineplot <- ggplot() +
     axis.title = element_text(size = 11),  # Axis title size
     axis.text = element_text(size = 11),  # Axis tick labels
     legend.title = element_text(size = 11),  # Legend title size
-    legend.text = element_text(size = 10)  # Legend labels size
-  )
+    legend.text = element_text(size = 10), 
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"))
 
 PSZ_b_snowdepths_lineplot
 ```
@@ -3899,7 +3954,7 @@ TSZ_b_snowdepths_lineplot <- ggplot() +
   name = NULL,
   values = c(
     "Burned Snow Depth" = "#D95F02", 
-    "Unburned Snow Depth" = "#2166AC", 
+    "Unburned Snow Depth" = alpha("#2166AC", 0.9), 
     "Mean Daily Air Temp" = alpha("#666666", 0.7)
   ),
     # Sets legend order
@@ -3915,8 +3970,10 @@ TSZ_b_snowdepths_lineplot <- ggplot() +
     axis.title = element_text(size = 11),  # Axis title size
     axis.text = element_text(size = 11),  # Axis tick labels
     legend.title = element_text(size = 11),  # Legend title size
-    legend.text = element_text(size = 10)  # Legend labels size
-  )
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"))
+
 
 
 TSZ_b_snowdepths_lineplot
