@@ -920,7 +920,8 @@ PSZ_dtnt_daily_gbdbub_plot_dataframe <- full_pers_gbdbub_data %>%
   select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
   #summarizing for one daily value
   group_by(day, month, phase, zone, aspect) %>%
-  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))  %>%
+  filter(day <= "2024-06-03")
   
 
 TSZ_dtnt_daily_gbdbub_plot_dataframe <- full_trans_gbdbub_data %>%
@@ -928,7 +929,8 @@ TSZ_dtnt_daily_gbdbub_plot_dataframe <- full_trans_gbdbub_data %>%
   select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
   #summarizing for one daily value
   group_by(day, month, phase, zone, aspect) %>%
-  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp)) %>%
+  filter(day <= "2024-06-03")
 ```
 
 ```{r}
@@ -1002,8 +1004,13 @@ PSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = PSZ_dtnt_daily_gbdbub_p
   ) +
   scale_y_continuous(limits = c(-20, 28)) +  # Set the y-axis limits here
   theme_bw() + 
+  #beginning of ablation
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.7) +
   #snowfree date
-  geom_vline(xintercept = as.numeric(as.Date('2024-05-29')), 
+  geom_vline(xintercept = as.numeric(as.Date('2024-06-03')), 
              linetype = "dashed",                # Dashed line
              color = "grey23",                      # Line color
              size = 0.4, alpha = 0.8) +
@@ -1036,8 +1043,13 @@ TSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_dtnt_daily_gbdbub_p
   ) +
   scale_y_continuous(limits = c(-20, 28)) +  # Set the y-axis limits here
   theme_bw() + 
+  #beginning of ablation
+  geom_vline(xintercept = as.numeric(as.Date('2024-04-01')), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.7) +
   #snowfree date
-  geom_vline(xintercept = as.numeric(as.Date('2024-05-12')), 
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-16')), 
              linetype = "dashed",                # Dashed line
              color = "grey23",                      # Line color
              size = 0.4, alpha = 0.8) +
@@ -1066,7 +1078,7 @@ ggsave(
   filename = "comb_dtnt_daily_lineplot.png",
   plot = comb_dtnt_daily_lineplot,           
   width = 7,                                         
-  height = 9.5,                                         # Adjust height as needed
+  height = 8.5,                                         # Adjust height as needed
   dpi = 600                                            # High resolution
 )
 ```
@@ -1289,7 +1301,8 @@ PSZ_dtnt_data <- full_pers_gbdbub_data %>%
       burn_status == "ub_temp" ~ "live",
       TRUE ~ burn_status  # Optional: Keep original value if no match
     )
-  )
+  ) %>%
+  filter(day <= "2024-06-03")
 
 #TSZ
 TSZ_dtnt_data <- full_trans_gbdbub_data %>%
@@ -1304,8 +1317,8 @@ TSZ_dtnt_data <- full_trans_gbdbub_data %>%
       burn_status == "db_temp" ~ "DB",
       burn_status == "ub_temp" ~ "live",
       TRUE ~ burn_status  # Optional: Keep original value if no match
-    )
-  )
+    )) %>%
+  filter(day <= "2024-06-03")
 ```
 
 ```{r}
@@ -1447,7 +1460,9 @@ PSZ_UB_mean_ns_lineplot_data <- PSZ_mean_ns_lineplot_data %>%
 
 ```{r}
 #rejoining to make combined dataframe
-PSZ_mean_ns_lineplot_data_V2 <- rbind(PSZ_DBGB_mean_ns_lineplot_data, PSZ_UB_mean_ns_lineplot_data)
+PSZ_mean_ns_lineplot_data_V2 <- bind_rows(PSZ_DBGB_mean_ns_lineplot_data, PSZ_UB_mean_ns_lineplot_data) %>%
+  #filtering so the lineplot ends on snow-free date for PSZ
+  filter(day <= as.Date("2024-06-03"))
 ```
 
 ```{r}
@@ -1462,7 +1477,8 @@ TSZ_mean_ns_lineplot_data <- full_15min_ns %>%
       TRUE ~ burn_status  # Keep any other values unchanged
     )) %>%
   group_by(day, zone, burn_status) %>%
-  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp))
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp)) %>%
+  filter(day <= as.Date("2024-06-03"))
 ```
 
 ```{r}
@@ -1485,7 +1501,7 @@ PSZ_meandaily_ns_lineplot <- ggplot(data = PSZ_mean_ns_lineplot_data_V2) +
   geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
              linetype = "solid", color = "grey23", size = 0.4, alpha = 0.8) +
   # Snow-free date line
-  geom_vline(xintercept = as.numeric(as.Date('2024-05-29')), 
+  geom_vline(xintercept = as.numeric(as.Date('2024-06-03')), 
              linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8) + 
   theme(
     strip.text = element_text(size = 11),  # Facet title size
@@ -1521,7 +1537,7 @@ TSZ_meandaily_ns_lineplot <- ggplot(data = TSZ_mean_ns_lineplot_data) +
   geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
              linetype = "solid", color = "grey23", size = 0.4, alpha = 0.8) +
   # Snow-free date line
-  geom_vline(xintercept = as.numeric(as.Date('2024-05-12')), 
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-16')), 
              linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8) + 
     theme(
     strip.text = element_text(size = 11),  # Facet title size
@@ -3797,6 +3813,22 @@ pers_ub_daily_snowdepth_data_V2 <- pers_ub_daily_snowdepth_data_V1 %>%
   filter(day <"2024-06-12")
 ```
 
+Data Wrangling a dataframe for mean daily tree temp of GB and DB trees by zone, for snow depth and air temp plot!
+
+```{r}
+PSZ_meanday_treetemp <- PSZ_dtnt_data %>%
+  filter(phase == "day", burn_status %in% c("DB", "GB")) %>%
+  group_by(day) %>%
+  summarize(mean_dt_treetemp = mean(temp))
+```
+
+```{r}
+TSZ_meanday_treetemp <- TSZ_dtnt_data %>%
+  filter(phase == "day", burn_status %in% c("DB", "GB")) %>%
+  group_by(day) %>%
+  summarize(mean_dt_treetemp = mean(temp))
+```
+
 Air temp & NR data!
 
 ```{r}
@@ -3808,7 +3840,7 @@ persb_wx_data <- filtered_persb_wx_hourly %>%
 persb_wx_data_V2 <- persb_wx_data %>%
   group_by(day, zone, burn_status) %>%
   summarize(mean_airtemp = max(mean_airtemp), mean_SW_net = mean(mean_SW_net), mean_LW_net = mean(mean_LW_net), mean_NR_Avg = mean(mean_NR_Avg)) %>%
-  filter(day <"2024-06-11")
+  filter(day <= "2024-06-03")
 ```
 
 ```{r}
@@ -3820,7 +3852,7 @@ transb_wx_data <- filtered_transb_wx_15min %>%
 transb_wx_data_V2 <- transb_wx_data %>%
   group_by(day, zone, burn_status) %>%
   summarize(mean_airtemp = max(mean_airtemp), mean_SW_net = mean(mean_SW_net), mean_LW_net = mean(mean_LW_net), mean_NR_Avg = mean(mean_NR_Avg)) %>%
-  filter(day <"2024-06-11")
+  filter(day <= "2024-06-03")
 ```
 
 ```{r}
@@ -3829,23 +3861,23 @@ persb_snowcamera_data_V2 <- persb_snowcamera_data %>%
   select(day, zone, burn_status, snowcam_max_depth_m, treewell_developed) %>%
   rename(max_snowdepth_m = snowcam_max_depth_m) %>%
   left_join(persb_wx_data_V2, by = c("day", "zone", "burn_status")) %>%
-  filter(day < "2024-05-29")
+  filter(day <= "2024-06-03")
 
 transb_snowcamera_data_V2 <- transb_snowcamera_data %>%
   select(day, zone, burn_status, snowcam_max_depth_m, treewell_developed) %>%
   rename(max_snowdepth_m = snowcam_max_depth_m)  %>%
   left_join(transb_wx_data_V2, by = c("day", "zone", "burn_status")) %>%
-  filter(day < "2024-05-12")
+  filter(day <= "2024-06-03")
 ```
 
 ```{r}
 persb_treewell_dates <- persb_snowcamera_data_V2 %>%
   filter(treewell_developed == "yes") %>%
-  filter(day < "2024-05-29")
+  filter(day <= "2024-06-03")
 
 transb_treewell_dates <- transb_snowcamera_data_V2 %>%
   filter(treewell_developed == "yes") %>%
-  filter(day < "2024-05-12")
+  filter(day <= "2024-05-16")
 ```
 
 Plotting
@@ -3858,6 +3890,8 @@ Version with Air Temp!
 scaling_factor <- 0.07
 ```
 
+Line plot version!
+
 ```{r}
 PSZ_b_snowdepths_lineplot <- ggplot() + 
   #manual snow survery date
@@ -3868,10 +3902,13 @@ PSZ_b_snowdepths_lineplot <- ggplot() +
   # Burned snow depth
   geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), linetype = "solid", linewidth = 0.8) +
   # Unburned snow depth
-  geom_line(data = pers_ub_daily_snowdepth_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
+  #geom_line(data = pers_ub_daily_snowdepth_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
+           # linetype = "solid", linewidth = 0.8) +
+    #mean daily tree temp 
+  geom_line(data = PSZ_meanday_treetemp, aes(x = day, y = mean_dt_treetemp * scaling_factor, color = "Tree Temperature"), 
             linetype = "solid", linewidth = 0.8) +
   # Burned wx station air temp
-  geom_line(data = persb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
+  geom_line(data = persb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Air Temperature"), 
             linetype = "solid", linewidth = 0.8) +
   # Treewell dates
   geom_point(data = persb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
@@ -3894,11 +3931,11 @@ PSZ_b_snowdepths_lineplot <- ggplot() +
   scale_color_manual(
   name = NULL,
   values = c(
-    "Burned Snow Depth" = "#D95F02", 
-    "Unburned Snow Depth" = alpha("#2166AC",0.9),
-    "Mean Daily Air Temp" = alpha("#666666", 0.7)),
+    "Burned Snow Depth" = "#2166AC", 
+    "Tree Temperature" = alpha("#D95F02",0.9),
+    "Air Temperature" = alpha("#666666", 0.7)),
     # Sets legend order
-  breaks = c("Burned Snow Depth", "Unburned Snow Depth", "Mean Daily Air Temp")
+  breaks = c("Burned Snow Depth", "Tree Temperature", "Air Temperature")
 ) +
   scale_shape_manual(
     name = NULL,
@@ -3917,27 +3954,100 @@ PSZ_b_snowdepths_lineplot <- ggplot() +
 PSZ_b_snowdepths_lineplot
 ```
 
+Snow line plot with temp bar plot version!
+
+```{r}
+PSZ_b_snowdepths_barplot <- ggplot() + 
+  # Manual snow survey date
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-03')), 
+             linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
+  # Mean daily tree temp (bar) - DODGED
+  geom_col(data = PSZ_meanday_treetemp, aes(x = day, y = mean_dt_treetemp * scaling_factor, fill = "Tree Temperature"), 
+           width = 0.7, position = position_dodge(width = 0.9)) +
+  # Burned wx station air temp (bar) - DODGED
+  geom_col(data = persb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, fill = "Air Temperature"), 
+           width = 0.7, position = position_dodge(width = 0.9)) +
+  # Burned snow depth (line)
+  geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), 
+            linetype = "solid", linewidth = 0.8) +
+  # Treewell dates
+  geom_point(data = persb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Snow Depth (m)",
+    fill = "Legend Title"  # Title for the fill legend
+  ) +
+  scale_y_continuous(
+    name = "Snow Depth (m)",
+    limits = c(-1, 2),
+    sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis for temperature
+  ) +
+  scale_x_date(
+    name = NULL,
+    limits = c(min(persb_wx_data_V2$day, na.rm = TRUE), max(persb_wx_data_V2$day, na.rm = TRUE)), 
+    expand = c(0, 0)
+  ) +
+  scale_color_manual(
+    name = NULL,
+    values = c("Burned Snow Depth" = "#2166AC")
+  ) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "Tree Temperature" = alpha("#D95F02", 0.7),  # Lower alpha for transparency
+      "Air Temperature" = alpha("#666666", 0.6)
+    ),
+    breaks = c("Tree Temperature", "Air Temperature")  # Sets legend order
+  ) +
+  scale_shape_manual(
+    name = NULL,
+    values = c("Dates that treewells developed" = 16)
+  ) + 
+  guides(shape = "none") + 
+  theme_bw() + 
+  theme(
+    strip.text = element_text(size = 11),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 11),
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1, "cm"),
+    legend.key.height = unit(0.85, "cm"))
+
+
+PSZ_b_snowdepths_barplot
+```
+
+TSZ Line Plot!
+
 ```{r}
 TSZ_b_snowdepths_lineplot <- ggplot() + 
   #manual snow survery date
   geom_vline(xintercept = as.numeric(as.Date('2024-04-12')), 
              linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
-   # Bold line at y = 0
+  # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
   # Burned snow depth
   geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), linetype = "solid", linewidth = 0.8) +
   # Unburned snow depth
-  geom_line(data = AG_transub_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
+  #geom_line(data = pers_ub_daily_snowdepth_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
+           # linetype = "solid", linewidth = 0.8) +
+    #mean daily tree temp 
+  geom_line(data = TSZ_meanday_treetemp, aes(x = day, y = mean_dt_treetemp * scaling_factor, color = "Tree Temperature"), 
             linetype = "solid", linewidth = 0.8) +
   # Burned wx station air temp
-  geom_line(data = transb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Mean Daily Air Temp"), 
+  geom_line(data = transb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, color = "Air Temperature"), 
             linetype = "solid", linewidth = 0.8) +
   # Treewell dates
   geom_point(data = transb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
              color = "black", fill = "black", size = 1.5) +
   labs(
-    title = "b) TSZ",
-    x = "Date",
+    title = "a) PSZ",
+    x = NULL,
     y = "Snow Depth (m)",
     color = "Legend Title"  # Title of the legend
   ) +
@@ -3948,35 +4058,99 @@ TSZ_b_snowdepths_lineplot <- ggplot() +
   ) +
   scale_x_date(
     name = NULL,
-    limits = c(min(transb_wx_data_V2$day, na.rm = TRUE), max(transb_wx_data_V2$day, na.rm = TRUE)), 
+    limits = c(min(transb_wx_data_V2$day, na.rm = TRUE), max(persb_wx_data_V2$day, na.rm = TRUE)), 
     expand = c(0, 0)) +
   scale_color_manual(
   name = NULL,
   values = c(
-    "Burned Snow Depth" = "#D95F02", 
-    "Unburned Snow Depth" = alpha("#2166AC", 0.9), 
-    "Mean Daily Air Temp" = alpha("#666666", 0.7)
-  ),
+    "Burned Snow Depth" = "#2166AC", 
+    "Tree Temperature" = alpha("#D95F02",0.9),
+    "Air Temperature" = alpha("#666666", 0.7)),
     # Sets legend order
-  breaks = c("Burned Snow Depth", "Unburned Snow Depth", "Mean Daily Air Temp")
+  breaks = c("Burned Snow Depth", "Tree Temperature", "Air Temperature")
 ) +
   scale_shape_manual(
     name = NULL,
     values = c("Dates that treewells developed" = 16)) + 
   guides(shape = "none") + 
   theme_bw() + 
-   theme(
+  theme(
     strip.text = element_text(size = 11),  # Facet title size
     axis.title = element_text(size = 11),  # Axis title size
     axis.text = element_text(size = 11),  # Axis tick labels
     legend.title = element_text(size = 11),  # Legend title size
-    legend.text = element_text(size = 10),
+    legend.text = element_text(size = 10), 
     legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
     legend.key.height = unit(0.85, "cm"))
 
-
-
 TSZ_b_snowdepths_lineplot
+```
+
+TSZ Line plot for snow with bar plot for temps
+
+```{r}
+TSZ_b_snowdepths_barplot <- ggplot() + 
+  # Manual snow survey date
+  geom_vline(xintercept = as.numeric(as.Date('2024-04-12')), 
+             linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
+  # Mean daily tree temp (bar) - DODGED
+  geom_col(data = TSZ_meanday_treetemp, aes(x = day, y = mean_dt_treetemp * scaling_factor, fill = "Tree Temperature"), 
+           width = 0.7, position = position_dodge(width = 0.9)) +
+  # Burned wx station air temp (bar) - DODGED
+  geom_col(data = transb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, fill = "Air Temperature"), 
+           width = 0.7, position = position_dodge(width = 0.9)) +
+  # Burned snow depth (line)
+  geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), 
+            linetype = "solid", linewidth = 0.8) +
+  # Treewell dates
+  geom_point(data = transb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  labs(
+    title = "b) TSZ",
+    x = "Date",
+    y = "Snow Depth (m)",
+    fill = "Legend Title"  # Title for the fill legend
+  ) +
+  scale_y_continuous(
+    name = "Snow Depth (m)",
+    limits = c(-1, 2),
+    sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis for temperature
+  ) +
+  scale_x_date(
+    name = NULL,
+    limits = c(min(transb_wx_data_V2$day, na.rm = TRUE), max(persb_wx_data_V2$day, na.rm = TRUE)), 
+    expand = c(0, 0)
+  ) +
+  scale_color_manual(
+    name = NULL,
+    values = c("Burned Snow Depth" = "#2166AC")
+  ) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "Tree Temperature" = alpha("#D95F02", 0.7),  # Lower alpha for transparency
+      "Air Temperature" = alpha("#666666", 0.6)
+    ),
+    breaks = c("Tree Temperature", "Air Temperature")  # Sets legend order
+  ) +
+  scale_shape_manual(
+    name = NULL,
+    values = c("Dates that treewells developed" = 16)
+  ) + 
+  guides(shape = "none") + 
+  theme_bw() + 
+  theme(
+    strip.text = element_text(size = 11),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 11),
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1, "cm"),
+    legend.key.height = unit(0.85, "cm"))
+
+TSZ_b_snowdepths_barplot
 ```
 
 ```{r}
@@ -3987,10 +4161,25 @@ final_comb_snowdepth_lineplot
 ```
 
 ```{r}
-ggsave(filename = "final_comb_snowdepth_lineplot.png", 
+#final combined plot
+final_comb_snowdepth_barplot <- ggarrange(PSZ_b_snowdepths_barplot, TSZ_b_snowdepths_barplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
+
+final_comb_snowdepth_barplot
+```
+
+```{r}
+ggsave(filename = "final_comb_snowdepth_lineplot_V4.png", 
        plot = final_comb_snowdepth_lineplot, 
        width = 7, 
        height = 6, 
+       dpi = 600)
+```
+
+```{r}
+ggsave(filename = "final_comb_snowdepth_barplot_V2.png", 
+       plot = final_comb_snowdepth_barplot, 
+       width = 6.5, 
+       height = 7, 
        dpi = 600)
 ```
 
