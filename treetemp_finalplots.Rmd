@@ -4183,6 +4183,18 @@ ggsave(filename = "final_comb_snowdepth_barplot_V2.png",
        dpi = 600)
 ```
 
+### Snow Depth Stats by Zone
+
+```{r}
+PSZ_snowdepth_stats <- persb_snowcamera_data_V2 %>%
+  summarize(max_sd_m = max(max_snowdepth_m))
+```
+
+```{r}
+TSZ_snowdepth_stats <- transb_snowcamera_data_V2 %>%
+  summarize(max_sd_m = max(max_snowdepth_m))
+```
+
 Version with SWin instead of air temp
 
 ```{r}
