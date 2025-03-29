@@ -1049,7 +1049,7 @@ TSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_dtnt_daily_gbdbub_p
              color = "grey23",                      # Line color
              size = 0.4, alpha = 0.7) +
   #snowfree date
-  geom_vline(xintercept = as.numeric(as.Date('2024-05-16')), 
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-08')), 
              linetype = "dashed",                # Dashed line
              color = "grey23",                      # Line color
              size = 0.4, alpha = 0.8) +
@@ -1537,7 +1537,7 @@ TSZ_meandaily_ns_lineplot <- ggplot(data = TSZ_mean_ns_lineplot_data) +
   geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
              linetype = "solid", color = "grey23", size = 0.4, alpha = 0.8) +
   # Snow-free date line
-  geom_vline(xintercept = as.numeric(as.Date('2024-05-16')), 
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-08')), 
              linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8) + 
     theme(
     strip.text = element_text(size = 11),  # Facet title size
@@ -3405,7 +3405,7 @@ pers_b_diff_results <- filtered_pers_b_aspects_r %>%
 
 ```{r}
 daily_pers_b_diff_results <- filtered_pers_b_aspects_r %>%
-  group_by(day, burn_status, aspect) %>%
+  group_by(burn_status, aspect) %>%
   summarise(
     mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
     mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
@@ -3421,7 +3421,7 @@ daily_pers_ub_diff_results <- filtered_pers_ub_aspects_r %>%
 
 ```{r}
 trans_b_diff_results <- filtered_pers_b_aspects_r %>%
-  group_by(burn_status, aspect) %>%
+  group_by(burn_status, phase) %>%
   summarise(
     mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
     mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
@@ -3559,7 +3559,7 @@ pers_gbdbub_aspects <- pers_gb_aspects %>%
 ```{r}
 #gb vs db
 pers_gb_db_diff_results <- pers_gbdbub_aspects %>%
-  #group_by(aspect) %>%
+  group_by(phase) %>%
   filter((gb_temp + db_temp) != 0) %>%
   summarise(
     mean_avg_diff = mean(abs(gb_temp - db_temp), na.rm = TRUE),
@@ -3568,7 +3568,7 @@ pers_gb_db_diff_results <- pers_gbdbub_aspects %>%
 
 # gb vs live
 pers_gb_live_diff_results <- pers_gbdbub_aspects %>%
-  #group_by(aspect) %>%
+  group_by(phase) %>%
   filter((gb_temp + ub_temp) != 0) %>%
   summarise(
     mean_avg_diff = mean(abs(gb_temp - ub_temp), na.rm = TRUE),
@@ -3577,7 +3577,7 @@ pers_gb_live_diff_results <- pers_gbdbub_aspects %>%
 
 # db vs live
 pers_db_live_diff_results <- pers_gbdbub_aspects %>%
-  #group_by(aspect) %>%
+  group_by(phase) %>%
   filter((db_temp + ub_temp) != 0) %>%
   summarise(
     mean_avg_diff = mean(abs(db_temp - ub_temp), na.rm = TRUE),
@@ -3613,7 +3613,7 @@ trans_gbdbub_aspects <- trans_gb_aspects %>%
 ```{r}
 #gb vs db
 trans_gb_db_diff_results <- trans_gbdbub_aspects %>%
-  #group_by(aspect) %>%
+  group_by(phase) %>%
   filter((gb_temp + db_temp) != 0) %>%
   summarise(
     mean_avg_diff = mean(abs(gb_temp - db_temp), na.rm = TRUE),
@@ -3622,7 +3622,7 @@ trans_gb_db_diff_results <- trans_gbdbub_aspects %>%
 
 # gb vs live
 trans_gb_live_diff_results <- trans_gbdbub_aspects %>%
- # group_by(aspect) %>%
+  group_by(phase) %>%
   filter((gb_temp + ub_temp) != 0) %>%
   summarise(
     mean_avg_diff = mean(abs(gb_temp - ub_temp), na.rm = TRUE),
@@ -3631,7 +3631,7 @@ trans_gb_live_diff_results <- trans_gbdbub_aspects %>%
 
 # db vs live
 trans_db_live_diff_results <- trans_gbdbub_aspects %>%
-  #group_by(aspect) %>%
+  group_by(phase) %>%
   filter((db_temp + ub_temp) != 0) %>%
   summarise(
     mean_avg_diff = mean(abs(db_temp - ub_temp), na.rm = TRUE),
@@ -4562,13 +4562,46 @@ t_ub_abla_ns_ttest_results
 #dataframes - not separated by north and south, but if I want to do that, I just need to add "aspect" into group_by then make a north and south-specific dataframe to run tests on
 PSZ_gbdbub_dataframe <- full_15min_gbdbub %>%
   filter(zone == "PSZ") %>%
-  group_by(zone, datetime) %>%
+  group_by(zone, phase) %>%
   summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp), ub_temp = mean(ub_temp))
 
 TSZ_gbdbub_dataframe <- full_15min_gbdbub %>%
   filter(zone == "TSZ") %>%
   group_by(zone, datetime) %>%
   summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp), ub_temp = mean(ub_temp))
+```
+
+```{r}
+#mean stats comparisons for db vs gb 
+PSZ_dbgb_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "PSZ") %>%
+  select(-ub_temp) %>%
+  group_by(zone, phase, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp))
+
+TSZ_dbgb_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "TSZ") %>%
+  select(-ub_temp) %>%
+  group_by(zone, phase, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp))
+```
+
+```{r}
+#mean stats comparisons for db vs ub vs gb -> getting average difference in temp!
+
+PSZ_dbubgb_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "PSZ") %>%
+  group_by(zone, phase, aspect) %>%
+  summarize(ub_temp = mean(ub_temp, na.rm = TRUE), 
+            db_temp = mean(db_temp, na.rm = TRUE), 
+            gb_temp = mean(gb_temp,na.rm = TRUE))
+
+TSZ_dbubgb_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "TSZ") %>%
+  group_by(zone, phase, aspect) %>%
+  summarize(ub_temp = mean(ub_temp, na.rm = TRUE), 
+            db_temp = mean(db_temp, na.rm = TRUE), 
+            gb_temp = mean(gb_temp,na.rm = TRUE))
 ```
 
 GB vs DB
