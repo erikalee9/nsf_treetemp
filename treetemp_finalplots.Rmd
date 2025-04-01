@@ -1421,7 +1421,7 @@ Lineplot - as of 2024-01-31 \*\* USE THIS LINEPLOT!
 ```{r}
 #PSZ lineplot data
 PSZ_mean_ns_lineplot_data <- full_15min_ns %>%
-  filter(zone == "PSZ") %>%
+  filter(zone == "PSZ", phase == "day") %>%
   mutate(day = as.Date(day)) %>%
   mutate(
     burn_status = case_when(
@@ -1468,7 +1468,7 @@ PSZ_mean_ns_lineplot_data_V2 <- bind_rows(PSZ_DBGB_mean_ns_lineplot_data, PSZ_UB
 ```{r}
 #TSZ lineplot data
 TSZ_mean_ns_lineplot_data <- full_15min_ns %>%
-  filter(zone == "TSZ") %>%
+  filter(zone == "TSZ", phase == "day") %>%
   mutate(
     burn_status = case_when(
       burn_status == "live" ~ "live",
@@ -3500,7 +3500,7 @@ transub_ns_aspects <- transub_n_aspects %>%
 
 ```{r}
 pers_b_ns_diff_results <- persb_ns_aspects %>%
-  group_by(burn_status, snow_phase) %>%
+  group_by(burn_status, phase, snow_phase) %>%
   #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing one observation
   filter((north_temp + south_temp) != 0) %>%
   summarise(
@@ -3508,7 +3508,7 @@ pers_b_ns_diff_results <- persb_ns_aspects %>%
     mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
 
 pers_ub_ns_diff_results <- persub_ns_aspects %>%
-  group_by(burn_status, snow_phase) %>%
+  group_by(burn_status, phase, snow_phase) %>%
   summarise(
     mean_avg_diff = mean(abs(north_temp - south_temp), na.rm = TRUE),
     mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
@@ -3516,13 +3516,13 @@ pers_ub_ns_diff_results <- persub_ns_aspects %>%
 
 ```{r}
 trans_b_ns_diff_results <- transb_ns_aspects %>%
-  group_by(burn_status, snow_phase) %>%
+  group_by(burn_status, snow_phase, phase) %>%
   summarise(
     mean_avg_diff = mean(abs(north_temp - south_temp), na.rm = TRUE),
     mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
 
 trans_ub_ns_diff_results <- transub_ns_aspects %>%
-  group_by(burn_status, snow_phase) %>%
+  group_by(burn_status, snow_phase, phase) %>%
   #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing two observations
   filter((north_temp + south_temp) != 0) %>%
   summarise(
