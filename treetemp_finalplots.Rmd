@@ -420,6 +420,10 @@ TSZ_threeday_abla_comp <- full_trans_aspects %>%
 ```
 
 ```{r}
+#long format
+```
+
+```{r}
 #single day dataframes - NOT USING as of now
 PSZ_single_day_sensor_comp_db <- full_pers_aspects %>%
   filter(burn_status == "dead burn", datetime >= "2024-03-10 00:00:00" & datetime <= "2024-03-10 23:45:00")
@@ -881,6 +885,91 @@ ggsave(
   height = 10,  # Set height (adjust as needed)
   dpi = 600  # High resolution for publication-quality output
 )
+```
+
+### Stats for individual sensors
+
+```{r}
+#data wrangling
+PSZ_ind_sensor_accu <- PSZ_threeday_accu_comp %>% 
+  pivot_wider(
+    names_from = tree_name,  # Column to become new columns
+    values_from = temp            # Values to fill in the new columns
+  )
+
+PSZ_tree1_ind_accu <- PSZ_ind_sensor_accu %>%
+  select(-`Tree 2`) %>%
+  drop_na()
+
+
+PSZ_tree2_ind_accu <- PSZ_ind_sensor_accu %>%
+  select(-`Tree 1`) %>%
+  drop_na() %>%
+  select(datetime, day, phase, zone, aspect, snow_phase, burn_status, 'Tree 2')
+
+PSZ_ind_accu_MADstats <- PSZ_tree1_ind_accu %>%
+  inner_join(PSZ_tree2_ind_accu, by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase", "burn_status")) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Ensure sum is not zero to avoid division errors
+  group_by(aspect, burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+PSZ_ind_sensor_abla <- PSZ_threeday_abla_comp %>% 
+  pivot_wider(
+    names_from = tree_name,  # Column to become new columns
+    values_from = temp            # Values to fill in the new columns
+  )
+
+PSZ_tree1_ind_abla <- PSZ_ind_sensor_abla %>%
+  select(-`Tree 2`) %>%
+  drop_na()
+
+
+PSZ_tree2_ind_abla <- PSZ_ind_sensor_abla %>%
+  select(-`Tree 1`) %>%
+  drop_na() %>%
+  select(datetime, day, phase, zone, aspect, snow_phase, burn_status, 'Tree 2')
+
+PSZ_ind_abla_MADstats <- PSZ_tree1_ind_abla %>%
+  inner_join(PSZ_tree2_ind_abla, by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase", "burn_status")) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Ensure sum is not zero to avoid division errors
+  group_by(aspect, burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+TSZ
+
+```{r}
+#data wrangling
+TSZ_ind_sensor_accu <- TSZ_threeday_accu_comp %>% 
+  pivot_wider(
+    names_from = "tree_name",
+    values_from = "temp")
+
+TSZ_tree1_ind_accu <- TSZ_ind_sensor_accu %>%
+  select(-`Tree 2`) %>%
+  drop_na()
+
+TSZ_tree2_ind_accu <- TSZ_ind_sensor_accu %>%
+  select(-`Tree 1`) %>%
+  drop_na() %>%
+  select(datetime, day, phase, zone, aspect, snow_phase, burn_status, 'Tree 2')
+
+TSZ_ind_accu_MADstats <- TSZ_tree1_ind_accu %>%
+  inner_join(PSZ_tree2_ind_accu, by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase", "burn_status")) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Ensure sum is not zero to avoid division errors
+  group_by(aspect, burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
 ```
 
 ## Daytime vs Nighttime Tree Temp Plot - GB/DB/UB with aspects
@@ -3530,7 +3619,7 @@ trans_ub_ns_diff_results <- transub_ns_aspects %>%
     mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
 ```
 
-Now doing stas as gb vs db vs live
+Now doing stats as gb vs db vs live
 
 ```{r}
 pers_gb_aspects <- filtered_pers_b_aspects_r %>%
