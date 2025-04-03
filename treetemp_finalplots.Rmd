@@ -5145,3 +5145,119 @@ t_gb_ub_ttest_results <- t.test(TSZ_gbdbub_dataframe$gb_temp, TSZ_gbdbub_datafra
 
 t_gb_ub_ttest_results
 ```
+
+Temperature Matrix
+
+```{r}
+#north temp only dataframes
+full_15min_n_wide <- full_15min_ns %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = north_temp) %>%
+  rename(DB_north = "dead burn", GB_north = "green burn", live_north = "live") %>%
+  select(-south_temp)
+
+DB_n_wide <- full_15min_n_wide %>%
+  select(-c(GB_north, live_north)) %>%
+  drop_na()
+
+GB_n_wide <- full_15min_n_wide %>%
+  select(-c(DB_north, live_north)) %>%
+  drop_na()
+
+live_n_wide <- full_15min_n_wide %>%
+  select(-c(DB_north, GB_north)) %>%
+  drop_na()
+
+full_15min_n <- DB_n_wide %>%
+  inner_join(GB_n_wide, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(live_n_wide, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+```{r}
+#south temp only dataframes
+full_15min_s_wide <- full_15min_ns %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = south_temp) %>%
+  rename(DB_south = "dead burn", GB_south = "green burn", live_south = "live") %>%
+  select(-north_temp)
+
+DB_s_wide <- full_15min_s_wide %>%
+  select(-c(GB_south, live_south)) %>%
+  drop_na()
+
+GB_s_wide <- full_15min_s_wide %>%
+  select(-c(DB_south, live_south)) %>%
+  drop_na()
+
+live_s_wide <- full_15min_s_wide %>%
+  select(-c(DB_south, GB_south)) %>%
+  drop_na()
+
+full_15min_s <- DB_s_wide %>%
+  inner_join(GB_s_wide, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(live_s_wide, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+```{r}
+#creating full north and south wide dataframe with temps by burn status and aspect
+
+comb_full_ns_data <- full_15min_n %>%
+  inner_join(full_15min_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+Making Function & Plotting
+
+\*\* next step is to just separate these functions by phase and zone -\> so I have four different matrix; PSZ day, PSZ night, TSZ day, TSZ night
+
+```{r}
+# Define function for mean absolute difference
+# Define function for mean absolute difference
+mean_avg_diff <- function(x, y) {
+  mean(abs(x - y), na.rm = TRUE)
+}
+
+# Select only the temperature-related columns
+temp_vars <- c("DB_north", "DB_south", "GB_north", "GB_south", "live_north", "live_south")
+
+# Compute pairwise mean absolute differences
+pairwise_diffs <- expand_grid(var1 = temp_vars, var2 = temp_vars) %>%
+  filter(var1 != var2) %>%  # Remove self-comparisons
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(comb_full_ns_data[[var1]], comb_full_ns_data[[var2]])) %>%
+  ungroup()
+
+# Create a lookup table for renaming
+rename_vars <- c(
+  "DB_north" = "DB North",
+  "DB_south" = "DB South",
+  "GB_north" = "GB North",
+  "GB_south" = "GB South",
+  "live_north" = "Live North",
+  "live_south" = "Live South"
+)
+
+# Rename the variables in the dataframe
+pairwise_diffs <- pairwise_diffs %>%
+  mutate(var1 = recode(var1, !!!rename_vars),
+         var2 = recode(var2, !!!rename_vars))
+
+# Add 'phase' and 'zone' to the pairwise_diffs dataframe by joining with comb_full_ns_data
+pairwise_diffs <- pairwise_diffs %>%
+  left_join(comb_full_ns_data %>% select(datetime, phase, zone) %>% distinct(), 
+            by = c("datetime" = "datetime"))
+
+# Visualizing the mean absolute difference as a heatmap with values inside
+ggplot(pairwise_diffs, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 5) +  # Add values in squares
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = mean(pairwise_diffs$mean_diff, na.rm = TRUE)) +
+  theme_minimal() +
+  labs(title = "Mean Absolute Difference of Temperature Variables",
+       x = "Variable 1",
+       y = "Variable 2",
+       fill = "Mean Abs Diff") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
