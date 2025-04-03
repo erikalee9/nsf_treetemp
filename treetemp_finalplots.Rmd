@@ -5150,7 +5150,9 @@ t_gb_ub_ttest_results
 
 ## Individual Sensors
 
-North Aspect PSZ
+### PSZ
+
+North Aspect PSZ - Tree 1
 
 ```{r}
 PSZ_ind_sensor_tree1_n <- PSZ_threeday_accu_comp %>%
@@ -5214,7 +5216,360 @@ PSZ_comb_ind_tree1 <- PSZ_ind_tree1_n_final %>%
   inner_join(PSZ_ind_tree1_s_final, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
 ```
 
-\*\* see if I actually need to separate into tree 1 and tree 2, or if I can just make that distinction in function, since I just want to compare between tree 1 and tree 2!
+North Ind. PSZ - Tree 2
+
+```{r}
+PSZ_ind_sensor_tree2_n <- PSZ_threeday_accu_comp %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 2", aspect == "north") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree2_DB_north = "DB", tree2_GB_north = "GB", tree2_live_north = "live") %>%
+  select(-c(aspect, tree_name))
+  
+PSZ_ind_DB_tree2_n <- PSZ_ind_sensor_tree2_n %>%
+  select(-c(tree2_GB_north, tree2_live_north)) %>%
+  drop_na()
+
+PSZ_ind_GB_tree2_n <- PSZ_ind_sensor_tree2_n %>%
+  select(-c(tree2_DB_north, tree2_live_north)) %>%
+  drop_na()
+
+PSZ_ind_live_tree2_n <- PSZ_ind_sensor_tree2_n %>%
+  select(-c(tree2_DB_north, tree2_GB_north)) %>%
+  drop_na()
+
+PSZ_ind_tree2_n_final <- PSZ_ind_DB_tree2_n %>%
+  inner_join(PSZ_ind_GB_tree2_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(PSZ_ind_live_tree2_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree2_DB_north", "tree2_GB_north", "tree2_live_north"))
+```
+
+```{r}
+#south tree 2 
+PSZ_ind_sensor_tree2_s <- PSZ_threeday_accu_comp %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 2", aspect == "south") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree2_DB_south = "DB", tree2_GB_south = "GB", tree2_live_south = "live") %>%
+  select(-c(aspect, tree_name))
+  
+PSZ_ind_DB_tree2_s <- PSZ_ind_sensor_tree2_s %>%
+  select(-c(tree2_GB_south, tree2_live_south)) %>%
+  drop_na()
+
+PSZ_ind_GB_tree2_s <- PSZ_ind_sensor_tree2_s %>%
+  select(-c(tree2_DB_south, tree2_live_south)) %>%
+  drop_na()
+
+PSZ_ind_live_tree2_s <- PSZ_ind_sensor_tree2_s %>%
+  select(-c(tree2_DB_south, tree2_GB_south)) %>%
+  drop_na()
+
+PSZ_ind_tree2_s_final <- PSZ_ind_DB_tree2_s %>%
+  inner_join(PSZ_ind_GB_tree2_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(PSZ_ind_live_tree2_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree2_DB_south", "tree2_GB_south", "tree2_live_south"))
+```
+
+```{r}
+PSZ_comb_ind_tree2 <- PSZ_ind_tree2_n_final %>%
+  inner_join(PSZ_ind_tree2_s_final, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+```{r}
+#combining tree 1 and tree 2
+PSZ_comb_ind_alltrees <- PSZ_comb_ind_tree1 %>%
+  inner_join(PSZ_comb_ind_tree2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+```{r}
+mean_avg_diff <- function(x, y) {
+  mean(abs(x - y), na.rm = TRUE)
+}
+
+# Select only the temperature-related columns
+temp_varsdiff_1 <- c("tree1_DB_north", "tree1_DB_south", "tree1_GB_north", "tree1_GB_south", "tree1_live_north", "tree1_live_south")
+
+temp_varsdiff_2 <- c("tree2_DB_north", "tree2_DB_south", "tree2_GB_north", "tree2_GB_south", "tree2_live_north", "tree2_live_south")
+
+# Compute pairwise mean absolute differences
+pairwise_diffs_ind <- expand_grid(var1 = temp_varsdiff_1, var2 = temp_varsdiff_2) %>%
+  filter(var1 != var2) %>%  # Remove self-comparisons
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(PSZ_comb_ind_alltrees[[var1]], PSZ_comb_ind_alltrees[[var2]])) %>%
+  ungroup()
+
+# Create a lookup table for renaming
+rename_vars_ind <- c(
+  "tree1_DB_north" = "DB North",
+  "tree1_DB_south" = "DB South",
+  "tree1_GB_north" = "GB North",
+  "tree1_GB_south" = "GB South",
+  "tree1_live_north" = "Live North",
+  "tree1_live_south" = "Live South", 
+  "tree2_DB_north" = "DB North",
+  "tree2_DB_south" = "DB South",
+  "tree2_GB_north" = "GB North",
+  "tree2_GB_south" = "GB South",
+  "tree2_live_north" = "Live North",
+  "tree2_live_south" = "Live South"
+)
+
+# Rename the variables in the dataframe
+pairwise_diffs_ind <- pairwise_diffs_ind %>%
+  mutate(var1 = recode(var1, !!!rename_vars_ind),
+         var2 = recode(var2, !!!rename_vars_ind))
+
+# Visualizing the mean absolute difference as a heatmap with values inside
+ggplot(pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 5) +  # Add values in squares
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = mean(pairwise_diffs_ind$mean_diff, na.rm = TRUE)) +
+  theme_minimal() +
+  labs(title = "PSZ: Mean Average Difference (°C) of Sensor Duplicates",
+       x = "Tree 1 Sensors",
+       y = "Tree 2 Sensors",
+       fill = "Mean Abs Diff") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### TSZ
+
+Tree1
+
+```{r}
+TSZ_ind_sensor_tree1_n <- TSZ_threeday_accu_comp %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 1", aspect == "north") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree1_DB_north = "DB", tree1_GB_north = "GB", tree1_live_north = "live") %>%
+  select(-c(aspect, tree_name))
+  
+TSZ_ind_DB_tree1_n <- TSZ_ind_sensor_tree1_n %>%
+  select(-c(tree1_GB_north, tree1_live_north)) %>%
+  drop_na()
+
+TSZ_ind_GB_tree1_n <- TSZ_ind_sensor_tree1_n %>%
+  select(-c(tree1_DB_north, tree1_live_north)) %>%
+  drop_na()
+
+TSZ_ind_live_tree1_n <- TSZ_ind_sensor_tree1_n %>%
+  select(-c(tree1_DB_north, tree1_GB_north)) %>%
+  drop_na()
+
+TSZ_ind_tree1_n_final <- TSZ_ind_DB_tree1_n %>%
+  inner_join(TSZ_ind_GB_tree1_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(TSZ_ind_live_tree1_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree1_DB_north", "tree1_GB_north", "tree1_live_north"))
+
+```
+
+```{r}
+TSZ_ind_sensor_tree1_s <- TSZ_threeday_accu_comp %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 1", aspect == "south") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree1_DB_south = "DB", tree1_GB_south = "GB", tree1_live_south = "live") %>%
+  select(-c(aspect, tree_name))
+  
+TSZ_ind_DB_tree1_s <- TSZ_ind_sensor_tree1_s %>%
+  select(-c(tree1_GB_south, tree1_live_south)) %>%
+  drop_na()
+
+TSZ_ind_GB_tree1_s <- TSZ_ind_sensor_tree1_s %>%
+  select(-c(tree1_DB_south, tree1_live_south)) %>%
+  drop_na()
+
+TSZ_ind_live_tree1_s <- TSZ_ind_sensor_tree1_s %>%
+  select(-c(tree1_DB_south, tree1_GB_south)) %>%
+  drop_na()
+
+TSZ_ind_tree1_s_final <- TSZ_ind_DB_tree1_s %>%
+  inner_join(TSZ_ind_GB_tree1_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(TSZ_ind_live_tree1_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree1_DB_south", "tree1_GB_south", "tree1_live_south"))
+```
+
+```{r}
+#combining north and south
+TSZ_comb_ind_tree1 <- TSZ_ind_tree1_n_final %>%
+  inner_join(TSZ_ind_tree1_s_final, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+Tree 2
+
+```{r}
+TSZ_ind_sensor_tree2_n <- TSZ_threeday_accu_comp %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 2", aspect == "north") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree2_DB_north = "DB", tree2_GB_north = "GB", tree2_live_north = "live") %>%
+  select(-c(aspect, tree_name))
+  
+TSZ_ind_DB_tree2_n <- TSZ_ind_sensor_tree2_n %>%
+  select(-c(tree2_GB_north, tree2_live_north)) %>%
+  drop_na()
+
+TSZ_ind_GB_tree2_n <- TSZ_ind_sensor_tree2_n %>%
+  select(-c(tree2_DB_north, tree2_live_north)) %>%
+  drop_na()
+
+TSZ_ind_live_tree2_n <- TSZ_ind_sensor_tree2_n %>%
+  select(-c(tree2_DB_north, tree2_GB_north)) %>%
+  drop_na()
+
+TSZ_ind_tree2_n_final <- TSZ_ind_DB_tree2_n %>%
+  inner_join(TSZ_ind_GB_tree2_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(TSZ_ind_live_tree2_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree2_DB_north", "tree2_GB_north", "tree2_live_north"))
+```
+
+```{r}
+#south tree 2 
+TSZ_ind_sensor_tree2_s <- TSZ_threeday_accu_comp %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 2", aspect == "south") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree2_DB_south = "DB", tree2_GB_south = "GB", tree2_live_south = "live") %>%
+  select(-c(aspect, tree_name))
+  
+TSZ_ind_DB_tree2_s <- TSZ_ind_sensor_tree2_s %>%
+  select(-c(tree2_GB_south, tree2_live_south)) %>%
+  drop_na()
+
+TSZ_ind_GB_tree2_s <- TSZ_ind_sensor_tree2_s %>%
+  select(-c(tree2_DB_south, tree2_live_south)) %>%
+  drop_na()
+
+TSZ_ind_live_tree2_s <- TSZ_ind_sensor_tree2_s %>%
+  select(-c(tree2_DB_south, tree2_GB_south)) %>%
+  drop_na()
+
+TSZ_ind_tree2_s_final <- TSZ_ind_DB_tree2_s %>%
+  inner_join(TSZ_ind_GB_tree2_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(TSZ_ind_live_tree2_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree2_DB_south", "tree2_GB_south", "tree2_live_south"))
+```
+
+```{r}
+TSZ_comb_ind_tree2 <- TSZ_ind_tree2_n_final %>%
+  inner_join(TSZ_ind_tree2_s_final, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+```{r}
+#combining tree 1 and tree 2
+TSZ_comb_ind_alltrees <- TSZ_comb_ind_tree1 %>%
+  inner_join(TSZ_comb_ind_tree2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+```{r}
+mean_avg_diff <- function(x, y) {
+  mean(abs(x - y), na.rm = TRUE)
+}
+
+# Select only the temperature-related columns
+temp_varsdiff_1 <- c("tree1_DB_north", "tree1_DB_south", "tree1_GB_north", "tree1_GB_south", "tree1_live_north", "tree1_live_south")
+
+temp_varsdiff_2 <- c("tree2_DB_north", "tree2_DB_south", "tree2_GB_north", "tree2_GB_south", "tree2_live_north", "tree2_live_south")
+
+# Compute pairwise mean absolute differences
+pairwise_diffs_ind <- expand_grid(var1 = temp_varsdiff_1, var2 = temp_varsdiff_2) %>%
+  filter(var1 != var2) %>%  # Remove self-comparisons
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(TSZ_comb_ind_alltrees[[var1]], TSZ_comb_ind_alltrees[[var2]])) %>%
+  ungroup()
+
+# Create a lookup table for renaming
+rename_vars_ind <- c(
+  "tree1_DB_north" = "DB North",
+  "tree1_DB_south" = "DB South",
+  "tree1_GB_north" = "GB North",
+  "tree1_GB_south" = "GB South",
+  "tree1_live_north" = "Live North",
+  "tree1_live_south" = "Live South", 
+  "tree2_DB_north" = "DB North",
+  "tree2_DB_south" = "DB South",
+  "tree2_GB_north" = "GB North",
+  "tree2_GB_south" = "GB South",
+  "tree2_live_north" = "Live North",
+  "tree2_live_south" = "Live South"
+)
+
+# Rename the variables in the dataframe
+pairwise_diffs_ind <- pairwise_diffs_ind %>%
+  mutate(var1 = recode(var1, !!!rename_vars_ind),
+         var2 = recode(var2, !!!rename_vars_ind))
+
+# Visualizing the mean absolute difference as a heatmap with values inside
+ggplot(pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 5) +  # Add values in squares
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = mean(pairwise_diffs_ind$mean_diff, na.rm = TRUE)) +
+  theme_minimal() +
+  labs(title = "TSZ: Mean Average Difference (°C) of Sensor Duplicates",
+       x = "Tree 1 Sensors",
+       y = "Tree 2 Sensors",
+       fill = "Mean Abs Diff") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Column Visualization of MAD
+
+```{r}
+PSZ_ind_wide <- PSZ_threeday_accu_comp %>%
+  pivot_wider(names_from = c(burn_status, tree_name), 
+              values_from = temp, 
+              names_sep = "_") %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk, sensor_label))
+
+PSZ_db1 <- PSZ_ind_wide %>%
+  select(-c(DB_Tree2, GB_Tree1, GB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+PSZ_db2 <- PSZ_ind_wide %>%
+  select(-c(DB_Tree1, GB_Tree1, GB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+PSZ_gb1 <- PSZ_ind_wide %>%
+  select(-c(GB_Tree2, DB_Tree1, DB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+PSZ_gb2 <- PSZ_ind_wide %>%
+  select(-c(GB_Tree1, DB_Tree1, DB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+PSZ_live1 <- PSZ_ind_wide %>%
+  select(-c(live_Tree2, DB_Tree1, DB_Tree2, GB_Tree1, GB_Tree2)) %>%
+  drop_na()
+
+PSZ_live2 <- PSZ_ind_wide %>%
+  select(-c(live_Tree1, DB_Tree1, DB_Tree2, GB_Tree1, GB_Tree2)) %>%
+  drop_na()
+
+PSZ_ind_comb <- PSZ_db1 %>%
+  inner_join(PSZ_db2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(PSZ_gb1, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(PSZ_gb2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(PSZ_live1, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(PSZ_live2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  select(c(datetime, day, month, phase, zone, snow_phase, aspect, DB_Tree1, DB_Tree2, GB_Tree1, GB_Tree2, live_Tree1, live_Tree2))
+
+PSZ_ind_MAD <- PSZ_ind_comb %>%
+  group_by(zone, aspect) %>%
+  summarize(DB_MAD = abs(DB_Tree1 - DB_Tree2), 
+            GB_MAD = abs(GB_Tree1 - GB_Tree2), 
+            live_MAD = abs(live_Tree1 = live_Tree2, 
+            GB_DB_MAD)
+```
 
 ## Mean Temps
 
@@ -5284,6 +5639,20 @@ Making Function & Plotting
 \*\* next step is to just separate these functions by phase and zone -\> so I have four different matrix; PSZ day, PSZ night, TSZ day, TSZ night
 
 ```{r}
+PSZ_ns_day <- comb_full_ns_data %>%
+  filter(phase == "day", zone == "PSZ")
+
+PSZ_ns_night <- comb_full_ns_data %>%
+  filter(phase == "night", zone == "PSZ")
+
+TSZ_ns_day <- comb_full_ns_data %>%
+  filter(phase == "day", zone == "TSZ")
+
+TSZ_ns_night <- comb_full_ns_data %>%
+  filter(phase == "night", zone == "TSZ")
+```
+
+```{r}
 # Define function for mean absolute difference
 # Define function for mean absolute difference
 mean_avg_diff <- function(x, y) {
@@ -5293,14 +5662,12 @@ mean_avg_diff <- function(x, y) {
 # Select only the temperature-related columns
 temp_vars <- c("DB_north", "DB_south", "GB_north", "GB_south", "live_north", "live_south")
 
-# Compute pairwise mean absolute differences
-pairwise_diffs <- expand_grid(var1 = temp_vars, var2 = temp_vars) %>%
-  filter(var1 != var2) %>%  # Remove self-comparisons
+pairwise_diffs_PSZ_day <- expand_grid(var1 = temp_vars, var2 = temp_vars) %>%
   rowwise() %>%
-  mutate(mean_diff = mean_avg_diff(comb_full_ns_data[[var1]], comb_full_ns_data[[var2]])) %>%
+  mutate(mean_diff = mean_avg_diff(PSZ_ns_day[[var1]], PSZ_ns_day[[var2]])) %>%
   ungroup()
 
-# Create a lookup table for renaming
+# Step 2: Create a lookup table for renaming
 rename_vars <- c(
   "DB_north" = "DB North",
   "DB_south" = "DB South",
@@ -5310,26 +5677,228 @@ rename_vars <- c(
   "live_south" = "Live South"
 )
 
-# Rename the variables in the dataframe
-pairwise_diffs <- pairwise_diffs %>%
+# Step 3: Rename the variables in the dataframe
+pairwise_diffs_PSZ_day <- pairwise_diffs_PSZ_day %>%
   mutate(var1 = recode(var1, !!!rename_vars),
          var2 = recode(var2, !!!rename_vars))
 
-# Add 'phase' and 'zone' to the pairwise_diffs dataframe by joining with comb_full_ns_data
-pairwise_diffs <- pairwise_diffs %>%
-  left_join(comb_full_ns_data %>% select(datetime, phase, zone) %>% distinct(), 
-            by = c("datetime" = "datetime"))
+#setting a limit for all four plots that is incorporated into each plot, so the color gradient is equal across all plots
+color_limits <- c(0, 8)
+
+diffs_PSZ_day_heatmap <- ggplot(pairwise_diffs_PSZ_day, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = 3,
+                       limits = color_limits) +  # Add color limits here
+  theme_minimal() +
+  labs(title = "a) PSZ Day",
+       x = NULL,
+       y = NULL,
+       fill = "Mean Avg Diff (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        strip.text = element_text(size = 11),  # Facet title size
+        axis.title = element_text(size = 11),  # Axis title size
+        axis.text = element_text(size = 11),  # Axis tick labels
+        legend.title = element_text(size = 11),  # Legend title size
+        legend.text = element_text(size = 10))
+
+# Print the plot
+diffs_PSZ_day_heatmap
+```
+
+```{r}
+# Select only the temperature-related columns
+temp_vars_PSZn <- c("DB_north", "DB_south", "GB_north", "GB_south", "live_north", "live_south")
+
+pairwise_diffs_PSZ_night <- expand_grid(var1 = temp_vars_PSZn, var2 = temp_vars_PSZn) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(PSZ_ns_night[[var1]], PSZ_ns_night[[var2]])) %>%
+  ungroup()
+
+# Step 2: Create a lookup table for renaming
+rename_vars <- c(
+  "DB_north" = "DB North",
+  "DB_south" = "DB South",
+  "GB_north" = "GB North",
+  "GB_south" = "GB South",
+  "live_north" = "Live North",
+  "live_south" = "Live South"
+)
+
+# Step 3: Rename the variables in the dataframe
+pairwise_diffs_PSZ_night <- pairwise_diffs_PSZ_night %>%
+  mutate(var1 = recode(var1, !!!rename_vars),
+         var2 = recode(var2, !!!rename_vars))
 
 # Visualizing the mean absolute difference as a heatmap with values inside
-ggplot(pairwise_diffs, aes(x = var1, y = var2, fill = mean_diff)) +
+diffs_PSZ_night_heatmap <- ggplot(pairwise_diffs_PSZ_night, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
-  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 5) +  # Add values in squares
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = mean(pairwise_diffs$mean_diff, na.rm = TRUE)) +
+  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 4) +  # Add values in squares
+scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = 3, 
+                       limits = color_limits) + 
   theme_minimal() +
+  labs(title = "b) PSZ Night",
+       x = NULL,
+       y = NULL,
+       fill = "Mean Avg Diff (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.text.y = element_blank(),  # Remove y-axis text
+        axis.ticks.y = element_blank(),  # Remove y-axis ticks
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10))
+
+diffs_PSZ_night_heatmap
+```
+
+```{r}
+temp_vars_TSZd <- c("DB_north", "DB_south", "GB_north", "GB_south", "live_north", "live_south")
+
+pairwise_diffs_TSZ_day <- expand_grid(var1 = temp_vars_TSZd, var2 = temp_vars_TSZd) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(TSZ_ns_day[[var1]], TSZ_ns_day[[var2]])) %>%
+  ungroup()
+
+# Step 2: Create a lookup table for renaming
+rename_vars <- c(
+  "DB_north" = "DB North",
+  "DB_south" = "DB South",
+  "GB_north" = "GB North",
+  "GB_south" = "GB South",
+  "live_north" = "Live North",
+  "live_south" = "Live South"
+)
+
+# Step 3: Rename the variables in the dataframe
+pairwise_diffs_TSZ_day <- pairwise_diffs_TSZ_day %>%
+  mutate(var1 = recode(var1, !!!rename_vars),
+         var2 = recode(var2, !!!rename_vars))
+
+# Visualizing the mean absolute difference as a heatmap with values inside
+diffs_TSZ_day_heatmap <- ggplot(pairwise_diffs_TSZ_day, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 4) +
+   scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = 3, 
+                       limits = color_limits) + 
+  theme_minimal() +
+  labs(title = "c) TSZ Day",
+       x = NULL,
+       y = NULL,
+       fill = "Mean Avg Diff (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10))
+
+diffs_TSZ_day_heatmap
+```
+
+```{r}
+temp_vars_TSZn <- c("DB_north", "DB_south", "GB_north", "GB_south", "live_north", "live_south")
+
+pairwise_diffs_TSZ_night <- expand_grid(var1 = temp_vars_TSZn, var2 = temp_vars_TSZn) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(TSZ_ns_night[[var1]], TSZ_ns_night[[var2]])) %>%
+  ungroup()
+
+# Step 2: Create a lookup table for renaming
+rename_vars <- c(
+  "DB_north" = "DB North",
+  "DB_south" = "DB South",
+  "GB_north" = "GB North",
+  "GB_south" = "GB South",
+  "live_north" = "Live North",
+  "live_south" = "Live South"
+)
+
+# Step 3: Rename the variables in the dataframe
+pairwise_diffs_TSZ_night <- pairwise_diffs_TSZ_night %>%
+  mutate(var1 = recode(var1, !!!rename_vars),
+         var2 = recode(var2, !!!rename_vars))
+
+# Visualizing the mean absolute difference as a heatmap with values inside
+diffs_TSZ_night_heatmap <- ggplot(pairwise_diffs_TSZ_night, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = 3, 
+                       limits = color_limits) +
+  theme_minimal() +
+  labs(title = "d) TSZ Night",
+       x = NULL,
+       y = NULL,
+       fill = "Mean Avg Diff (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        axis.text.y = element_blank(),  # Remove y-axis text
+        axis.ticks.y = element_blank(),  # Remove y-axis ticks
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10))
+
+diffs_TSZ_night_heatmap
+```
+
+```{r}
+PSZ_comb_heatmap <- ggarrange(diffs_PSZ_day_heatmap, diffs_PSZ_night_heatmap, nrow =1, ncol = 2, common.legend = TRUE, legend = "right", 
+  align = "v",         # Align vertically
+  heights = c(2, 2.5)    # Set equal height for both plots
+)
+
+PSZ_comb_heatmap 
+```
+
+```{r}
+TSZ_comb_heatmap <- ggarrange(diffs_TSZ_day_heatmap, diffs_TSZ_night_heatmap, nrow =1, ncol = 2, common.legend = TRUE, legend = "right", 
+                              align = "v",         # Align vertically
+  heights = c(2, 2.5)    # Set equal height for both plots
+)
+
+TSZ_comb_heatmap
+```
+
+```{r}
+full_comb_heatmap <- ggarrange(PSZ_comb_heatmap, TSZ_comb_heatmap, nrow =2, ncol = 1, common.legend = TRUE, legend = "right")
+
+full_comb_heatmap
+```
+
+```{r}
+ggplot(pairwise_diffs, aes(x = var1, y = mean_diff, fill = var2)) +
+  geom_col(position = "dodge") +  # Bar chart with grouped bars
+  scale_fill_manual(values = c("blue", "red", "green", "orange", "purple", "cyan")) +  # Customize colors
+  theme_bw() +
+  facet_wrap(~zone + phase) +  # Facet by both zone (rows) and phase (columns)
   labs(title = "Mean Absolute Difference of Temperature Variables",
        x = "Variable 1",
-       y = "Variable 2",
-       fill = "Mean Abs Diff") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+       y = "Mean Abs Diff",
+       fill = "Compared Variable") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels
+
+```
+
+Stephanie's ideas for visualization:
+
+```{r}
+data=read_csv('temps.csv')
+
+replicate=filter(data,compare=='replicate')
+
+ggplot()+geom_boxplot(data=replicate,aes(x=label,y=diff))
+
+ns=filter(data,compare=='NS')
+
+ggplot()+geom_col(data=ns,aes(x=label,y=diff))
+
+burn=filter(data,compare=='burn')
+
+ggplot()+geom_col(data=burn,aes(x=label,y=diff,fill=aspect),position='dodge')
 ```
