@@ -910,7 +910,7 @@ PSZ_tree2_ind_accu <- PSZ_ind_sensor_accu %>%
 PSZ_ind_accu_MADstats <- PSZ_tree1_ind_accu %>%
   inner_join(PSZ_tree2_ind_accu, by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase", "burn_status")) %>%
   filter((`Tree 1` + `Tree 2`) != 0) %>%  # Ensure sum is not zero to avoid division errors
-  group_by(aspect, burn_status, phase) %>%
+  group_by(aspect, burn_status) %>%
   summarise(
     mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
     mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
@@ -950,8 +950,8 @@ TSZ
 #data wrangling
 TSZ_ind_sensor_accu <- TSZ_threeday_accu_comp %>% 
   pivot_wider(
-    names_from = "tree_name",
-    values_from = "temp")
+    names_from = tree_name,
+    values_from = temp)
 
 TSZ_tree1_ind_accu <- TSZ_ind_sensor_accu %>%
   select(-`Tree 2`) %>%
@@ -963,13 +963,405 @@ TSZ_tree2_ind_accu <- TSZ_ind_sensor_accu %>%
   select(datetime, day, phase, zone, aspect, snow_phase, burn_status, 'Tree 2')
 
 TSZ_ind_accu_MADstats <- TSZ_tree1_ind_accu %>%
-  inner_join(PSZ_tree2_ind_accu, by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase", "burn_status")) %>%
+  inner_join(TSZ_tree2_ind_accu, by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase", "burn_status")) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Ensure sum is not zero to avoid division errors
+  group_by(aspect, burn_status) %>%
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+TSZ_ind_sensor_abla <- TSZ_threeday_abla_comp %>% 
+  pivot_wider(
+    names_from = tree_name,
+    values_from = temp)
+
+TSZ_tree1_ind_abla <- TSZ_ind_sensor_abla%>%
+  select(-`Tree 2`) %>%
+  drop_na()
+
+TSZ_tree2_ind_abla <- TSZ_ind_sensor_abla %>%
+  select(-`Tree 1`) %>%
+  drop_na() %>%
+  select(datetime, day, phase, zone, aspect, snow_phase, burn_status, 'Tree 2')
+
+TSZ_ind_abla_MADstats <- TSZ_tree1_ind_abla %>%
+  inner_join(TSZ_tree2_ind_abla, by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase", "burn_status")) %>%
   filter((`Tree 1` + `Tree 2`) != 0) %>%  # Ensure sum is not zero to avoid division errors
   group_by(aspect, burn_status, phase) %>%
   summarise(
     mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
     mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
   )
+```
+
+Now I am comparing the north sensor of tree 1 to the south sensor of tree 2\
+
+```{r}
+PSZ_ind_accu_NS_comp <- PSZ_tree1_ind_accu %>%
+  filter(aspect == "north") %>%  # Keep only north-facing sensors for Tree 1
+  inner_join(
+    PSZ_tree2_ind_accu %>% filter(aspect == "south"),  # Keep only south-facing sensors for Tree 2
+    by = c("datetime", "day", "phase", "zone", "snow_phase", "burn_status")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(burn_status) %>%  # Grouping by burn status (aspect is no longer relevant)
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+TSZ_ind_accu_NS_comp <- TSZ_tree1_ind_accu %>%
+  filter(aspect == "north") %>%  # Keep only north-facing sensors for Tree 1
+  inner_join(
+    TSZ_tree2_ind_accu %>% filter(aspect == "south"),  # Keep only south-facing sensors for Tree 2
+    by = c("datetime", "day", "phase", "zone", "snow_phase", "burn_status")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(burn_status) %>%  # Grouping by burn status (aspect is no longer relevant)
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+Now comparing GB to DB of tree 1 and tree 2
+
+```{r}
+PSZ_ind_accu_GB_DB <- PSZ_tree1_ind_accu %>%
+  filter(burn_status == "GB") %>%  # Keep only Green Burned (GB) data
+  inner_join(
+    PSZ_tree2_ind_accu %>% filter(burn_status == "DB"),  # Keep only Dead Burned (DB) data
+    by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(aspect) %>%  # Group by aspect
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+PSZ_ind_accu_DB_live <- PSZ_tree1_ind_accu %>%
+  filter(burn_status == "DB") %>%  # Keep only Green Burned (GB) data
+  inner_join(
+    PSZ_tree2_ind_accu %>% filter(burn_status == "live"),  # Keep only Dead Burned (DB) data
+    by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(aspect) %>%  # Group by aspect
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+#switched which trees were witch
+PSZ_ind_accu_GB_DB <- PSZ_tree1_ind_accu %>%
+  filter(burn_status == "DB") %>%  # Keep only Green Burned (GB) data
+  inner_join(
+    PSZ_tree2_ind_accu %>% filter(burn_status == "GB"),  # Keep only Dead Burned (DB) data
+    by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(aspect) %>%  # Group by aspect
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+#switched trees
+PSZ_ind_accu_DB_live <- PSZ_tree1_ind_accu %>%
+  filter(burn_status == "live") %>%  # Keep only Green Burned (GB) data
+  inner_join(
+    PSZ_tree2_ind_accu %>% filter(burn_status == "DB"),  # Keep only Dead Burned (DB) data
+    by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(aspect) %>%  # Group by aspect
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+GB vs live
+
+```{r}
+PSZ_ind_accu_GB_live <- PSZ_tree1_ind_accu %>%
+  filter(burn_status == "GB") %>%  # Keep only Green Burned (GB) data
+  inner_join(
+    PSZ_tree2_ind_accu %>% filter(burn_status == "live"),  # Keep only Dead Burned (DB) data
+    by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(aspect) %>%  # Group by aspect
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+#switched order
+PSZ_ind_accu_GB_live <- PSZ_tree1_ind_accu %>%
+  filter(burn_status == "live") %>%  # Keep only Green Burned (GB) data
+  inner_join(
+    PSZ_tree2_ind_accu %>% filter(burn_status == "GB"),  # Keep only Dead Burned (DB) data
+    by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(aspect) %>%  # Group by aspect
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+TSZ_ind_accu_GB_DB <- TSZ_tree1_ind_accu %>%
+  filter(burn_status == "GB") %>%  # Keep only Green Burned (GB) data
+  inner_join(
+    TSZ_tree2_ind_accu %>% filter(burn_status == "DB"),  # Keep only Dead Burned (DB) data
+    by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(aspect) %>%  # Group by aspect
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+#switched which trees were witch
+TSZ_ind_accu_GB_DB <- TSZ_tree1_ind_accu %>%
+  filter(burn_status == "DB") %>%  # Keep only Green Burned (GB) data
+  inner_join(
+    TSZ_tree2_ind_accu %>% filter(burn_status == "GB"),  # Keep only Dead Burned (DB) data
+    by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(aspect) %>%  # Group by aspect
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+GB vs live
+
+```{r}
+TSZ_ind_accu_GB_live <- TSZ_tree1_ind_accu %>%
+  filter(burn_status == "GB") %>%  # Keep only Green Burned (GB) data
+  inner_join(
+    TSZ_tree2_ind_accu %>% filter(burn_status == "live"),  # Keep only Dead Burned (DB) data
+    by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(aspect) %>%  # Group by aspect
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+#switched order
+TSZ_ind_accu_GB_live <- TSZ_tree1_ind_accu %>%
+  filter(burn_status == "live") %>%  # Keep only Green Burned (GB) data
+  inner_join(
+    TSZ_tree2_ind_accu %>% filter(burn_status == "GB"),  # Keep only Dead Burned (DB) data
+    by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(aspect) %>%  # Group by aspect
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+TSZ_ind_accu_DB_live <- TSZ_tree1_ind_accu %>%
+  filter(burn_status == "DB") %>%  # Keep only Green Burned (GB) data
+  inner_join(
+    TSZ_tree2_ind_accu %>% filter(burn_status == "live"),  # Keep only Dead Burned (DB) data
+    by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(aspect) %>%  # Group by aspect
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+#switched trees
+TSZ_ind_accu_DB_live <- TSZ_tree1_ind_accu %>%
+  filter(burn_status == "live") %>%  # Keep only Green Burned (GB) data
+  inner_join(
+    TSZ_tree2_ind_accu %>% filter(burn_status == "DB"),  # Keep only Dead Burned (DB) data
+    by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  group_by(aspect) %>%  # Group by aspect
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+Now comparing north aspect of south aspect of one GB to one DB
+
+```{r}
+PSZ_ind_accu_GB_DB <- PSZ_tree1_ind_accu %>%
+  filter(burn_status == "GB", aspect == "north") %>%  # Keep only Green Burned (GB) with north aspect
+  inner_join(
+    PSZ_tree2_ind_accu %>% filter(burn_status == "DB", aspect == "south"),  # Keep only Dead Burned (DB) with south aspect
+    by = c("datetime", "day", "phase", "zone", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+TSZ_ind_accu_GB_DB <- TSZ_tree1_ind_accu %>%
+  filter(burn_status == "GB", aspect == "north") %>%  # Keep only Green Burned (GB) with north aspect
+  inner_join(
+    TSZ_tree2_ind_accu %>% filter(burn_status == "DB", aspect == "south"),  # Keep only Dead Burned (DB) with south aspect
+    by = c("datetime", "day", "phase", "zone", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+PSZ_ind_accu_DB_live <- PSZ_tree1_ind_accu %>%
+  filter(burn_status == "live", aspect == "south") %>%  # Keep only Green Burned (GB) with north aspect
+  inner_join(
+    PSZ_tree2_ind_accu %>% filter(burn_status == "DB", aspect == "north"),  # Keep only Dead Burned (DB) with south aspect
+    by = c("datetime", "day", "phase", "zone", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+Now switching order of above
+
+```{r}
+PSZ_ind_accu_GB_DB <- PSZ_tree1_ind_accu %>%
+  filter(burn_status == "GB", aspect == "south") %>%  # Keep only Green Burned (GB) with north aspect
+  inner_join(
+    PSZ_tree2_ind_accu %>% filter(burn_status == "DB", aspect == "north"),  # Keep only Dead Burned (DB) with south aspect
+    by = c("datetime", "day", "phase", "zone", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+TSZ_ind_accu_GB_DB <- TSZ_tree1_ind_accu %>%
+  filter(burn_status == "DB", aspect == "south") %>%  # Keep only Green Burned (GB) with north aspect
+  inner_join(
+    TSZ_tree2_ind_accu %>% filter(burn_status == "GB", aspect == "south"),  # Keep only Dead Burned (DB) with south aspect
+    by = c("datetime", "day", "phase", "zone", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+Doing the above for GB vs Live
+
+```{r}
+PSZ_ind_accu_GB_live <- PSZ_tree1_ind_accu %>%
+  filter(burn_status == "GB", aspect == "south") %>%  # Keep only Green Burned (GB) with north aspect
+  inner_join(
+    PSZ_tree2_ind_accu %>% filter(burn_status == "live", aspect == "north"),  # Keep only Dead Burned (DB) with south aspect
+    by = c("datetime", "day", "phase", "zone", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+TSZ
+
+```{r}
+#switching order
+TSZ_ind_accu_GB_live <- TSZ_tree1_ind_accu %>%
+  filter(burn_status == "live", aspect == "south") %>%  # Keep only Green Burned (GB) with north aspect
+  inner_join(
+    TSZ_tree2_ind_accu %>% filter(burn_status == "GB", aspect == "north"),  # Keep only Dead Burned (DB) with south aspect
+    by = c("datetime", "day", "phase", "zone", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+#switching order
+TSZ_ind_accu_DB_live <- TSZ_tree1_ind_accu %>%
+  filter(burn_status == "live", aspect == "south") %>%  # Keep only Green Burned (GB) with north aspect
+  inner_join(
+    TSZ_tree2_ind_accu %>% filter(burn_status == "DB", aspect == "north"),  # Keep only Dead Burned (DB) with south aspect
+    by = c("datetime", "day", "phase", "zone", "snow_phase")  # Common grouping variables
+  ) %>%
+  filter((`Tree 1` + `Tree 2`) != 0) %>%  # Avoid division errors
+  summarise(
+    mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
+  )
+```
+
+### Plotting Matrix - NOT WORKING
+
+```{r}
+data <- read.csv("your_file.csv", row.names = 1)
+data_long <- as.data.frame(as.table(as.matrix(data)))
+
+# Create heatmap
+ggplot(data_long, aes(x = Var2, y = Var1, fill = Freq)) +
+  geom_tile() +
+  scale_fill_gradient(low = "blue", high = "red") +  
+  theme_minimal() +
+  labs(x = "Columns", y = "Rows", fill = "Value")
+
+```
+
+```{r}
+# Step 1: Load the data (assuming the first column contains row names)
+data_matrix <- as.matrix(read.csv("individualsensor_temp_matrix_data.csv"))
+
 ```
 
 ## Daytime vs Nighttime Tree Temp Plot - GB/DB/UB with aspects
@@ -3485,7 +3877,14 @@ Data Wrangling
 
 ```{r}
 pers_b_diff_results <- filtered_pers_b_aspects_r %>%
-  group_by(burn_status, aspect) %>%
+  group_by(burn_status, aspect, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+
+pers_ub_diff_results <- filtered_pers_ub_aspects_r %>%
+  group_by(burn_status, aspect, phase) %>%
   summarise(
     mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
     mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
@@ -3510,14 +3909,14 @@ daily_pers_ub_diff_results <- filtered_pers_ub_aspects_r %>%
 
 ```{r}
 trans_b_diff_results <- filtered_pers_b_aspects_r %>%
-  group_by(burn_status, phase) %>%
+  group_by(burn_status, aspect, phase) %>%
   summarise(
     mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
     mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
   )
 
 trans_ub_diff_results <- filtered_pers_ub_aspects_r %>%
-  group_by(burn_status, aspect) %>%
+  group_by(burn_status, aspect, phase) %>%
   summarise(
     mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
     mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
@@ -3589,7 +3988,7 @@ transub_ns_aspects <- transub_n_aspects %>%
 
 ```{r}
 pers_b_ns_diff_results <- persb_ns_aspects %>%
-  group_by(burn_status, phase, snow_phase) %>%
+  group_by(burn_status, phase) %>%
   #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing one observation
   filter((north_temp + south_temp) != 0) %>%
   summarise(
@@ -3597,7 +3996,7 @@ pers_b_ns_diff_results <- persb_ns_aspects %>%
     mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
 
 pers_ub_ns_diff_results <- persub_ns_aspects %>%
-  group_by(burn_status, phase, snow_phase) %>%
+  group_by(burn_status, phase) %>%
   summarise(
     mean_avg_diff = mean(abs(north_temp - south_temp), na.rm = TRUE),
     mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
@@ -3605,13 +4004,13 @@ pers_ub_ns_diff_results <- persub_ns_aspects %>%
 
 ```{r}
 trans_b_ns_diff_results <- transb_ns_aspects %>%
-  group_by(burn_status, snow_phase, phase) %>%
+  group_by(burn_status, phase) %>%
   summarise(
     mean_avg_diff = mean(abs(north_temp - south_temp), na.rm = TRUE),
     mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
 
 trans_ub_ns_diff_results <- transub_ns_aspects %>%
-  group_by(burn_status, snow_phase, phase) %>%
+  group_by(burn_status, phase) %>%
   #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing two observations
   filter((north_temp + south_temp) != 0) %>%
   summarise(
