@@ -908,7 +908,7 @@ PSZ_tree2_ind_accu <- PSZ_ind_sensor_accu %>%
   select(datetime, day, phase, zone, aspect, snow_phase, burn_status, 'Tree 2')
 
 PSZ_ind_accu_MADstats <- PSZ_tree1_ind_accu %>%
-  inner_join(PSZ_tree2_ind_accu, by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase", "burn_status")) %>%
+  inner_join(PSZ_tree2_ind_accu, by = c("datetime", "day", "phase", "zone", "aspect", "snow_phase", "burn_status") %>%
   filter((`Tree 1` + `Tree 2`) != 0) %>%  # Ensure sum is not zero to avoid division errors
   group_by(aspect, burn_status) %>%
   summarise(
@@ -5146,7 +5146,79 @@ t_gb_ub_ttest_results <- t.test(TSZ_gbdbub_dataframe$gb_temp, TSZ_gbdbub_datafra
 t_gb_ub_ttest_results
 ```
 
-Temperature Matrix
+# Temperature Matrix
+
+## Individual Sensors
+
+North Aspect PSZ
+
+```{r}
+PSZ_ind_sensor_tree1_n <- PSZ_threeday_accu_comp %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 1", aspect == "north") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree1_DB_north = "DB", tree1_GB_north = "GB", tree1_live_north = "live") %>%
+  select(-c(aspect, tree_name))
+  
+PSZ_ind_DB_tree1_n <- PSZ_ind_sensor_tree1_n %>%
+  select(-c(tree1_GB_north, tree1_live_north)) %>%
+  drop_na()
+
+PSZ_ind_GB_tree1_n <- PSZ_ind_sensor_tree1_n %>%
+  select(-c(tree1_DB_north, tree1_live_north)) %>%
+  drop_na()
+
+PSZ_ind_live_tree1_n <- PSZ_ind_sensor_tree1_n %>%
+  select(-c(tree1_DB_north, tree1_GB_north)) %>%
+  drop_na()
+
+PSZ_ind_tree1_n_final <- PSZ_ind_DB_tree1_n %>%
+  inner_join(PSZ_ind_GB_tree1_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(PSZ_ind_live_tree1_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree1_DB_north", "tree1_GB_north", "tree1_live_north"))
+```
+
+South Aspect PSZ
+
+```{r}
+PSZ_ind_sensor_tree1_s <- PSZ_threeday_accu_comp %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 1", aspect == "south") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree1_DB_south = "DB", tree1_GB_south = "GB", tree1_live_south = "live") %>%
+  select(-c(aspect, tree_name))
+  
+PSZ_ind_DB_tree1_s <- PSZ_ind_sensor_tree1_s %>%
+  select(-c(tree1_GB_south, tree1_live_south)) %>%
+  drop_na()
+
+PSZ_ind_GB_tree1_s <- PSZ_ind_sensor_tree1_s %>%
+  select(-c(tree1_DB_south, tree1_live_south)) %>%
+  drop_na()
+
+PSZ_ind_live_tree1_s <- PSZ_ind_sensor_tree1_s %>%
+  select(-c(tree1_DB_south, tree1_GB_south)) %>%
+  drop_na()
+
+PSZ_ind_tree1_s_final <- PSZ_ind_DB_tree1_s %>%
+  inner_join(PSZ_ind_GB_tree1_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(PSZ_ind_live_tree1_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree1_DB_south", "tree1_GB_south", "tree1_live_south"))
+```
+
+```{r}
+#combining north and south
+PSZ_comb_ind_tree1 <- PSZ_ind_tree1_n_final %>%
+  inner_join(PSZ_ind_tree1_s_final, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+\*\* see if I actually need to separate into tree 1 and tree 2, or if I can just make that distinction in function, since I just want to compare between tree 1 and tree 2!
+
+## Mean Temps
+
+\*\* by burn status and aspect
 
 ```{r}
 #north temp only dataframes
