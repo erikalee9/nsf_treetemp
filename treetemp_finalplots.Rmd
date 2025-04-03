@@ -5289,6 +5289,8 @@ mean_avg_diff <- function(x, y) {
   mean(abs(x - y), na.rm = TRUE)
 }
 
+color_limits_ind <- c(0, 8)
+
 # Select only the temperature-related columns
 temp_varsdiff_1 <- c("tree1_DB_north", "tree1_DB_south", "tree1_GB_north", "tree1_GB_south", "tree1_live_north", "tree1_live_south")
 
@@ -5325,9 +5327,10 @@ pairwise_diffs_ind <- pairwise_diffs_ind %>%
 # Visualizing the mean absolute difference as a heatmap with values inside
 ggplot(pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
-  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 5) +  # Add values in squares
+  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 4) +  # Add values in squares
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = mean(pairwise_diffs_ind$mean_diff, na.rm = TRUE)) +
+                       midpoint = 3,
+                       limits = color_limits) +
   theme_minimal() +
   labs(title = "PSZ: Mean Average Difference (°C) of Sensor Duplicates",
        x = "Tree 1 Sensors",
@@ -5475,12 +5478,12 @@ mean_avg_diff <- function(x, y) {
 }
 
 # Select only the temperature-related columns
-temp_varsdiff_1 <- c("tree1_DB_north", "tree1_DB_south", "tree1_GB_north", "tree1_GB_south", "tree1_live_north", "tree1_live_south")
+TSZ_temp_varsdiff_1 <- c("tree1_DB_north", "tree1_DB_south", "tree1_GB_north", "tree1_GB_south", "tree1_live_north", "tree1_live_south")
 
-temp_varsdiff_2 <- c("tree2_DB_north", "tree2_DB_south", "tree2_GB_north", "tree2_GB_south", "tree2_live_north", "tree2_live_south")
+TSZ_temp_varsdiff_2 <- c("tree2_DB_north", "tree2_DB_south", "tree2_GB_north", "tree2_GB_south", "tree2_live_north", "tree2_live_south")
 
 # Compute pairwise mean absolute differences
-pairwise_diffs_ind <- expand_grid(var1 = temp_varsdiff_1, var2 = temp_varsdiff_2) %>%
+TSZ_pairwise_diffs_ind <- expand_grid(var1 = TSZ_temp_varsdiff_1, var2 = TSZ_temp_varsdiff_2) %>%
   filter(var1 != var2) %>%  # Remove self-comparisons
   rowwise() %>%
   mutate(mean_diff = mean_avg_diff(TSZ_comb_ind_alltrees[[var1]], TSZ_comb_ind_alltrees[[var2]])) %>%
@@ -5503,16 +5506,17 @@ rename_vars_ind <- c(
 )
 
 # Rename the variables in the dataframe
-pairwise_diffs_ind <- pairwise_diffs_ind %>%
+TSZ_pairwise_diffs_ind <- TSZ_pairwise_diffs_ind %>%
   mutate(var1 = recode(var1, !!!rename_vars_ind),
          var2 = recode(var2, !!!rename_vars_ind))
 
 # Visualizing the mean absolute difference as a heatmap with values inside
-ggplot(pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
+ggplot(TSZ_pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
-  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 5) +  # Add values in squares
+  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 4) +  # Add values in squares
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = mean(pairwise_diffs_ind$mean_diff, na.rm = TRUE)) +
+                       midpoint = 3,
+                       limits = color_limits) +
   theme_minimal() +
   labs(title = "TSZ: Mean Average Difference (°C) of Sensor Duplicates",
        x = "Tree 1 Sensors",
@@ -5565,10 +5569,84 @@ PSZ_ind_comb <- PSZ_db1 %>%
 
 PSZ_ind_MAD <- PSZ_ind_comb %>%
   group_by(zone, aspect) %>%
-  summarize(DB_MAD = abs(DB_Tree1 - DB_Tree2), 
-            GB_MAD = abs(GB_Tree1 - GB_Tree2), 
-            live_MAD = abs(live_Tree1 = live_Tree2, 
-            GB_DB_MAD)
+  summarize(
+    DB_MAD = mean(abs(DB_Tree1 - DB_Tree2)),
+    GB_MAD = mean(abs(GB_Tree1 - GB_Tree2)),
+    live_MAD = mean(abs(live_Tree1 - live_Tree2)))
+```
+
+TSZ
+
+```{r}
+TSZ_ind_wide <- TSZ_threeday_accu_comp %>%
+  mutate(
+    tree_name = str_replace(tree_name, "Tree 1", "Tree1"),
+    tree_name = str_replace(tree_name, "Tree 2", "Tree2")
+  ) %>%
+  pivot_wider(names_from = c(burn_status, tree_name), 
+              values_from = temp, 
+              names_sep = "_") %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk))
+
+TSZ_db1 <- TSZ_ind_wide %>%
+  select(-c(DB_Tree2, GB_Tree1, GB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+TSZ_db2 <- TSZ_ind_wide %>%
+  select(-c(DB_Tree1, GB_Tree1, GB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+TSZ_gb1 <- TSZ_ind_wide %>%
+  select(-c(GB_Tree2, DB_Tree1, DB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+TSZ_gb2 <- TSZ_ind_wide %>%
+  select(-c(GB_Tree1, DB_Tree1, DB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+TSZ_live1 <- TSZ_ind_wide %>%
+  select(-c(live_Tree2, DB_Tree1, DB_Tree2, GB_Tree1, GB_Tree2)) %>%
+  drop_na()
+
+TSZ_live2 <- TSZ_ind_wide %>%
+  select(-c(live_Tree1, DB_Tree1, DB_Tree2, GB_Tree1, GB_Tree2)) %>%
+  drop_na()
+
+TSZ_ind_comb <- TSZ_db1 %>%
+  inner_join(TSZ_db2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(TSZ_gb1, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(TSZ_gb2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(TSZ_live1, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(TSZ_live2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  select(c(datetime, day, month, phase, zone, snow_phase, aspect, DB_Tree1, DB_Tree2, GB_Tree1, GB_Tree2, live_Tree1, live_Tree2))
+
+TSZ_ind_MAD <- TSZ_ind_comb %>%
+  group_by(zone, aspect) %>%
+  summarize(
+    DB_MAD = mean(abs(DB_Tree1 - DB_Tree2)),
+    GB_MAD = mean(abs(GB_Tree1 - GB_Tree2)),
+    live_MAD = mean(abs(live_Tree1 - live_Tree2)))
+```
+
+Plotting
+
+```{r}
+# Reshape the data to long format
+# Reshape the data to long format
+PSZ_ind_MAD_long <- PSZ_ind_MAD %>%
+  pivot_longer(cols = c(DB_MAD, GB_MAD, live_MAD), 
+               names_to = "MAD_type", 
+               values_to = "MAD_value")
+
+# Plot the data
+PSZ_ind_MAD_barplot <- ggplot(PSZ_ind_MAD_long, aes(x = MAD_type, y = MAD_value, fill = aspect)) +
+  geom_col(position = "dodge") +  # Use dodge position to separate bars
+  labs(x = "MAD Type", y = "Mean Average Difference (°C)", fill = "Aspect") +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(limits = c(0, 8))  # Set y-axis limits from 0 to 8
+
+PSZ_ind_MAD_barplot
 ```
 
 ## Mean Temps
@@ -5687,9 +5765,9 @@ color_limits <- c(0, 8)
 
 diffs_PSZ_day_heatmap <- ggplot(pairwise_diffs_PSZ_day, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
-  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 4) +  # Add values in squares
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 3,
+                       midpoint = 2.5,
                        limits = color_limits) +  # Add color limits here
   theme_minimal() +
   labs(title = "a) PSZ Day",
@@ -5734,9 +5812,9 @@ pairwise_diffs_PSZ_night <- pairwise_diffs_PSZ_night %>%
 # Visualizing the mean absolute difference as a heatmap with values inside
 diffs_PSZ_night_heatmap <- ggplot(pairwise_diffs_PSZ_night, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
-  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 4) +  # Add values in squares
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
 scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 3, 
+                       midpoint = 2.5, 
                        limits = color_limits) + 
   theme_minimal() +
   labs(title = "b) PSZ Night",
@@ -5781,9 +5859,9 @@ pairwise_diffs_TSZ_day <- pairwise_diffs_TSZ_day %>%
 # Visualizing the mean absolute difference as a heatmap with values inside
 diffs_TSZ_day_heatmap <- ggplot(pairwise_diffs_TSZ_day, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
-  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 4) +
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +
    scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 3, 
+                       midpoint = 2.5, 
                        limits = color_limits) + 
   theme_minimal() +
   labs(title = "c) TSZ Day",
@@ -5826,9 +5904,9 @@ pairwise_diffs_TSZ_night <- pairwise_diffs_TSZ_night %>%
 # Visualizing the mean absolute difference as a heatmap with values inside
 diffs_TSZ_night_heatmap <- ggplot(pairwise_diffs_TSZ_night, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
-  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 4) +  # Add values in squares
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 3, 
+                       midpoint = 2.5, 
                        limits = color_limits) +
   theme_minimal() +
   labs(title = "d) TSZ Night",
