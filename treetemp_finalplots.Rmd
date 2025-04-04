@@ -420,10 +420,6 @@ TSZ_threeday_abla_comp <- full_trans_aspects %>%
 ```
 
 ```{r}
-#long format
-```
-
-```{r}
 #single day dataframes - NOT USING as of now
 PSZ_single_day_sensor_comp_db <- full_pers_aspects %>%
   filter(burn_status == "dead burn", datetime >= "2024-03-10 00:00:00" & datetime <= "2024-03-10 23:45:00")
@@ -913,8 +909,7 @@ PSZ_ind_accu_MADstats <- PSZ_tree1_ind_accu %>%
   group_by(aspect, burn_status) %>%
   summarise(
     mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
-    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
-  )
+    mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE))
 ```
 
 ```{r}
@@ -1341,27 +1336,6 @@ TSZ_ind_accu_DB_live <- TSZ_tree1_ind_accu %>%
     mean_avg_diff = mean(abs(`Tree 1` - `Tree 2`), na.rm = TRUE),
     mean_relative_diff = mean(abs(`Tree 1` - `Tree 2`) / ((`Tree 1` + `Tree 2`) / 2), na.rm = TRUE)
   )
-```
-
-### Plotting Matrix - NOT WORKING
-
-```{r}
-data <- read.csv("your_file.csv", row.names = 1)
-data_long <- as.data.frame(as.table(as.matrix(data)))
-
-# Create heatmap
-ggplot(data_long, aes(x = Var2, y = Var1, fill = Freq)) +
-  geom_tile() +
-  scale_fill_gradient(low = "blue", high = "red") +  
-  theme_minimal() +
-  labs(x = "Columns", y = "Rows", fill = "Value")
-
-```
-
-```{r}
-# Step 1: Load the data (assuming the first column contains row names)
-data_matrix <- as.matrix(read.csv("individualsensor_temp_matrix_data.csv"))
-
 ```
 
 ## Daytime vs Nighttime Tree Temp Plot - GB/DB/UB with aspects
@@ -1902,7 +1876,7 @@ Lineplot - as of 2024-01-31 \*\* USE THIS LINEPLOT!
 ```{r}
 #PSZ lineplot data
 PSZ_mean_ns_lineplot_data <- full_15min_ns %>%
-  filter(zone == "PSZ", phase == "day") %>%
+  filter(zone == "PSZ") %>%
   mutate(day = as.Date(day)) %>%
   mutate(
     burn_status = case_when(
@@ -1944,12 +1918,21 @@ PSZ_UB_mean_ns_lineplot_data <- PSZ_mean_ns_lineplot_data %>%
 PSZ_mean_ns_lineplot_data_V2 <- bind_rows(PSZ_DBGB_mean_ns_lineplot_data, PSZ_UB_mean_ns_lineplot_data) %>%
   #filtering so the lineplot ends on snow-free date for PSZ
   filter(day <= as.Date("2024-06-03"))
+
+PSZ_mean_ns_stats <- full_15min_ns %>% 
+  filter(zone == "PSZ") %>%
+  mutate(temp_diff = north_temp - south_temp) %>%
+  group_by(burn_status) %>%
+  summarize(MAD = mean(temp_diff, na.rm = TRUE), 
+    north_higher = sum(north_temp > south_temp, na.rm = TRUE),
+    south_higher = sum(south_temp > north_temp, na.rm = TRUE),
+    equal_temps  = sum(north_temp == south_temp, na.rm = TRUE))
 ```
 
 ```{r}
 #TSZ lineplot data
 TSZ_mean_ns_lineplot_data <- full_15min_ns %>%
-  filter(zone == "TSZ", phase == "day") %>%
+  filter(zone == "TSZ") %>%
   mutate(
     burn_status = case_when(
       burn_status == "live" ~ "live",
@@ -1960,6 +1943,24 @@ TSZ_mean_ns_lineplot_data <- full_15min_ns %>%
   group_by(day, zone, burn_status) %>%
   summarize(north_temp = mean(north_temp), south_temp = mean(south_temp)) %>%
   filter(day <= as.Date("2024-06-03"))
+
+TSZ_ns_stats <- full_15min_ns %>% 
+  filter(zone == "TSZ") %>%
+  mutate(temp_diff = north_temp - south_temp) %>%
+  group_by(snow_phase, phase, burn_status) %>%
+  summarize(MAD = mean(temp_diff, na.rm = TRUE), 
+    north_higher = sum(north_temp > south_temp, na.rm = TRUE),
+    south_higher = sum(south_temp > north_temp, na.rm = TRUE),
+    equal_temps  = sum(north_temp == south_temp, na.rm = TRUE))
+
+TSZ_mean_ns_stats <- full_15min_ns %>% 
+  filter(zone == "TSZ") %>%
+  mutate(temp_diff = north_temp - south_temp) %>%
+  group_by(burn_status) %>%
+  summarize(MAD = mean(temp_diff, na.rm = TRUE), 
+    north_higher = sum(north_temp > south_temp, na.rm = TRUE),
+    south_higher = sum(south_temp > north_temp, na.rm = TRUE),
+    equal_temps  = sum(north_temp == south_temp, na.rm = TRUE))
 ```
 
 ```{r}
@@ -5305,18 +5306,18 @@ pairwise_diffs_ind <- expand_grid(var1 = temp_varsdiff_1, var2 = temp_varsdiff_2
 
 # Create a lookup table for renaming
 rename_vars_ind <- c(
-  "tree1_DB_north" = "DB North",
-  "tree1_DB_south" = "DB South",
-  "tree1_GB_north" = "GB North",
-  "tree1_GB_south" = "GB South",
-  "tree1_live_north" = "Live North",
-  "tree1_live_south" = "Live South", 
-  "tree2_DB_north" = "DB North",
-  "tree2_DB_south" = "DB South",
-  "tree2_GB_north" = "GB North",
-  "tree2_GB_south" = "GB South",
-  "tree2_live_north" = "Live North",
-  "tree2_live_south" = "Live South"
+  "tree1_DB_north" = "DB N",
+  "tree1_DB_south" = "DB S",
+  "tree1_GB_north" = "GB N",
+  "tree1_GB_south" = "GB S",
+  "tree1_live_north" = "Live N",
+  "tree1_live_south" = "Live S", 
+  "tree2_DB_north" = "DB N",
+  "tree2_DB_south" = "DB S",
+  "tree2_GB_north" = "GB N",
+  "tree2_GB_south" = "GB S",
+  "tree2_live_north" = "Live N",
+  "tree2_live_south" = "Live S"
 )
 
 # Rename the variables in the dataframe
@@ -5325,18 +5326,25 @@ pairwise_diffs_ind <- pairwise_diffs_ind %>%
          var2 = recode(var2, !!!rename_vars_ind))
 
 # Visualizing the mean absolute difference as a heatmap with values inside
-ggplot(pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
+PSZ_ind_heatmap <- ggplot(pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
-  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 4) +  # Add values in squares
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 3,
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "blue2", mid = "white", high = "orangered3", 
+                       midpoint = 4,
                        limits = color_limits) +
   theme_minimal() +
-  labs(title = "PSZ: Mean Average Difference (°C) of Sensor Duplicates",
+  labs(title = "a) PSZ",
        x = "Tree 1 Sensors",
        y = "Tree 2 Sensors",
-       fill = "Mean Abs Diff") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), # Remove y-axis ticks
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 10),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 11))
+
+PSZ_ind_heatmap
 ```
 
 ### TSZ
@@ -5491,18 +5499,18 @@ TSZ_pairwise_diffs_ind <- expand_grid(var1 = TSZ_temp_varsdiff_1, var2 = TSZ_tem
 
 # Create a lookup table for renaming
 rename_vars_ind <- c(
-  "tree1_DB_north" = "DB North",
-  "tree1_DB_south" = "DB South",
-  "tree1_GB_north" = "GB North",
-  "tree1_GB_south" = "GB South",
-  "tree1_live_north" = "Live North",
-  "tree1_live_south" = "Live South", 
-  "tree2_DB_north" = "DB North",
-  "tree2_DB_south" = "DB South",
-  "tree2_GB_north" = "GB North",
-  "tree2_GB_south" = "GB South",
-  "tree2_live_north" = "Live North",
-  "tree2_live_south" = "Live South"
+  "tree1_DB_north" = "DB N",
+  "tree1_DB_south" = "DB S",
+  "tree1_GB_north" = "GB N",
+  "tree1_GB_south" = "GB S",
+  "tree1_live_north" = "Live N",
+  "tree1_live_south" = "Live S", 
+  "tree2_DB_north" = "DB N",
+  "tree2_DB_south" = "DB S",
+  "tree2_GB_north" = "GB N",
+  "tree2_GB_south" = "GB S",
+  "tree2_live_north" = "Live N",
+  "tree2_live_south" = "Live S"
 )
 
 # Rename the variables in the dataframe
@@ -5511,19 +5519,49 @@ TSZ_pairwise_diffs_ind <- TSZ_pairwise_diffs_ind %>%
          var2 = recode(var2, !!!rename_vars_ind))
 
 # Visualizing the mean absolute difference as a heatmap with values inside
-ggplot(TSZ_pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
+TSZ_ind_heatmap <- ggplot(TSZ_pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
-  geom_text(aes(label = round(mean_diff, 2)), color = "black", size = 4) +  # Add values in squares
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 3,
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "blue2", mid = "white", high = "orangered3", 
+                       midpoint = 4,
                        limits = color_limits) +
   theme_minimal() +
-  labs(title = "TSZ: Mean Average Difference (°C) of Sensor Duplicates",
+  labs(title = "b) TSZ",
        x = "Tree 1 Sensors",
-       y = "Tree 2 Sensors",
-       fill = "Mean Abs Diff") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.text.y = element_blank(),  # Remove y-axis text
+        axis.ticks.y = element_blank(),
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 10),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 11))
 
+TSZ_ind_heatmap
+```
+
+```{r}
+library(patchwork)
+
+#USING THIS VERSION OF COMBINED PLOTS
+comb_ind_heatmap <- PSZ_ind_heatmap + TSZ_ind_heatmap +
+  plot_layout(ncol = 2, guides = "collect") &
+  theme(legend.position = "right")
+
+comb_ind_heatmap
+```
+
+```{r}
+#using this!
+ggsave(
+  filename = "comb_ind_heatmap_V2.png",  # File name with extension
+  plot = comb_ind_heatmap,  # The arranged plot object
+  width = 6.5,  # Set width (adjust as needed)
+  height = 4,  # Set height (adjust as needed)
+  dpi = 600  # High resolution for publication-quality output
+)
 ```
 
 Column Visualization of MAD
@@ -5747,12 +5785,12 @@ pairwise_diffs_PSZ_day <- expand_grid(var1 = temp_vars, var2 = temp_vars) %>%
 
 # Step 2: Create a lookup table for renaming
 rename_vars <- c(
-  "DB_north" = "DB North",
-  "DB_south" = "DB South",
-  "GB_north" = "GB North",
-  "GB_south" = "GB South",
-  "live_north" = "Live North",
-  "live_south" = "Live South"
+  "DB_north" = "DB N",
+  "DB_south" = "DB S",
+  "GB_north" = "GB N",
+  "GB_south" = "GB S",
+  "live_north" = "Live N",
+  "live_south" = "Live S"
 )
 
 # Step 3: Rename the variables in the dataframe
@@ -5767,19 +5805,19 @@ diffs_PSZ_day_heatmap <- ggplot(pairwise_diffs_PSZ_day, aes(x = var1, y = var2, 
   geom_tile() +  # Create heatmap tiles
   geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 2.5,
+                       midpoint = 4,
                        limits = color_limits) +  # Add color limits here
   theme_minimal() +
   labs(title = "a) PSZ Day",
        x = NULL,
        y = NULL,
-       fill = "Mean Avg Diff (°C)") +
+       fill = "MAD (°C)") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), 
         strip.text = element_text(size = 11),  # Facet title size
         axis.title = element_text(size = 11),  # Axis title size
-        axis.text = element_text(size = 11),  # Axis tick labels
+        axis.text = element_text(size = 10),  # Axis tick labels
         legend.title = element_text(size = 11),  # Legend title size
-        legend.text = element_text(size = 10))
+        legend.text = element_text(size = 11))
 
 # Print the plot
 diffs_PSZ_day_heatmap
@@ -5796,12 +5834,12 @@ pairwise_diffs_PSZ_night <- expand_grid(var1 = temp_vars_PSZn, var2 = temp_vars_
 
 # Step 2: Create a lookup table for renaming
 rename_vars <- c(
-  "DB_north" = "DB North",
-  "DB_south" = "DB South",
-  "GB_north" = "GB North",
-  "GB_south" = "GB South",
-  "live_north" = "Live North",
-  "live_south" = "Live South"
+  "DB_north" = "DB N",
+  "DB_south" = "DB S",
+  "GB_north" = "GB N",
+  "GB_south" = "GB S",
+  "live_north" = "Live N",
+  "live_south" = "Live S"
 )
 
 # Step 3: Rename the variables in the dataframe
@@ -5814,13 +5852,13 @@ diffs_PSZ_night_heatmap <- ggplot(pairwise_diffs_PSZ_night, aes(x = var1, y = va
   geom_tile() +  # Create heatmap tiles
   geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
 scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 2.5, 
+                       midpoint = 4, 
                        limits = color_limits) + 
   theme_minimal() +
   labs(title = "b) PSZ Night",
        x = NULL,
        y = NULL,
-       fill = "Mean Avg Diff (°C)") +
+       fill = "MAD (°C)") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         axis.text.y = element_blank(),  # Remove y-axis text
         axis.ticks.y = element_blank(),  # Remove y-axis ticks
@@ -5843,12 +5881,12 @@ pairwise_diffs_TSZ_day <- expand_grid(var1 = temp_vars_TSZd, var2 = temp_vars_TS
 
 # Step 2: Create a lookup table for renaming
 rename_vars <- c(
-  "DB_north" = "DB North",
-  "DB_south" = "DB South",
-  "GB_north" = "GB North",
-  "GB_south" = "GB South",
-  "live_north" = "Live North",
-  "live_south" = "Live South"
+  "DB_north" = "DB N",
+  "DB_south" = "DB S",
+  "GB_north" = "GB N",
+  "GB_south" = "GB S",
+  "live_north" = "Live N",
+  "live_south" = "Live S"
 )
 
 # Step 3: Rename the variables in the dataframe
@@ -5861,13 +5899,13 @@ diffs_TSZ_day_heatmap <- ggplot(pairwise_diffs_TSZ_day, aes(x = var1, y = var2, 
   geom_tile() +  # Create heatmap tiles
   geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +
    scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 2.5, 
+                       midpoint = 4, 
                        limits = color_limits) + 
   theme_minimal() +
   labs(title = "c) TSZ Day",
        x = NULL,
        y = NULL,
-       fill = "Mean Avg Diff (°C)") +
+       fill = "MAD (°C)") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), 
     strip.text = element_text(size = 11),  # Facet title size
     axis.title = element_text(size = 11),  # Axis title size
@@ -5888,12 +5926,12 @@ pairwise_diffs_TSZ_night <- expand_grid(var1 = temp_vars_TSZn, var2 = temp_vars_
 
 # Step 2: Create a lookup table for renaming
 rename_vars <- c(
-  "DB_north" = "DB North",
-  "DB_south" = "DB South",
-  "GB_north" = "GB North",
-  "GB_south" = "GB South",
-  "live_north" = "Live North",
-  "live_south" = "Live South"
+  "DB_north" = "DB N",
+  "DB_south" = "DB S",
+  "GB_north" = "GB N",
+  "GB_south" = "GB S",
+  "live_north" = "Live N",
+  "live_south" = "Live S"
 )
 
 # Step 3: Rename the variables in the dataframe
@@ -5906,13 +5944,13 @@ diffs_TSZ_night_heatmap <- ggplot(pairwise_diffs_TSZ_night, aes(x = var1, y = va
   geom_tile() +  # Create heatmap tiles
   geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 2.5, 
+                       midpoint = 4, 
                        limits = color_limits) +
   theme_minimal() +
   labs(title = "d) TSZ Night",
        x = NULL,
        y = NULL,
-       fill = "Mean Avg Diff (°C)") +
+       fill = "MAD (°C)") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), 
         axis.text.y = element_blank(),  # Remove y-axis text
         axis.ticks.y = element_blank(),  # Remove y-axis ticks
@@ -5928,8 +5966,7 @@ diffs_TSZ_night_heatmap
 ```{r}
 PSZ_comb_heatmap <- ggarrange(diffs_PSZ_day_heatmap, diffs_PSZ_night_heatmap, nrow =1, ncol = 2, common.legend = TRUE, legend = "right", 
   align = "v",         # Align vertically
-  heights = c(2, 2.5)    # Set equal height for both plots
-)
+  heights = c(2, 2.5))
 
 PSZ_comb_heatmap 
 ```
@@ -5937,17 +5974,29 @@ PSZ_comb_heatmap
 ```{r}
 TSZ_comb_heatmap <- ggarrange(diffs_TSZ_day_heatmap, diffs_TSZ_night_heatmap, nrow =1, ncol = 2, common.legend = TRUE, legend = "right", 
                               align = "v",         # Align vertically
-  heights = c(2, 2.5)    # Set equal height for both plots
-)
+  heights = c(2, 2.5))
 
 TSZ_comb_heatmap
 ```
 
 ```{r}
-full_comb_heatmap <- ggarrange(PSZ_comb_heatmap, TSZ_comb_heatmap, nrow =2, ncol = 1, common.legend = TRUE, legend = "right")
+full_comb_heatmap <- ggarrange(PSZ_comb_heatmap, TSZ_comb_heatmap, nrow =2, ncol = 1, common.legend = FALSE, legend = "right")
 
 full_comb_heatmap
 ```
+
+```{r}
+#using this!
+
+ggsave(
+  filename = "full_comb_heatmap.png",  # File name with extension
+  plot = full_comb_heatmap,  # The arranged plot object
+  width = 6.5,  # Set width (adjust as needed)
+  height = 6.5,  # Set height (adjust as needed)
+  dpi = 600)
+```
+
+Bar Plot of above Data - exploration, NOT USING!
 
 ```{r}
 ggplot(pairwise_diffs, aes(x = var1, y = mean_diff, fill = var2)) +
@@ -5960,7 +6009,6 @@ ggplot(pairwise_diffs, aes(x = var1, y = mean_diff, fill = var2)) +
        y = "Mean Abs Diff",
        fill = "Compared Variable") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels
-
 ```
 
 Stephanie's ideas for visualization:
