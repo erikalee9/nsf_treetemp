@@ -6011,6 +6011,241 @@ ggplot(pairwise_diffs, aes(x = var1, y = mean_diff, fill = var2)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels
 ```
 
+## Day vs Night
+
+### Data Wrangling
+
+```{r}
+#Day dataframe
+full_day <- full_15min_gbdbub %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(phase == "day") %>%
+  rename(`DB day` = db_temp, `GB day` = gb_temp, `live day` = ub_temp) %>%
+  group_by(day, zone, snow_phase) %>%
+  summarize(`DB day` = mean(`DB day`, na.rm = TRUE), 
+            `GB day` = mean(`GB day`, na.rm = TRUE), 
+            `live day` = mean(`live day`, na.rm = TRUE), 
+            .groups = "drop")
+  
+
+full_night <- full_15min_gbdbub %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(phase == "night") %>%
+  rename(`DB night` = db_temp, `GB night` = gb_temp, `live night` = ub_temp) %>%
+  group_by(day, zone, snow_phase) %>%
+  summarize(`DB night` = mean(`DB night`, na.rm = TRUE), 
+            `GB night` = mean(`GB night`, na.rm = TRUE), 
+            `live night` = mean(`live night`, na.rm = TRUE), 
+            .groups = "drop")
+
+final_daynight_comb <- full_day %>%
+  inner_join(full_night, by = c("day", "zone", "snow_phase"))
+```
+
+```{r}
+PSZ_daynight <- final_daynight_comb %>%
+  filter(zone == "PSZ")
+
+TSZ_daynight <- final_daynight_comb %>%
+  filter(zone == "TSZ")
+```
+
+Matrix
+
+### PSZ
+
+```{r}
+mean_avg_diff <- function(x, y) {
+  mean(abs(x - y), na.rm = TRUE)
+}
+
+# Select only the temperature-related columns
+temp_vars <- c("DB day", "DB night", "GB day", "GB night", "live day", "live night")
+
+pairwise_diffs_PSZ_dtnt <- expand_grid(var1 = temp_vars, var2 = temp_vars) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(PSZ_daynight[[var1]], PSZ_daynight[[var2]])) %>%
+  ungroup()
+
+#setting a limit for all four plots that is incorporated into each plot, so the color gradient is equal across all plots
+color_limits <- c(0, 12)
+
+diffs_PSZ_dtnt_heatmap <- ggplot(pairwise_diffs_PSZ_dtnt, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = 4,
+                       limits = color_limits) +  # Add color limits here
+  theme_minimal() + 
+  labs(title = "a) PSZ",
+       x = NULL,
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        strip.text = element_text(size = 11),  # Facet title size
+        axis.title = element_text(size = 11),  # Axis title size
+        axis.text = element_text(size = 10),  # Axis tick labels
+        legend.title = element_text(size = 11),  # Legend title size
+        legend.text = element_text(size = 11))
+
+# Print the plot
+diffs_PSZ_dtnt_heatmap
+```
+
+### TSZ
+
+```{r}
+# Select only the temperature-related columns
+temp_vars <- c("DB day", "DB night", "GB day", "GB night", "live day", "live night")
+
+pairwise_diffs_TSZ_dtnt <- expand_grid(var1 = temp_vars, var2 = temp_vars) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(TSZ_daynight[[var1]], TSZ_daynight[[var2]])) %>%
+  ungroup()
+
+#setting a limit for all four plots that is incorporated into each plot, so the color gradient is equal across all plots
+color_limits <- c(0, 12)
+
+diffs_TSZ_dtnt_heatmap <- ggplot(pairwise_diffs_TSZ_dtnt, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = 4,
+                       limits = color_limits) +  # Add color limits here
+  theme_minimal() +
+  labs(title = "b) TSZ",
+       x = NULL,
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        axis.text.y = element_blank(),  # Remove y-axis text
+        axis.ticks.y = element_blank(),
+        strip.text = element_text(size = 11),  # Facet title size
+        axis.title = element_text(size = 11),  # Axis title size
+        axis.text = element_text(size = 10),  # Axis tick labels
+        legend.title = element_text(size = 11),  # Legend title size
+        legend.text = element_text(size = 11))
+
+# Print the plot
+diffs_TSZ_dtnt_heatmap
+```
+
+```{r}
+comb_dtnt_heatmap <- diffs_PSZ_dtnt_heatmap + diffs_TSZ_dtnt_heatmap +
+  plot_layout(ncol = 2, guides = "collect") &
+  theme(legend.position = "right")
+
+comb_dtnt_heatmap 
+```
+
+```{r}
+ggsave(
+  filename = "comb_dtnt_heatmap .png",  # File name with extension
+  plot = comb_dtnt_heatmap,  # The arranged plot object
+  width = 6.5,  # Set width (adjust as needed)
+  height = 4,  # Set height (adjust as needed)
+  dpi = 600  # High resolution for publication-quality output
+)
+```
+
+### V2 - using this!
+
+Split differently so that Day temps are on one axis and night temps are on the other
+
+PSZ
+
+```{r}
+# Separate day and night variables
+day_vars <- c("DB day", "GB day", "live day")
+night_vars <- c("DB night", "GB night", "live night")
+
+# Only compare day (y-axis) vs. night (x-axis)
+pairwise_diffs_PSZ_dtnt_V2 <- expand_grid(var_day = day_vars, var_night = night_vars) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(PSZ_daynight[[var_day]], PSZ_daynight[[var_night]])) %>%
+  ungroup()
+
+# Plot: x = night temps, y = day temps
+diffs_PSZ_dtnt_heatmap_V2 <- ggplot(pairwise_diffs_PSZ_dtnt_V2, aes(x = var_night, y = var_day, fill = mean_diff)) +
+  geom_tile() +  
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = 4,
+                       limits = color_limits) +  
+  theme_minimal() +
+  labs(title = "a) PSZ",
+       x = NULL,
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        strip.text = element_text(size = 11),
+        axis.title = element_text(size = 11),
+        axis.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        legend.text = element_text(size = 11))
+
+# Print the plot
+diffs_PSZ_dtnt_heatmap_V2
+```
+
+TSZ
+
+```{r}
+# Separate day and night variables
+day_vars <- c("DB day", "GB day", "live day")
+night_vars <- c("DB night", "GB night", "live night")
+
+# Only compare day (y-axis) vs. night (x-axis)
+pairwise_diffs_TSZ_dtnt_V2 <- expand_grid(var_day = day_vars, var_night = night_vars) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(TSZ_daynight[[var_day]], TSZ_daynight[[var_night]])) %>%
+  ungroup()
+
+# Plot: x = night temps, y = day temps
+diffs_TSZ_dtnt_heatmap_V2 <- ggplot(pairwise_diffs_TSZ_dtnt_V2, aes(x = var_night, y = var_day, fill = mean_diff)) +
+  geom_tile() +  
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = 4,
+                       limits = color_limits) +  
+  theme_minimal() +
+  labs(title = "b) TSZ",
+       x = NULL,
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        axis.text.y = element_blank(),  # Remove y-axis text
+        axis.ticks.y = element_blank(),
+        strip.text = element_text(size = 11),  # Facet title size
+        axis.title = element_text(size = 11),  # Axis title size
+        axis.text = element_text(size = 10),  # Axis tick labels
+        legend.title = element_text(size = 11),  # Legend title size
+        legend.text = element_text(size = 11))
+
+# Print the plot
+diffs_TSZ_dtnt_heatmap_V2
+```
+
+```{r}
+comb_dtnt_heatmap_V2 <- diffs_PSZ_dtnt_heatmap_V2 + diffs_TSZ_dtnt_heatmap_V2 +
+  plot_layout(ncol = 2, guides = "collect") &
+  theme(legend.position = "right")
+
+comb_dtnt_heatmap_V2
+```
+
+```{r}
+ggsave(
+  filename = "comb_dtnt_heatmap_V2.png",  # File name with extension
+  plot = comb_dtnt_heatmap_V2,  # The arranged plot object
+  width = 6.5,  # Set width (adjust as needed)
+  height = 4,  # Set height (adjust as needed)
+  dpi = 600  # High resolution for publication-quality output
+)
+```
+
+\*\* I separated the above plots by accu/abla season, but the pattern was pretty similar! So I left them combined
+
 Stephanie's ideas for visualization:
 
 ```{r}
