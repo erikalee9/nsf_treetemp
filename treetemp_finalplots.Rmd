@@ -4511,6 +4511,18 @@ PSZ_b_snowdepths_barplot <- ggplot() +
 PSZ_b_snowdepths_barplot
 ```
 
+```{r}
+#stats on mean tree temp during ablation for PSZ and TSZ - used in limitation section of thesis!
+
+PSZ_meantreetemp_abla_stats <- PSZ_meanday_treetemp %>%
+  filter(day >= "2024-05-03") %>%
+  summarize(mean_treetemp = mean(mean_dt_treetemp))
+
+TSZ_meantreetemp_abla_stats <- TSZ_meanday_treetemp %>%
+  filter(day >= "2024-04-12" & day <= "2024-05-12") %>%
+  summarize(mean_treetemp = mean(mean_dt_treetemp))
+```
+
 TSZ Line Plot!
 
 ```{r}
