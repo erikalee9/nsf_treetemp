@@ -4286,14 +4286,19 @@ transub_snowcamera_data_V2 <- transub_snowcamera_data %>%
 
 #Use this dataset for trans UB snowdepths, as it's more accurate than mountain campus snow depths!
 AG_transub_snowcamera_data_V2 <- AG_transub_snowcamera_data %>%
-  filter(day < "2024-05-12")
+  filter(day < "2024-05-13") %>%
+  mutate(day = day - day(1))
 ```
+
+------------------------------------------------------------------------
 
 ```{r}
 #need to use weather data for trans ub snow depths
 pers_ub_daily_snowdepth_data_V1 <- filtered_persub_wx_hourly %>%
-  group_by(day, phase, zone, burn_status) %>%
+  group_by(datetime, day, zone, phase, burn_status) %>%
+  mutate(SnowDepth_m = if_else(Q_Avg < 180, NA_real_, SnowDepth_m)) %>%
   summarize(max_snowdepth_m = max(SnowDepth_m), mean_airtemp = mean(AirTC_Avg))
+  
 
 #this is the mean of day and night, to give proper mean daytime temps and maximum day and night snow depths! Use V2 for plotting
 pers_ub_daily_snowdepth_data_V2 <- pers_ub_daily_snowdepth_data_V1 %>%
@@ -4329,7 +4334,7 @@ persb_wx_data <- filtered_persb_wx_hourly %>%
 persb_wx_data_V2 <- persb_wx_data %>%
   group_by(day, zone, burn_status) %>%
   summarize(mean_airtemp = max(mean_airtemp), mean_SW_net = mean(mean_SW_net), mean_LW_net = mean(mean_LW_net), mean_NR_Avg = mean(mean_NR_Avg)) %>%
-  filter(day <= "2024-06-03")
+  filter(day <= "2024-06-12")
 ```
 
 ```{r}
@@ -4341,7 +4346,7 @@ transb_wx_data <- filtered_transb_wx_15min %>%
 transb_wx_data_V2 <- transb_wx_data %>%
   group_by(day, zone, burn_status) %>%
   summarize(mean_airtemp = max(mean_airtemp), mean_SW_net = mean(mean_SW_net), mean_LW_net = mean(mean_LW_net), mean_NR_Avg = mean(mean_NR_Avg)) %>%
-  filter(day <= "2024-06-03")
+  filter(day <= "2024-06-12")
 ```
 
 ```{r}
@@ -4356,7 +4361,7 @@ transb_snowcamera_data_V2 <- transb_snowcamera_data %>%
   select(day, zone, burn_status, snowcam_max_depth_m, treewell_developed) %>%
   rename(max_snowdepth_m = snowcam_max_depth_m)  %>%
   left_join(transb_wx_data_V2, by = c("day", "zone", "burn_status")) %>%
-  filter(day <= "2024-06-03")
+  filter(day <= "2024-05-08")
 ```
 
 ```{r}
@@ -4366,7 +4371,7 @@ persb_treewell_dates <- persb_snowcamera_data_V2 %>%
 
 transb_treewell_dates <- transb_snowcamera_data_V2 %>%
   filter(treewell_developed == "yes") %>%
-  filter(day <= "2024-05-16")
+  filter(day <= "2024-05-08")
 ```
 
 Plotting
@@ -4458,6 +4463,9 @@ PSZ_b_snowdepths_barplot <- ggplot() +
   # Burned wx station air temp (bar) - DODGED
   geom_col(data = persb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, fill = "Air Temperature"), 
            width = 0.7, position = position_dodge(width = 0.9)) +
+  # Unburned snow depth
+  geom_line(data = pers_ub_daily_snowdepth_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
+            linetype = "solid", linewidth = 0.8) +
   # Burned snow depth (line)
   geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), 
             linetype = "solid", linewidth = 0.8) +
@@ -4477,12 +4485,12 @@ PSZ_b_snowdepths_barplot <- ggplot() +
   ) +
   scale_x_date(
     name = NULL,
-    limits = c(min(persb_wx_data_V2$day, na.rm = TRUE), max(persb_wx_data_V2$day, na.rm = TRUE)), 
+    limits = c(min(pers_ub_daily_snowdepth_data_V2$day, na.rm = TRUE), max(pers_ub_daily_snowdepth_data_V2$day, na.rm = TRUE)), 
     expand = c(0, 0)
   ) +
   scale_color_manual(
     name = NULL,
-    values = c("Burned Snow Depth" = "#2166AC")
+    values = c("Burned Snow Depth" = "#2166AC", "Unburned Snow Depth" = "grey23")
   ) +
   scale_fill_manual(
     name = NULL,
@@ -4496,7 +4504,11 @@ PSZ_b_snowdepths_barplot <- ggplot() +
     name = NULL,
     values = c("Dates that treewells developed" = 16)
   ) + 
-  guides(shape = "none") + 
+  guides(
+    shape = "none",  # Hides the shape legend
+    fill = guide_legend(nrow = 2),  # Place fill (bar) legends in one row
+    color = guide_legend(nrow = 2)  # Place color (line) legends in another row
+  ) + 
   theme_bw() + 
   theme(
     strip.text = element_text(size = 11),
@@ -4505,7 +4517,9 @@ PSZ_b_snowdepths_barplot <- ggplot() +
     legend.title = element_text(size = 11),
     legend.text = element_text(size = 10),
     legend.key.width = unit(1, "cm"),
-    legend.key.height = unit(0.85, "cm"))
+    legend.key.height = unit(0.85, "cm"),
+    legend.position = "bottom"  # Put the legend at the bottom
+  )
 
 
 PSZ_b_snowdepths_barplot
@@ -4602,6 +4616,9 @@ TSZ_b_snowdepths_barplot <- ggplot() +
   # Burned wx station air temp (bar) - DODGED
   geom_col(data = transb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, fill = "Air Temperature"), 
            width = 0.7, position = position_dodge(width = 0.9)) +
+  # Unburned snow depth
+  geom_line(data = AG_transub_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
+            linetype = "solid", linewidth = 0.8) +
   # Burned snow depth (line)
   geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), 
             linetype = "solid", linewidth = 0.8) +
@@ -4621,12 +4638,12 @@ TSZ_b_snowdepths_barplot <- ggplot() +
   ) +
   scale_x_date(
     name = NULL,
-    limits = c(min(transb_wx_data_V2$day, na.rm = TRUE), max(persb_wx_data_V2$day, na.rm = TRUE)), 
+    limits = c(min(pers_ub_daily_snowdepth_data_V2$day, na.rm = TRUE), max(pers_ub_daily_snowdepth_data_V2$day, na.rm = TRUE)), 
     expand = c(0, 0)
   ) +
   scale_color_manual(
     name = NULL,
-    values = c("Burned Snow Depth" = "#2166AC")
+    values = c("Burned Snow Depth" = "#2166AC", "Unburned Snow Depth" = "grey23")
   ) +
   scale_fill_manual(
     name = NULL,
@@ -4640,7 +4657,11 @@ TSZ_b_snowdepths_barplot <- ggplot() +
     name = NULL,
     values = c("Dates that treewells developed" = 16)
   ) + 
-  guides(shape = "none") + 
+    guides(
+    shape = "none",  # Hides the shape legend
+    fill = guide_legend(nrow = 2),  # Place fill (bar) legends in one row
+    color = guide_legend(nrow = 2)  # Place color (line) legends in another row
+  ) + 
   theme_bw() + 
   theme(
     strip.text = element_text(size = 11),
@@ -4649,7 +4670,9 @@ TSZ_b_snowdepths_barplot <- ggplot() +
     legend.title = element_text(size = 11),
     legend.text = element_text(size = 10),
     legend.key.width = unit(1, "cm"),
-    legend.key.height = unit(0.85, "cm"))
+    legend.key.height = unit(0.85, "cm"),
+    legend.position = "bottom"  # Put the legend at the bottom
+  )
 
 TSZ_b_snowdepths_barplot
 ```
@@ -4677,10 +4700,10 @@ ggsave(filename = "final_comb_snowdepth_lineplot_V4.png",
 ```
 
 ```{r}
-ggsave(filename = "final_comb_snowdepth_barplot_V2.png", 
+ggsave(filename = "final_comb_snowdepth_barplot_V3.png", 
        plot = final_comb_snowdepth_barplot, 
        width = 6.5, 
-       height = 7, 
+       height = 8, 
        dpi = 600)
 ```
 
@@ -6342,7 +6365,7 @@ TSZ_comb_dtnt_heatmap_V2
 comb_dtnt_heatmap_V2 <- ggarrange(PSZ_comb_dtnt_heatmap_V2, TSZ_comb_dtnt_heatmap_V2, 
                                   nrow = 2, ncol = 1, common.legend = FALSE, legend = "right")
 
-comb_dtnt_heatmap_V2 
+comb_dtnt_heatmap_V2
 ```
 
 ```{r}
