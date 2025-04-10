@@ -5191,7 +5191,7 @@ t_gb_ub_ttest_results
 North Aspect PSZ - Tree 1
 
 ```{r}
-PSZ_ind_sensor_tree1_n <- PSZ_threeday_accu_comp %>%
+PSZ_ind_sensor_tree1_n <- PSZ_ind_sensor_fullperiod %>%
   select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
   filter(tree_name == "Tree 1", aspect == "north") %>%
   pivot_wider(names_from = burn_status, 
@@ -5220,7 +5220,7 @@ PSZ_ind_tree1_n_final <- PSZ_ind_DB_tree1_n %>%
 South Aspect PSZ
 
 ```{r}
-PSZ_ind_sensor_tree1_s <- PSZ_threeday_accu_comp %>%
+PSZ_ind_sensor_tree1_s <- PSZ_ind_sensor_fullperiod %>%
   select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
   filter(tree_name == "Tree 1", aspect == "south") %>%
   pivot_wider(names_from = burn_status, 
@@ -5255,7 +5255,7 @@ PSZ_comb_ind_tree1 <- PSZ_ind_tree1_n_final %>%
 North Ind. PSZ - Tree 2
 
 ```{r}
-PSZ_ind_sensor_tree2_n <- PSZ_threeday_accu_comp %>%
+PSZ_ind_sensor_tree2_n <- PSZ_ind_sensor_fullperiod %>%
   select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
   filter(tree_name == "Tree 2", aspect == "north") %>%
   pivot_wider(names_from = burn_status, 
@@ -5283,7 +5283,7 @@ PSZ_ind_tree2_n_final <- PSZ_ind_DB_tree2_n %>%
 
 ```{r}
 #south tree 2 
-PSZ_ind_sensor_tree2_s <- PSZ_threeday_accu_comp %>%
+PSZ_ind_sensor_tree2_s <- PSZ_ind_sensor_fullperiod %>%
   select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
   filter(tree_name == "Tree 2", aspect == "south") %>%
   pivot_wider(names_from = burn_status, 
@@ -5363,10 +5363,10 @@ pairwise_diffs_ind <- pairwise_diffs_ind %>%
 # Visualizing the mean absolute difference as a heatmap with values inside
 PSZ_ind_heatmap <- ggplot(pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
-  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
+  geom_text(aes(label = sprintf("%.1f", mean_diff)), color = "black", size = 4) +  # Add values in squares
   scale_fill_gradient2(low = "blue2", mid = "white", high = "orangered3", 
                        midpoint = 4,
-                       limits = color_limits) +
+                       limits = color_limits_ind) +
   theme_minimal() +
   labs(title = "a) PSZ",
        x = "Tree 1 Sensors",
@@ -5387,7 +5387,7 @@ PSZ_ind_heatmap
 Tree1
 
 ```{r}
-TSZ_ind_sensor_tree1_n <- TSZ_threeday_accu_comp %>%
+TSZ_ind_sensor_tree1_n <- TSZ_ind_sensor_fullperiod %>%
   select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
   filter(tree_name == "Tree 1", aspect == "north") %>%
   pivot_wider(names_from = burn_status, 
@@ -5415,7 +5415,7 @@ TSZ_ind_tree1_n_final <- TSZ_ind_DB_tree1_n %>%
 ```
 
 ```{r}
-TSZ_ind_sensor_tree1_s <- TSZ_threeday_accu_comp %>%
+TSZ_ind_sensor_tree1_s <- TSZ_ind_sensor_fullperiod %>%
   select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
   filter(tree_name == "Tree 1", aspect == "south") %>%
   pivot_wider(names_from = burn_status, 
@@ -5450,7 +5450,7 @@ TSZ_comb_ind_tree1 <- TSZ_ind_tree1_n_final %>%
 Tree 2
 
 ```{r}
-TSZ_ind_sensor_tree2_n <- TSZ_threeday_accu_comp %>%
+TSZ_ind_sensor_tree2_n <- TSZ_ind_sensor_fullperiod %>%
   select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
   filter(tree_name == "Tree 2", aspect == "north") %>%
   pivot_wider(names_from = burn_status, 
@@ -5478,7 +5478,7 @@ TSZ_ind_tree2_n_final <- TSZ_ind_DB_tree2_n %>%
 
 ```{r}
 #south tree 2 
-TSZ_ind_sensor_tree2_s <- TSZ_threeday_accu_comp %>%
+TSZ_ind_sensor_tree2_s <- TSZ_ind_sensor_fullperiod %>%
   select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
   filter(tree_name == "Tree 2", aspect == "south") %>%
   pivot_wider(names_from = burn_status, 
@@ -5556,10 +5556,10 @@ TSZ_pairwise_diffs_ind <- TSZ_pairwise_diffs_ind %>%
 # Visualizing the mean absolute difference as a heatmap with values inside
 TSZ_ind_heatmap <- ggplot(TSZ_pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
-  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
+  geom_text(aes(label = sprintf("%.1f", mean_diff)), color = "black", size = 4) +  # Add values in squares
   scale_fill_gradient2(low = "blue2", mid = "white", high = "orangered3", 
                        midpoint = 4,
-                       limits = color_limits) +
+                       limits = color_limits_ind) +
   theme_minimal() +
   labs(title = "b) TSZ",
        x = "Tree 1 Sensors",
@@ -5589,9 +5589,11 @@ comb_ind_heatmap
 ```
 
 ```{r}
+#currently saving full timeperiod matrix, if I just want the three-day period, us V2 in thesis_figures file.
+
 #using this!
 ggsave(
-  filename = "comb_ind_heatmap_V2.png",  # File name with extension
+  filename = "comb_ind_heatmap_V3.png",  # File name with extension
   plot = comb_ind_heatmap,  # The arranged plot object
   width = 6.5,  # Set width (adjust as needed)
   height = 4,  # Set height (adjust as needed)
@@ -5599,6 +5601,49 @@ ggsave(
 )
 ```
 
+\
+V2 - full period of observation, not just three-day period
+
+Data Wrangling
+
+```{r}
+PSZ_ind_sensor_fullperiod <- full_pers_aspects %>%
+  filter(datetime < "2024-05-24 00:00:00") %>%
+  mutate(tree_name = case_when(
+    tree_name == "gb_e" ~ "gb_n", TRUE ~ tree_name)) %>%
+  #changing tree names so I can plot line type with onyl 2 IDs
+  mutate(tree_name = case_when(
+      str_detect(tree_name, "_n$") ~ "Tree 1",  
+      str_detect(tree_name, "_s$") ~ "Tree 2",  
+      TRUE ~ tree_name  # Keep original if it doesn’t match
+    ),
+    burn_status = case_when(
+    burn_status == "green burn" ~ "GB", 
+    burn_status == "dead burn" ~ "DB",
+    burn_status == "live" ~ "live",
+    TRUE ~ burn_status))
+
+TSZ_ind_sensor_fullperiod <- full_trans_aspects %>%
+  filter(datetime < "2024-04-26 00:00:00") %>%
+   mutate(tree_name = case_when(
+    tree_name == "ub_e" ~ "ub_n",
+    tree_name == "ub_w" ~ "ub_s", TRUE ~ tree_name)) %>%
+  #changing tree names so I can plot line type with onyl 2 IDs
+  mutate(tree_name = case_when(
+      str_detect(tree_name, "_n$") ~ "Tree 1",  
+      str_detect(tree_name, "_s$") ~ "Tree 2",  
+      TRUE ~ tree_name  # Keep original if it doesn’t match
+    ),
+    burn_status = case_when(
+    burn_status == "green burn" ~ "GB", 
+    burn_status == "dead burn" ~ "DB",
+    burn_status == "live" ~ "live",
+    TRUE ~ burn_status))
+```
+
+\
+\*\* switched out three_day dataframe in above code for full period. If I want to go back to three-day analysis, switch back! \
+\
 Column Visualization of MAD
 
 ```{r}
