@@ -5094,6 +5094,118 @@ t_ub_abla_ns_ttest_results <- t.test(TSZ_ub_abla_ns_dataframe$north_temp, TSZ_ub
 t_ub_abla_ns_ttest_results
 ```
 
+N/S tests NOT separated by accu/abla but day/night instead
+
+DB
+
+```{r}
+PSZ_db_ns_dt_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "day", burn_status == "dead burn")
+
+PSZ_db_ns_nt_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "night", burn_status == "dead burn")
+
+TSZ_db_ns_dt_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "day", burn_status == "dead burn")
+
+TSZ_db_ns_nt_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "night", burn_status == "dead burn")
+```
+
+```{r}
+p_db_ns_dt_ttest_results <- t.test(PSZ_db_ns_dt_dataframe$north_temp, PSZ_db_ns_dt_dataframe$south_temp)
+
+p_db_ns_dt_ttest_results
+
+p_db_ns_nt_ttest_results <- t.test(PSZ_db_ns_nt_dataframe$north_temp, PSZ_db_ns_nt_dataframe$south_temp)
+
+p_db_ns_nt_ttest_results
+```
+
+```{r}
+t_db_ns_dt_ttest_results <- t.test(TSZ_db_ns_dt_dataframe$north_temp, TSZ_db_ns_dt_dataframe$south_temp)
+
+t_db_ns_dt_ttest_results
+
+t_db_ns_nt_ttest_results <- t.test(TSZ_db_ns_nt_dataframe$north_temp, TSZ_db_ns_nt_dataframe$south_temp)
+
+t_db_ns_nt_ttest_results
+```
+
+GB
+
+```{r}
+PSZ_gb_ns_dt_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "day", burn_status == "green burn")
+
+PSZ_gb_ns_nt_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "night", burn_status == "green burn")
+
+TSZ_gb_ns_dt_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "day", burn_status == "green burn")
+
+TSZ_gb_ns_nt_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "night", burn_status == "green burn")
+```
+
+```{r}
+p_gb_ns_dt_ttest_results <- t.test(PSZ_gb_ns_dt_dataframe$north_temp, PSZ_gb_ns_dt_dataframe$south_temp)
+
+p_gb_ns_dt_ttest_results
+
+p_gb_ns_nt_ttest_results <- t.test(PSZ_gb_ns_nt_dataframe$north_temp, PSZ_gb_ns_nt_dataframe$south_temp)
+
+p_gb_ns_nt_ttest_results
+```
+
+```{r}
+t_gb_ns_dt_ttest_results <- t.test(TSZ_gb_ns_dt_dataframe$north_temp, TSZ_gb_ns_dt_dataframe$south_temp)
+
+t_gb_ns_dt_ttest_results
+
+t_gb_ns_nt_ttest_results <- t.test(TSZ_gb_ns_nt_dataframe$north_temp, TSZ_gb_ns_nt_dataframe$south_temp)
+
+t_gb_ns_nt_ttest_results
+```
+
+Live
+
+```{r}
+PSZ_ub_ns_dt_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "day", burn_status == "live")
+
+PSZ_ub_ns_nt_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "night", burn_status == "live")
+
+TSZ_ub_ns_dt_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "day", burn_status == "live")
+
+TSZ_ub_ns_nt_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "night", burn_status == "live")
+```
+
+```{r}
+p_ub_ns_dt_ttest_results <- t.test(PSZ_ub_ns_dt_dataframe$north_temp, PSZ_ub_ns_dt_dataframe$south_temp)
+
+p_ub_ns_dt_ttest_results
+
+p_ub_ns_nt_ttest_results <- t.test(PSZ_ub_ns_nt_dataframe$north_temp, PSZ_ub_ns_nt_dataframe$south_temp)
+
+p_ub_ns_nt_ttest_results
+```
+
+```{r}
+t_ub_ns_dt_ttest_results <- t.test(TSZ_ub_ns_dt_dataframe$north_temp, TSZ_ub_ns_dt_dataframe$south_temp)
+
+t_ub_ns_dt_ttest_results
+
+t_ub_ns_nt_ttest_results <- t.test(TSZ_ub_ns_nt_dataframe$north_temp, TSZ_ub_ns_nt_dataframe$south_temp)
+
+t_ub_ns_nt_ttest_results
+```
+
+\
+
 ## GB vs DB vs Live
 
 ```{r}
@@ -5128,16 +5240,15 @@ TSZ_dbgb_dataframe <- full_15min_gbdbub %>%
 #mean stats comparisons for db vs ub vs gb -> getting average difference in temp!
 
 PSZ_dbubgb_dataframe <- full_15min_gbdbub %>%
-  filter(zone == "PSZ")
-
-#%>%
- # group_by(zone, phase, aspect) %>%
-  #summarize(ub_temp = mean(ub_temp, na.rm = TRUE), 
-       #     db_temp = mean(db_temp, na.rm = TRUE), 
-        #    gb_temp = mean(gb_temp,na.rm = TRUE))
+  filter(zone == "PSZ") %>%
+  group_by(zone) %>%
+  summarize(ub_temp = mean(ub_temp, na.rm = TRUE), 
+           db_temp = mean(db_temp, na.rm = TRUE), 
+           gb_temp = mean(gb_temp,na.rm = TRUE))
 
 TSZ_dbubgb_dataframe <- full_15min_gbdbub %>%
-  filter(zone == "TSZ")
+  filter(zone == "TSZ") %>%
+  drop_na()
 
 #%>%
 #  group_by(zone, phase, aspect) %>%
