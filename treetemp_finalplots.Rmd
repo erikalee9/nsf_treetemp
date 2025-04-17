@@ -4453,7 +4453,7 @@ Snow line plot with temp bar plot version!
 ```{r}
 PSZ_b_snowdepths_barplot <- ggplot() + 
   # Manual snow survey date
-  geom_vline(xintercept = as.numeric(as.Date('2024-05-03')), 
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
              linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
   # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
@@ -4464,8 +4464,8 @@ PSZ_b_snowdepths_barplot <- ggplot() +
   geom_col(data = persb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, fill = "Air Temperature"), 
            width = 0.7, position = position_dodge(width = 0.9)) +
   # Unburned snow depth
-  geom_line(data = pers_ub_daily_snowdepth_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
-            linetype = "solid", linewidth = 0.8) +
+  #geom_line(data = pers_ub_daily_snowdepth_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
+            #linetype = "solid", linewidth = 0.8) +
   # Burned snow depth (line)
   geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), 
             linetype = "solid", linewidth = 0.8) +
@@ -4490,7 +4490,8 @@ PSZ_b_snowdepths_barplot <- ggplot() +
   ) +
   scale_color_manual(
     name = NULL,
-    values = c("Burned Snow Depth" = "#2166AC", "Unburned Snow Depth" = "grey23")
+    values = c("Burned Snow Depth" = "#2166AC")
+               #"Unburned Snow Depth" = "grey23")
   ) +
   scale_fill_manual(
     name = NULL,
@@ -4505,10 +4506,10 @@ PSZ_b_snowdepths_barplot <- ggplot() +
     values = c("Dates that treewells developed" = 16)
   ) + 
   guides(
-    shape = "none",  # Hides the shape legend
-    fill = guide_legend(nrow = 2),  # Place fill (bar) legends in one row
-    color = guide_legend(nrow = 2)  # Place color (line) legends in another row
-  ) + 
+    shape = "none") +  # Hides the shape legend
+   # fill = guide_legend(nrow = 2),  # Place fill (bar) legends in one row
+  #  color = guide_legend(nrow = 2)  # Place color (line) legends in another row
+ # ) + 
   theme_bw() + 
   theme(
     strip.text = element_text(size = 11),
@@ -4606,7 +4607,7 @@ TSZ Line plot for snow with bar plot for temps
 ```{r}
 TSZ_b_snowdepths_barplot <- ggplot() + 
   # Manual snow survey date
-  geom_vline(xintercept = as.numeric(as.Date('2024-04-12')), 
+  geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
              linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
   # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
@@ -4617,8 +4618,8 @@ TSZ_b_snowdepths_barplot <- ggplot() +
   geom_col(data = transb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, fill = "Air Temperature"), 
            width = 0.7, position = position_dodge(width = 0.9)) +
   # Unburned snow depth
-  geom_line(data = AG_transub_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
-            linetype = "solid", linewidth = 0.8) +
+  #geom_line(data = AG_transub_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
+          #  linetype = "solid", linewidth = 0.8) +
   # Burned snow depth (line)
   geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), 
             linetype = "solid", linewidth = 0.8) +
@@ -4643,8 +4644,9 @@ TSZ_b_snowdepths_barplot <- ggplot() +
   ) +
   scale_color_manual(
     name = NULL,
-    values = c("Burned Snow Depth" = "#2166AC", "Unburned Snow Depth" = "grey23")
-  ) +
+    values = c("Burned Snow Depth" = "#2166AC")) +
+               #"Unburned Snow Depth" = "grey23")
+  #) +
   scale_fill_manual(
     name = NULL,
     values = c(
@@ -4658,10 +4660,10 @@ TSZ_b_snowdepths_barplot <- ggplot() +
     values = c("Dates that treewells developed" = 16)
   ) + 
     guides(
-    shape = "none",  # Hides the shape legend
-    fill = guide_legend(nrow = 2),  # Place fill (bar) legends in one row
-    color = guide_legend(nrow = 2)  # Place color (line) legends in another row
-  ) + 
+    shape = "none") +  # Hides the shape legend
+   # fill = guide_legend(nrow = 2),  # Place fill (bar) legends in one row
+   # color = guide_legend(nrow = 2)  # Place color (line) legends in another row
+  #) + 
   theme_bw() + 
   theme(
     strip.text = element_text(size = 11),
@@ -4700,7 +4702,7 @@ ggsave(filename = "final_comb_snowdepth_lineplot_V4.png",
 ```
 
 ```{r}
-ggsave(filename = "final_comb_snowdepth_barplot_V3.png", 
+ggsave(filename = "final_comb_snowdepth_barplot_V5.png", 
        plot = final_comb_snowdepth_barplot, 
        width = 6.5, 
        height = 8, 
@@ -5126,18 +5128,22 @@ TSZ_dbgb_dataframe <- full_15min_gbdbub %>%
 #mean stats comparisons for db vs ub vs gb -> getting average difference in temp!
 
 PSZ_dbubgb_dataframe <- full_15min_gbdbub %>%
-  filter(zone == "PSZ") %>%
-  group_by(zone, phase, aspect) %>%
-  summarize(ub_temp = mean(ub_temp, na.rm = TRUE), 
-            db_temp = mean(db_temp, na.rm = TRUE), 
-            gb_temp = mean(gb_temp,na.rm = TRUE))
+  filter(zone == "PSZ")
+
+#%>%
+ # group_by(zone, phase, aspect) %>%
+  #summarize(ub_temp = mean(ub_temp, na.rm = TRUE), 
+       #     db_temp = mean(db_temp, na.rm = TRUE), 
+        #    gb_temp = mean(gb_temp,na.rm = TRUE))
 
 TSZ_dbubgb_dataframe <- full_15min_gbdbub %>%
-  filter(zone == "TSZ") %>%
-  group_by(zone, phase, aspect) %>%
-  summarize(ub_temp = mean(ub_temp, na.rm = TRUE), 
-            db_temp = mean(db_temp, na.rm = TRUE), 
-            gb_temp = mean(gb_temp,na.rm = TRUE))
+  filter(zone == "TSZ")
+
+#%>%
+#  group_by(zone, phase, aspect) %>%
+ # summarize(ub_temp = mean(ub_temp, na.rm = TRUE), 
+  #          db_temp = mean(db_temp, na.rm = TRUE), 
+   #         gb_temp = mean(gb_temp,na.rm = TRUE))
 ```
 
 GB vs DB
@@ -5173,13 +5179,85 @@ GB vs Live
 ```{r}
 p_gb_ub_ttest_results <- t.test(PSZ_gbdbub_dataframe$gb_temp, PSZ_gbdbub_dataframe$ub_temp)
 
-p_gb_ub_ttest_results
+p_gb_ub_ttest_results 
 ```
 
 ```{r}
 t_gb_ub_ttest_results <- t.test(TSZ_gbdbub_dataframe$gb_temp, TSZ_gbdbub_dataframe$ub_temp)
 
 t_gb_ub_ttest_results
+```
+
+Separating by Day and Night for GB vs DB vs UB comparisons
+
+```{r}
+PSZ_dbubgb_dt_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "PSZ", phase == "day")
+
+PSZ_dbubgb_nt_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "PSZ", phase == "night")
+
+TSZ_dbubgb_dt_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "TSZ", phase == "day")
+
+TSZ_dbubgb_nt_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "TSZ", phase == "night")
+```
+
+```{r}
+p_gb_db_ttest_results_dt <- t.test(PSZ_dbubgb_dt_dataframe$db_temp, PSZ_dbubgb_dt_dataframe$gb_temp)
+
+p_gb_db_ttest_results_dt
+
+p_db_ub_ttest_results_dt <- t.test(PSZ_dbubgb_dt_dataframe$db_temp, PSZ_dbubgb_dt_dataframe$ub_temp)
+
+p_db_ub_ttest_results_dt
+
+p_gb_ub_ttest_results_dt <- t.test(PSZ_dbubgb_dt_dataframe$gb_temp, PSZ_dbubgb_dt_dataframe$ub_temp)
+
+p_gb_ub_ttest_results_dt
+```
+
+```{r}
+p_gb_db_ttest_results_nt <- t.test(PSZ_dbubgb_nt_dataframe$db_temp, PSZ_dbubgb_nt_dataframe$gb_temp)
+
+p_gb_db_ttest_results_nt
+
+p_db_ub_ttest_results_nt <- t.test(PSZ_dbubgb_nt_dataframe$db_temp, PSZ_dbubgb_nt_dataframe$ub_temp)
+
+p_db_ub_ttest_results_nt
+
+p_gb_ub_ttest_results_nt <- t.test(PSZ_dbubgb_nt_dataframe$gb_temp, PSZ_dbubgb_nt_dataframe$ub_temp)
+
+p_gb_ub_ttest_results_nt
+```
+
+```{r}
+t_gb_db_ttest_results_dt <- t.test(TSZ_dbubgb_dt_dataframe$db_temp, TSZ_dbubgb_dt_dataframe$gb_temp)
+
+t_gb_db_ttest_results_dt
+
+t_db_ub_ttest_results_dt <- t.test(TSZ_dbubgb_dt_dataframe$db_temp, TSZ_dbubgb_dt_dataframe$ub_temp)
+
+t_db_ub_ttest_results_dt
+
+t_gb_ub_ttest_results_dt <- t.test(TSZ_dbubgb_dt_dataframe$gb_temp, TSZ_dbubgb_dt_dataframe$ub_temp)
+
+t_gb_ub_ttest_results_dt
+```
+
+```{r}
+t_gb_db_ttest_results_nt <- t.test(TSZ_dbubgb_nt_dataframe$db_temp, TSZ_dbubgb_nt_dataframe$gb_temp)
+
+t_gb_db_ttest_results_nt
+
+t_db_ub_ttest_results_nt <- t.test(TSZ_dbubgb_nt_dataframe$db_temp, TSZ_dbubgb_nt_dataframe$ub_temp)
+
+t_db_ub_ttest_results_nt
+
+t_gb_ub_ttest_results_nt <- t.test(TSZ_dbubgb_nt_dataframe$gb_temp, TSZ_dbubgb_nt_dataframe$ub_temp)
+
+t_gb_ub_ttest_results_nt
 ```
 
 # Temperature Matrix
@@ -5642,7 +5720,7 @@ TSZ_ind_sensor_fullperiod <- full_trans_aspects %>%
 ```
 
 \
-\*\* switched out three_day dataframe in above code for full period. If I want to go back to three-day analysis, switch back! \
+\*\* switched out three_day dataframe in above code for full period. If I want to go back to three-day analysis, switch back!\
 \
 Column Visualization of MAD
 
