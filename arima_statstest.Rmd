@@ -37,7 +37,7 @@ library(broom)
 setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 ```
 
-Loading Data
+## Loading Data
 
 ```{r}
 p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
@@ -83,9 +83,9 @@ full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
   select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp, solarNoon, sunrise, sunset, dawn, dusk)
 ```
 
-Arima Test Data Wrangling
+## ARIMA Model
 
-PSZ
+PSZ Data Wrangling
 
 ```{r}
 PSZ_full_ns <- full_15min_ns %>%
@@ -123,9 +123,9 @@ PSZ_fit <- PSZ_tsibble_filled %>%
 report(PSZ_fit)
 ```
 
-Linear Mixed Model
+## Linear Mixed Model
 
-With phase as a comparison as well, not grouped by phase!
+With phase as a comparison as well, not grouped by phase! not using!
 
 ```{r}
 
@@ -145,26 +145,23 @@ Interpreting these results:
 
 These results suggest that **time of day (phase)** and **burn status** have the largest impacts on temperature, and **aspect** also plays a role in temperature differences.
 
+##  General Linear Model
+
+### PSZ Day
+
+Model type: **fixed effects linear model** (also called a **general linear model**) with an **interaction term** between two **categorical predictors**.
+
 Now comparing only for daytime: With live as comparison -\>
 
 ```{r}
+#wrangling data 
 PSZ_daytime_only <- PSZ_full_ns_clean %>%
   filter(phase == "day")
-```
 
-```{r}
 PSZ_daytime_only$burn_status <- factor(PSZ_daytime_only$burn_status)
 
 #setting live temperatures as reference
 PSZ_daytime_only$burn_status <- relevel(PSZ_daytime_only$burn_status, ref = "live")
-```
-
-```{r}
-# Fit a linear model for daytime only conditions without random effect for aspect
-PSZ_daytime_model_fixed <- lm(temp_C ~ burn_status * aspect, data = PSZ_daytime_only)
-
-# Check the summary of the model
-summary(PSZ_daytime_model_fixed)
 ```
 
 ```{r}
@@ -212,14 +209,51 @@ print(results_table)
 write.csv(results_table, "PSZ_livevsburned_model_results_table.csv", row.names = FALSE)
 ```
 
+Checking parameters of model:
+
+```{r}
+PSZ_daytime_only$residuals <- residuals(PSZ_daytime_model_fixed)
+
+boxplot(residuals ~ burn_status * aspect, data = PSZ_daytime_only,
+        main = "Residuals by Group", las = 2, cex.axis = 0.8,
+        col = "lightgray", ylab = "Residuals")
+abline(h = 0, col = "red")
+
+#interpretation - this looks good, no group seems to have an abnormal spread
+```
+
+```{r}
+#checking normalty of residuals
+qqnorm(residuals(PSZ_daytime_model_fixed))
+qqline(residuals(PSZ_daytime_model_fixed), col = "red")
+
+hist(residuals(PSZ_daytime_model_fixed), breaks = 30, main = "Histogram of Residuals")
+
+#looks good - evenly distributed around zero, with no major outliers
+```
+
+-   also have independent observations, which is a requirement - no repeated observations per tree because I am using the mean of both replicate trees to represent burn condition/aspect/datetime.
+
+\
+Getting North and South mean Comparisons by burn condition:
+
+```{r}
+# Use the emmeans package to perform pairwise comparisons
+library(emmeans)
+
+# Calculate estimated marginal means for burn_status by aspect
+PSZ_dt_emmeans_results <- emmeans(PSZ_daytime_model_fixed, ~ burn_status | aspect)
+
+# Perform pairwise comparisons
+pairs(PSZ_dt_emmeans_results)
+```
+
 Comparing DB and GB to each other:
 
 ```{r}
 PSZ_daytime_only$burn_comparison <- factor(PSZ_daytime_only$burn_status,
                                            levels = c("dead burn", "green burn"))
-```
 
-```{r}
 lm(formula = temp_C ~ burn_comparison * aspect, data = PSZ_daytime_only)
 ```
 
@@ -258,18 +292,16 @@ model_table <- model_summary %>%
 print(model_table)
 
 # If you want to save this table as a CSV
-write.csv(model_table, "model_results_table.csv", row.names = FALSE)
-
+#write.csv(model_table, "model_results_table.csv", row.names = FALSE)
 ```
 
-Now comparing only nighttime:
+### PSZ Night
 
 ```{r}
+#wrangling data 
 PSZ_nighttime_only <- PSZ_full_ns_clean %>%
   filter(phase == "night")
-```
 
-```{r}
 PSZ_nighttime_only$burn_status <- factor(PSZ_nighttime_only$burn_status)
 
 #setting live temperatures as reference
@@ -277,8 +309,225 @@ PSZ_nighttime_only$burn_status <- relevel(PSZ_nighttime_only$burn_status, ref = 
 ```
 
 ```{r}
+# Fit a linear model for daytime only conditions without random effect for aspect
 PSZ_nighttime_model_fixed <- lm(temp_C ~ burn_status * aspect, data = PSZ_nighttime_only)
 
-# Check the summary of the model
-summary(PSZ_nighttime_model_fixed)
+# Get the summary of the model
+PSZ_nt_model_summary <- summary(PSZ_nighttime_model_fixed)
+
+# Extract the coefficients, standard errors, t-values, and p-values
+coefficients <- PSZ_nt_model_summary$coefficients
+
+# Create a function to categorize the p-value significance level
+significance_level <- function(p) {
+  if (p < 0.001) {
+    return("***")
+  } else if (p < 0.01) {
+    return("**")
+  } else if (p < 0.05) {
+    return("*")
+  } else if (p < 0.1) {
+    return(".")
+  } else {
+    return("ns")  # not significant
+  }
+}
+
+# Apply the significance function to the p-values
+significance <- sapply(coefficients[, "Pr(>|t|)"], significance_level)
+
+# Create a clean data frame for the results
+PSZ_nt_results_table <- data.frame(
+  Coefficient = rownames(coefficients),
+  Estimate = coefficients[, "Estimate"],
+  Std_Error = coefficients[, "Std. Error"],
+  t_value = coefficients[, "t value"],
+  p_value = coefficients[, "Pr(>|t|)"],
+  Significance = significance
+)
+
+# Print the results table
+print(PSZ_nt_results_table)
+
+# If you want to save this table as a CSV
+#write.csv(results_table, "PSZ_livevsburned_nt_model_results_table.csv", row.names = FALSE)
+```
+
+Checking parameters of model:
+
+```{r}
+PSZ_nighttime_only$residuals <- residuals(PSZ_nighttime_model_fixed)
+
+boxplot(residuals ~ burn_status * aspect, data = PSZ_nighttime_only,
+        main = "Residuals by Group", las = 2, cex.axis = 0.8,
+        col = "lightgray", ylab = "Residuals")
+abline(h = 0, col = "red")
+
+#interpretation - this looks good, no group seems to have an abnormal spread
+```
+
+```{r}
+#checking normalty of residuals
+qqnorm(residuals(PSZ_nighttime_model_fixed))
+qqline(residuals(PSZ_nighttime_model_fixed), col = "red")
+
+hist(residuals(PSZ_nighttime_model_fixed), breaks = 30, main = "Histogram of Residuals")
+
+#looks relatively good - evenly distributed around zero, with no major outliers
+```
+
+North/South mean comparisons by burn condition:
+
+```{r}
+# Calculate estimated marginal means for burn_status by aspect
+PSZ_nt_emmeans_results <- emmeans(PSZ_nighttime_model_fixed, ~ burn_status | aspect)
+
+# Perform pairwise comparisons
+pairs(PSZ_nt_emmeans_results)
+```
+
+GB vs DB
+
+```{r}
+PSZ_nighttime_only$burn_comparison <- factor(PSZ_nighttime_only$burn_status,
+                                           levels = c("dead burn", "green burn"))
+
+lm(formula = temp_C ~ burn_comparison * aspect, data = PSZ_nighttime_only)
+```
+
+```{r}
+# Fit your model (this is assuming you've already done this step)
+# PSZ_daytime_only$burn_comparison is a factor where "dead burn", "green burn", etc. are levels
+PSZ_DBGB_nt_model <- lm(temp_C ~ burn_comparison * aspect, data = PSZ_nighttime_only)
+
+# Use broom to tidy the model output
+PSZ_DBGB_nt_model_summary <- tidy(PSZ_DBGB_nt_model)
+
+# Add significance codes manually (you can adjust p-value thresholds if needed)
+PSZ_DBGB_nt_model_summary <- PSZ_DBGB_nt_model_summary %>%
+  mutate(
+    significance = case_when(
+      p.value < 0.001 ~ "***",
+      p.value < 0.01 ~ "**",
+      p.value < 0.05 ~ "*",
+      p.value < 0.1 ~ ".",
+      TRUE ~ " "
+    )
+  )
+
+# Now format the table with relevant columns
+PSZ_DBGB_nt_model_table <- PSZ_DBGB_nt_model_summary %>%
+  select(
+    Effect = term,
+    Estimate = estimate,
+    `Std. Error` = std.error,
+    `t-Value` = statistic,
+    `Pr(>|t|)` = p.value,
+    Significance = significance
+  )
+
+# Print the table
+print(PSZ_DBGB_nt_model_table)
+
+```
+
+### TSZ Day
+
+```{r}
+TSZ_full_ns <- full_15min_ns %>%
+  filter(zone == "TSZ", datetime <= "2024-05-16 23:45:00") %>%
+  pivot_longer(
+    cols = starts_with(c("north_", "south_")),
+    names_to = "aspect",
+    names_pattern = "(north|south)_.*",  # regex captures just 'north' or 'south'
+    values_to = "temp_C"
+  ) %>%
+  drop_na() %>%
+  mutate(datetime = parse_date_time(datetime, orders = c("ymd HMS", "ymd HM", "ymd")))
+
+
+TSZ_full_ns_clean <- TSZ_full_ns %>%
+  group_by(datetime, burn_status, aspect, phase) %>%
+  summarize(temp_C = mean(temp_C, na.rm = TRUE), .groups = "drop")
+```
+
+```{r}
+#wrangling data 
+TSZ_daytime_only <- TSZ_full_ns_clean %>%
+  filter(phase == "day")
+
+TSZ_daytime_only$burn_status <- factor(TSZ_daytime_only$burn_status)
+
+#setting live temperatures as reference
+TSZ_daytime_only$burn_status <- relevel(TSZ_daytime_only$burn_status, ref = "live")
+```
+
+```{r}
+# Fit a linear model for daytime only conditions without random effect for aspect
+TSZ_daytime_model_fixed <- lm(temp_C ~ burn_status * aspect, data = TSZ_daytime_only)
+
+# Get the summary of the model
+TSZ_dt_model_summary <- summary(TSZ_daytime_model_fixed)
+
+# Extract the coefficients, standard errors, t-values, and p-values
+coefficients <- TSZ_dt_model_summary$coefficients
+
+# Create a function to categorize the p-value significance level
+significance_level <- function(p) {
+  if (p < 0.001) {
+    return("***")
+  } else if (p < 0.01) {
+    return("**")
+  } else if (p < 0.05) {
+    return("*")
+  } else if (p < 0.1) {
+    return(".")
+  } else {
+    return("ns")  # not significant
+  }
+}
+
+# Apply the significance function to the p-values
+significance <- sapply(coefficients[, "Pr(>|t|)"], significance_level)
+
+# Create a clean data frame for the results
+TSZ_dt_results_table <- data.frame(
+  Coefficient = rownames(coefficients),
+  Estimate = coefficients[, "Estimate"],
+  Std_Error = coefficients[, "Std. Error"],
+  t_value = coefficients[, "t value"],
+  p_value = coefficients[, "Pr(>|t|)"],
+  Significance = significance
+)
+
+# Print the results table
+print(TSZ_dt_results_table)
+```
+
+##  Exploring Correlation between temp data
+
+```{r}
+predictors <- TSZ_daytime_only %>%
+  select(where(is.numeric))  # or select specific columns if needed
+
+# Correlation matrix
+cor_matrix <- cor(predictors, use = "complete.obs")
+
+# View it
+print(cor_matrix)
+```
+
+\*\* interpretation - they are highly correlated, as DB/GB temps go up, so do live temps
+
+Combining highly correlated data using PCS (Principle component analysis)
+
+```{r}
+# Run PCA
+pca <- prcomp(full_15min_ns[, c("north_temp", "south_temp")], center = TRUE, scale. = TRUE)
+
+# Check the explained variance of the principal components
+summary(pca)
+
+# Use the principal components as predictors in your statistical tests
+pca_scores <- pca$x
 ```
