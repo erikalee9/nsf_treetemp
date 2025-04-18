@@ -1,0 +1,284 @@
+---
+title: "arima_statstest"
+author: "Erika Lee"
+date: "2025-04-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(openxlsx)
+library(plotly)
+library(rstatix)
+library(htmlwidgets)
+library(RColorBrewer)
+library(patchwork)
+library(ggpubr)
+library(suncalc)
+library(ggpattern)
+library(hms)
+library(tsibble)
+library(fable)
+library(feasts)
+library(lme4)
+library(broom)
+
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
+
+Loading Data
+
+```{r}
+p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
+  mutate(
+    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunrise = with_tz(sunrise, tz = "MST")
+  ) %>%
+   mutate(
+    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunset = with_tz(sunset, tz = "MST")
+  )
+```
+
+```{r}
+full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = with_tz(datetime, tz = 'MST')) %>%
+  mutate(day = as.Date(day, format = ("%Y-%m-%d"))) %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, north_temp, south_temp, solarNoon, sunrise, sunset, dawn, dusk)
+```
+
+```{r}
+full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = with_tz(datetime, tz = 'MST'), ,
+    day = as.Date(datetime, tz= "MST")) %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp, solarNoon, sunrise, sunset, dawn, dusk)
+```
+
+Arima Test Data Wrangling
+
+PSZ
+
+```{r}
+PSZ_full_ns <- full_15min_ns %>%
+  filter(datetime <= "2024-06-03 23:45:00") %>%
+  pivot_longer(
+    cols = starts_with(c("north_", "south_")),
+    names_to = "aspect",
+    names_pattern = "(north|south)_.*",  # regex captures just 'north' or 'south'
+    values_to = "temp_C"
+  ) %>%
+  drop_na() %>%
+  mutate(datetime = parse_date_time(datetime, orders = c("ymd HMS", "ymd HM", "ymd")))
+
+
+PSZ_full_ns_clean <- PSZ_full_ns %>%
+  group_by(datetime, burn_status, aspect, phase) %>%
+  summarize(temp_C = mean(temp_C, na.rm = TRUE), .groups = "drop")
+
+
+PSZ_tsibble <- PSZ_full_ns_clean %>%
+  as_tsibble(index = datetime, key = c(burn_status, aspect))
+
+#filling time gaps
+
+PSZ_tsibble_filled <- PSZ_tsibble %>%
+  fill_gaps()
+```
+
+```{r}
+PSZ_fit <- PSZ_tsibble_filled %>%
+  model(arima = ARIMA(temp_C))
+
+
+# See model summary
+report(PSZ_fit)
+```
+
+Linear Mixed Model
+
+With phase as a comparison as well, not grouped by phase!
+
+```{r}
+
+# Fit a mixed-effects model where aspect, phase, and burn status are all fixed
+PSZ_model_fixed <- lmer(temp_C ~ phase + burn_status + aspect + (1 | aspect), data = PSZ_full_ns_clean)
+
+summary(PSZ_model_fixed)
+```
+
+Interpreting these results:
+
+-   **Night temperatures** are much lower than **day temperatures** (by 8.56°C).
+
+-   **Green burn** trees are colder than **unburned** trees, but **live** trees are even colder than both (with **live trees** being 1.36°C colder than unburned).
+
+-   **South-facing slopes** have higher temperatures than **north-facing slopes** by about 0.61°C, on average.
+
+These results suggest that **time of day (phase)** and **burn status** have the largest impacts on temperature, and **aspect** also plays a role in temperature differences.
+
+Now comparing only for daytime: With live as comparison -\>
+
+```{r}
+PSZ_daytime_only <- PSZ_full_ns_clean %>%
+  filter(phase == "day")
+```
+
+```{r}
+PSZ_daytime_only$burn_status <- factor(PSZ_daytime_only$burn_status)
+
+#setting live temperatures as reference
+PSZ_daytime_only$burn_status <- relevel(PSZ_daytime_only$burn_status, ref = "live")
+```
+
+```{r}
+# Fit a linear model for daytime only conditions without random effect for aspect
+PSZ_daytime_model_fixed <- lm(temp_C ~ burn_status * aspect, data = PSZ_daytime_only)
+
+# Check the summary of the model
+summary(PSZ_daytime_model_fixed)
+```
+
+```{r}
+# Fit a linear model for daytime only conditions without random effect for aspect
+PSZ_daytime_model_fixed <- lm(temp_C ~ burn_status * aspect, data = PSZ_daytime_only)
+
+# Get the summary of the model
+model_summary <- summary(PSZ_daytime_model_fixed)
+
+# Extract the coefficients, standard errors, t-values, and p-values
+coefficients <- model_summary$coefficients
+
+# Create a function to categorize the p-value significance level
+significance_level <- function(p) {
+  if (p < 0.001) {
+    return("***")
+  } else if (p < 0.01) {
+    return("**")
+  } else if (p < 0.05) {
+    return("*")
+  } else if (p < 0.1) {
+    return(".")
+  } else {
+    return("ns")  # not significant
+  }
+}
+
+# Apply the significance function to the p-values
+significance <- sapply(coefficients[, "Pr(>|t|)"], significance_level)
+
+# Create a clean data frame for the results
+results_table <- data.frame(
+  Coefficient = rownames(coefficients),
+  Estimate = coefficients[, "Estimate"],
+  Std_Error = coefficients[, "Std. Error"],
+  t_value = coefficients[, "t value"],
+  p_value = coefficients[, "Pr(>|t|)"],
+  Significance = significance
+)
+
+# Print the results table
+print(results_table)
+
+# If you want to save this table as a CSV
+write.csv(results_table, "PSZ_livevsburned_model_results_table.csv", row.names = FALSE)
+```
+
+Comparing DB and GB to each other:
+
+```{r}
+PSZ_daytime_only$burn_comparison <- factor(PSZ_daytime_only$burn_status,
+                                           levels = c("dead burn", "green burn"))
+```
+
+```{r}
+lm(formula = temp_C ~ burn_comparison * aspect, data = PSZ_daytime_only)
+```
+
+```{r}
+# Fit your model (this is assuming you've already done this step)
+# PSZ_daytime_only$burn_comparison is a factor where "dead burn", "green burn", etc. are levels
+model <- lm(temp_C ~ burn_comparison * aspect, data = PSZ_daytime_only)
+
+# Use broom to tidy the model output
+model_summary <- tidy(model)
+
+# Add significance codes manually (you can adjust p-value thresholds if needed)
+model_summary <- model_summary %>%
+  mutate(
+    significance = case_when(
+      p.value < 0.001 ~ "***",
+      p.value < 0.01 ~ "**",
+      p.value < 0.05 ~ "*",
+      p.value < 0.1 ~ ".",
+      TRUE ~ " "
+    )
+  )
+
+# Now format the table with relevant columns
+model_table <- model_summary %>%
+  select(
+    Effect = term,
+    Estimate = estimate,
+    `Std. Error` = std.error,
+    `t-Value` = statistic,
+    `Pr(>|t|)` = p.value,
+    Significance = significance
+  )
+
+# Print the table
+print(model_table)
+
+# If you want to save this table as a CSV
+write.csv(model_table, "model_results_table.csv", row.names = FALSE)
+
+```
+
+Now comparing only nighttime:
+
+```{r}
+PSZ_nighttime_only <- PSZ_full_ns_clean %>%
+  filter(phase == "night")
+```
+
+```{r}
+PSZ_nighttime_only$burn_status <- factor(PSZ_nighttime_only$burn_status)
+
+#setting live temperatures as reference
+PSZ_nighttime_only$burn_status <- relevel(PSZ_nighttime_only$burn_status, ref = "live")
+```
+
+```{r}
+PSZ_nighttime_model_fixed <- lm(temp_C ~ burn_status * aspect, data = PSZ_nighttime_only)
+
+# Check the summary of the model
+summary(PSZ_nighttime_model_fixed)
+```
