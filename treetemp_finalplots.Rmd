@@ -4355,12 +4355,15 @@ persb_snowcamera_data_V2 <- persb_snowcamera_data %>%
   select(day, zone, burn_status, snowcam_max_depth_m, treewell_developed) %>%
   rename(max_snowdepth_m = snowcam_max_depth_m) %>%
   left_join(persb_wx_data_V2, by = c("day", "zone", "burn_status")) %>%
+  #filter(!day %in% as.Date(c("2024-03-14", "2024-03-15", "2024-04-16", "2024-04-17"))) %>%
   filter(day <= "2024-06-03")
+
 
 transb_snowcamera_data_V2 <- transb_snowcamera_data %>%
   select(day, zone, burn_status, snowcam_max_depth_m, treewell_developed) %>%
   rename(max_snowdepth_m = snowcam_max_depth_m)  %>%
   left_join(transb_wx_data_V2, by = c("day", "zone", "burn_status")) %>%
+  #filter(!day %in% as.Date(c("2024-03-12", "2024-03-13", "2024-03-14", "2024-03-15", "2024-03-16", "2024-03-17", "2024-03-18", "2024-03-19", "2024-03-20"))) %>%
   filter(day <= "2024-05-08")
 ```
 
@@ -6630,4 +6633,250 @@ ggplot()+geom_col(data=ns,aes(x=label,y=diff))
 burn=filter(data,compare=='burn')
 
 ggplot()+geom_col(data=burn,aes(x=label,y=diff,fill=aspect),position='dodge')
+```
+
+# Ablation Season SWE Calculations
+
+Pers B
+
+```{r}
+#cleaning up snowcamera snow depth data to match SWE data 
+persb_snowcam_SWE_data <- persb_snowcamera_data_V2 %>%
+  select(day, max_snowdepth_m) %>%
+  rename(Date = day, cam_snowdepth_m = max_snowdepth_m)
+```
+
+```{r}
+#loading in Snow density data
+persb_SWE <- read_csv("nsf/snow_density/persb_SWE.csv") %>%
+  mutate(Date = as.Date(Date, format = "%m/%d/%y"),
+         Predicted_Snow_Density = as.numeric (Predicted_Snow_Density), 
+         SWE_m = as.numeric(SWE_m),
+         SWE_cm = as.numeric(SWE_cm),
+         SWE_m_adjusted = as.numeric(SWE_m_adjusted))
+
+persb_mean_SWE <- persb_SWE %>%
+  filter(Water_Year == "2024") %>%
+  filter(Date >= as.Date("2024-02-02") & Date <= as.Date("2024-07-01")) %>%
+  left_join(persb_snowcam_SWE_data, by = "Date") %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (Predicted_Snow_Density * cam_snowdepth_m)/1000, 
+         snowcam_SWE_cm = snowcam_SWE_m*100) %>%
+  filter(!Date %in% as.Date(c("2024-03-14", "2024-03-15", "2024-04-16", "2024-04-17"))) %>%
+  group_by(Date) %>%
+  summarize(SWE_m = mean(SWE_m, na.rm = TRUE),
+            SWE_cm = mean(SWE_cm, na.rm = TRUE), 
+            SWE_m_adjusted = mean(SWE_m_adjusted, na.rm = TRUE), 
+            SWE_cm_adjusted = SWE_m_adjusted * 100, 
+            snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE))
+
+#getting the date that the SWE hits maximum
+max_persb_wxSWEdate <- persb_mean_SWE %>%
+  filter(!is.na(SWE_cm)) %>%
+  slice_max(order_by = SWE_cm, n = 1) %>%
+  pull(Date)
+
+max_persb_snowcamSWEdate <- persb_mean_SWE %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+Pers UB
+
+```{r}
+#loading in Snow density data
+persub_SWE <- read_csv("nsf/snow_density/persub_SWE.csv") %>%
+  mutate(Date = as.Date(datetime, format = "%m/%d/%y"),
+         SWE_m = as.numeric(SWE_m),
+         SWE_cm = as.numeric(SWE_cm),
+         SWE_m_adjusted = as.numeric(SWE_m_adjusted)) %>%
+  select(Date, everything())
+
+persub_mean_SWE <- persub_SWE %>%
+  filter(Water_Year == "2024") %>%
+  filter(Date >= as.Date("2024-02-02") & Date <= as.Date("2024-07-01")) %>%
+  group_by(Date) %>%
+  summarize(SWE_m = mean(SWE_m, na.rm = TRUE),
+            SWE_cm = mean(SWE_cm, na.rm = TRUE), 
+            SWE_m_adjusted = mean(SWE_m_adjusted, na.rm = TRUE), 
+            SWE_cm_adjusted = SWE_m_adjusted * 100)
+
+#getting the date that the SWE hits maximum
+max_persub_SWEdate <- persub_mean_SWE %>%
+  filter(!is.na(SWE_cm)) %>%
+  slice_max(order_by = SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+#plotting to explore SWE dates
+pers_SWE_plot <- ggplot() +
+  geom_line(data = persb_mean_SWE, aes(x = Date, y = snowcam_SWE_cm, color = "burned site")) +
+  geom_line(data = persub_mean_SWE, aes(x = Date, y = SWE_cm, color = "unburned site")) +
+  scale_color_manual(name = NULL,
+                     values = c("burned site" = "black", "unburned site" = "blue")) +
+  theme_bw()
+
+pers_SWE_plot
+```
+
+Trans B
+
+```{r}
+#wrangling snow camera data to match SWE data
+transb_snowcam_SWE_data <- transb_snowcamera_data %>%
+  select(date, snowcam_max_depth_m) %>%
+  rename(Date = date, cam_snowdepth_m = snowcam_max_depth_m)
+```
+
+```{r}
+#loading in Snow density data
+transb_SWE <- read_csv("nsf/snow_density/transb_SWE.csv") %>%
+  mutate(Date = as.Date(Date, format = "%m/%d/%y"),
+         SWE_m = as.numeric(SWE_m),
+         SWE_cm = as.numeric(SWE_cm)) %>%
+  select(-TIMESTAMP)
+
+transb_mean_SWE <- transb_SWE %>%
+  filter(Date >= as.Date("2024-02-02") & Date <= as.Date("2024-07-01")) %>%
+  left_join(transb_snowcam_SWE_data, by = "Date") %>%
+  filter(!Date %in% as.Date(c("2024-03-12", "2024-03-13", "2024-03-14", "2024-03-15", "2024-03-16", "2024-03-17", "2024-03-18", "2024-03-19", "2024-03-20"))) %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (Predicted_Snow_Density * cam_snowdepth_m)/1000, 
+         snowcam_SWE_cm = snowcam_SWE_m*100) %>%
+  group_by(Date) %>%
+  summarize(SWE_m = mean(SWE_m, na.rm = TRUE),
+            SWE_cm = mean(SWE_cm, na.rm = TRUE),
+            snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE))
+
+#getting the date that the SWE hits maximum
+max_transb_wxSWEdate <- transb_mean_SWE %>%
+  filter(!is.na(SWE_cm)) %>%
+  slice_max(order_by = SWE_cm, n = 1) %>%
+  pull(Date)
+
+max_transb_snowcamSWEdate <- transb_mean_SWE %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+#wrangling snow camera data to match SWE data
+transub_snowcam_SWE_data <- AG_transub_snowcamera_data_V2 %>%
+  select(date, max_snowdepth_m) %>%
+  rename(Date = date, cam_snowdepth_m = max_snowdepth_m)
+```
+
+```{r}
+#loading in Snow density data
+transub_SWE <- read_csv("nsf/snow_density/transub_SWE.csv") %>%
+  mutate(Date = as.Date(Date, format = "%m/%d/%y"),
+         SWE_m = as.numeric(SWE_m),
+         SWE_cm = as.numeric(SWE_cm)) %>%
+  select(-datetime)
+
+transub_mean_SWE <- transub_SWE %>%
+  filter(Date >= as.Date("2024-02-02") & Date <= as.Date("2024-07-01")) %>%
+  left_join(transub_snowcam_SWE_data, by = "Date") %>%
+  filter(!Date %in% as.Date(c("2024-03-12", "2024-03-13", "2024-03-14", "2024-03-15", "2024-03-16", "2024-03-17", "2024-03-18", "2024-03-19", "2024-03-20"))) %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (Predicted_Snow_Density * cam_snowdepth_m)/1000, 
+         snowcam_SWE_cm = snowcam_SWE_m*100) %>%
+  group_by(Date) %>%
+  summarize(SWE_m = mean(SWE_m, na.rm = TRUE),
+            SWE_cm = mean(SWE_cm, na.rm = TRUE),
+            snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE), 
+            cam_snowdepth_m = mean(cam_snowdepth_m, na.rm = TRUE))
+
+
+#getting the date that the SWE hits maximum
+max_transub_wxSWEdate <- transub_mean_SWE %>%
+  filter(!is.na(SWE_cm)) %>%
+  slice_max(order_by = SWE_cm, n = 1) %>%
+  pull(Date)
+
+max_transub_snowcamSWEdate <- transub_mean_SWE %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+#plotting to explore SWE dates
+trans_SWE_plot <- ggplot() +
+  geom_line(data = transb_mean_SWE, aes(x = Date, y = snowcam_SWE_cm, color = "burned site")) +
+  geom_line(data = transub_mean_SWE, aes(x = Date, y = SWE_cm, color = "unburned site")) +
+  scale_color_manual(name = NULL,
+                     values = c("burned site" = "black", "unburned site" = "blue")) +
+  theme_bw()
+
+trans_SWE_plot
+```
+
+V2 - using only Joe Wright and Hourglass Lake SNOTEL sites to get predicted snow density, then applying to our snow depth data
+
+```{r}
+snotel_density_data <- read_csv("nsf/snow_density/snotel_SWE_data.csv") %>%
+  mutate(Date = as.Date(Date, format = "%y-%m-%d"), 
+         TSZ_SWE_in = as.numeric(TSZ_SWE_in),
+         TSZ_snowdepth_in = as.numeric(TSZ_snowdepth_in), 
+         TSZ_predicted_snowdensity_kg_m3 = as.numeric(TSZ_predicted_snowdensity_kg_m3),
+         PSZ_SWE_in = as.numeric(PSZ_SWE_in),
+         PSZ_snowdepth_in = as.numeric(PSZ_snowdepth_in), 
+         PSZ_predicted_snowdensity_kg_m3 = as.numeric(PSZ_predicted_snowdensity_kg_m3)) %>%
+  filter(Date >= as.Date("2024-02-02") & Date <= as.Date("2024-07-01"))
+```
+
+```{r}
+PSZ_snotel_swe <- snotel_density_data %>%
+  select(Date, PSZ_SWE_in, PSZ_snowdepth_in, PSZ_predicted_snowdensity_kg_m3)
+```
+
+```{r}
+TSZ_snotel_swe <- snotel_density_data %>%
+  select(Date, TSZ_SWE_in, PSZ_snowdepth_in, TSZ_predicted_snowdensity_kg_m3)
+```
+
+```{r}
+
+persb_mean_SWE_V2 <- PSZ_snotel_swe %>%
+  left_join(persb_snowcam_SWE_data, by = "Date") %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (PSZ_predicted_snowdensity_kg_m3/1000) * cam_snowdepth_m, 
+         snowcam_SWE_cm = snowcam_SWE_m*100) %>%
+  group_by(Date) %>%
+  summarize(snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE))
+
+max_persb_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+persub_snowcam_SWE_data <- pers_ub_daily_snowdepth_data_V2 %>%
+  select(day, max_snowdepth_m) %>%
+  rename(Date = day, cam_snowdepth_m = max_snowdepth_m)
+```
+
+```{r}
+persub_mean_SWE_V2 <- PSZ_snotel_swe %>%
+  left_join(persub_snowcam_SWE_data, by = "Date") %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (PSZ_predicted_snowdensity_kg_m3/1000) * cam_snowdepth_m, 
+         snowcam_SWE_cm = snowcam_SWE_m*100) %>%
+  group_by(Date) %>%
+  summarize(snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE))
+
+max_persub_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
 ```
