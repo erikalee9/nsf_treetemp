@@ -433,41 +433,40 @@ Accumulation Three Day Plots
 ```{r}
 #three day lineplot PSZ
 PSZ_threeday_accu_comp_lineplot <- ggplot(data = PSZ_threeday_accu_comp) + 
-        # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
   geom_line(aes(x = datetime, y = temp, linetype = tree_name, color = burn_status), linewidth = 0.7) +
   facet_wrap(~aspect) +
   scale_linetype_manual(
-    name = "Individual tree",  # New legend title (showing as 'Tree' instead of 'Tree Name')
+    name = "Individual tree", 
     values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
-    labels = c("Tree 1", "Tree 2")  # Ensuring the legend shows the correct labels
+    labels = c("Tree 1", "Tree 2")
   ) + 
-  #remove the linetype legend
   guides(linetype = "none") + 
   scale_x_datetime(
     breaks = as.POSIXct(c("2024-02-10 12:00:00", "2024-02-11 12:00:00", "2024-02-12 12:00:00"), tz = "MST"),
-    labels = c("Feb 10th", "Feb 11th", "Feb 12th")
+    labels = function(x) format(x, "%d %b")  # Custom date format
   ) +
   scale_color_manual(
     name = NULL,
-    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
- scale_y_continuous(limits = c(-25, 25)) +  # Set the y-axis limits here
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))
+  ) +
+  scale_y_continuous(limits = c(-25, 25)) +  
   theme_bw() +
   labs(title = "a) PSZ Accumulation", x = NULL, y = "Temperature (°C)") +
   theme(
-    strip.text = element_text(size = 11),  # Facet title size
-    axis.title = element_text(size = 11),  # Axis title size
-    axis.text = element_text(size = 11),  # Axis tick labels
-    legend.title = element_text(size = 11),  # Legend title size
-    legend.text = element_text(size = 10)  # Legend labels size
+    strip.text = element_text(size = 11),  
+    axis.title = element_text(size = 11),  
+    axis.text = element_text(size = 11),  
+    legend.title = element_text(size = 11),  
+    legend.text = element_text(size = 10)
   ) + 
   theme(
-    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.width = unit(1, "cm"),  
     legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
   )
-  
-  
+
 PSZ_threeday_accu_comp_lineplot
+
 ```
 
 ```{r}
@@ -486,7 +485,7 @@ TSZ_threeday_accu_comp_lineplot <- ggplot(data = TSZ_threeday_accu_comp) +
   guides(linetype = "none") + 
   scale_x_datetime(
     breaks = as.POSIXct(c("2024-02-10 12:00:00", "2024-02-11 12:00:00", "2024-02-12 12:00:00"), tz = "MST"),
-    labels = c("Feb 10th", "Feb 11th", "Feb 12th")
+    labels = function(x) format(x, "%d %b")  # Custom date format
   ) +
   scale_color_manual(
     name = NULL,
@@ -620,7 +619,7 @@ comb_threeday_accu_comp_lineplot
 ```{r}
 #use this plot!
 ggsave(
-  filename = "comb_threeday_accu_comp_lineplot.png",  # File name
+  filename = "comb_threeday_accu_comp_lineplot_V2.png",  # File name
   plot = comb_threeday_accu_comp_lineplot,           # The arranged plot object
  width = 7,                                          # Adjust width as needed
   height = 7,                                        # Adjust height as needed
@@ -4456,7 +4455,10 @@ Snow line plot with temp bar plot version!
 ```{r}
 PSZ_b_snowdepths_barplot <- ggplot() + 
   # Manual snow survey date
-  geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
+  #geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
+            # linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  #V2 of ablation begining date, based on SWE calcs
+  geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
              linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
   # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
@@ -4610,7 +4612,10 @@ TSZ Line plot for snow with bar plot for temps
 ```{r}
 TSZ_b_snowdepths_barplot <- ggplot() + 
   # Manual snow survey date
-  geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
+  #geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
+             #linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  #V2 of ablation begining date, based on SWE calcs
+  geom_vline(xintercept = as.numeric(as.Date('2024-03-03')), 
              linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
   # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
@@ -6769,6 +6774,11 @@ max_transb_snowcamSWEdate <- transb_mean_SWE %>%
 transub_snowcam_SWE_data <- AG_transub_snowcamera_data_V2 %>%
   select(date, max_snowdepth_m) %>%
   rename(Date = date, cam_snowdepth_m = max_snowdepth_m)
+
+#version using mountain campus snowcamera data
+transub_snowcam_SWE_data_V2 <- transub_snowcamera_data_V2 %>%
+  select(date, max_snowdepth_m,) %>%
+  rename(Date = date, cam_snowdepth_m = max_snowdepth_m)
 ```
 
 ```{r}
@@ -6798,7 +6808,7 @@ transub_mean_SWE <- transub_SWE %>%
 max_transub_wxSWEdate <- transub_mean_SWE %>%
   filter(!is.na(SWE_cm)) %>%
   slice_max(order_by = SWE_cm, n = 1) %>%
-  pull(Date)
+  pull(Date) 
 
 max_transub_snowcamSWEdate <- transub_mean_SWE %>%
   filter(!is.na(snowcam_SWE_cm)) %>%
@@ -6851,7 +6861,11 @@ persb_mean_SWE_V2 <- PSZ_snotel_swe %>%
          snowcam_SWE_cm = snowcam_SWE_m*100) %>%
   group_by(Date) %>%
   summarize(snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
-            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE))
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE)) %>%
+   # Apply the moving average but exclude data below the drop threshold
+  mutate(snowcam_SWE_cm_smooth = ifelse(snowcam_SWE_cm > drop_threshold, 
+                                        zoo::rollmean(snowcam_SWE_cm, k = 5, fill = NA, align = "center"), 
+                                        snowcam_SWE_cm))
 
 max_persb_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
   filter(!is.na(snowcam_SWE_cm)) %>%
@@ -6866,17 +6880,96 @@ persub_snowcam_SWE_data <- pers_ub_daily_snowdepth_data_V2 %>%
 ```
 
 ```{r}
+drop_threshold <- 10
+
 persub_mean_SWE_V2 <- PSZ_snotel_swe %>%
   left_join(persub_snowcam_SWE_data, by = "Date") %>%
   mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
-         snowcam_SWE_m = (PSZ_predicted_snowdensity_kg_m3/1000) * cam_snowdepth_m, 
-         snowcam_SWE_cm = snowcam_SWE_m*100) %>%
+         snowcam_SWE_m = (PSZ_predicted_snowdensity_kg_m3 / 1000) * cam_snowdepth_m, 
+         snowcam_SWE_cm = snowcam_SWE_m * 100) %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
   group_by(Date) %>%
   summarize(snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
-            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE))
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE), 
+            cam_snowdepth_m = mean(cam_snowdepth_m, na.rm = TRUE)) %>%
+  # Apply the moving average but exclude data below the drop threshold
+  mutate(snowcam_SWE_cm_smooth = ifelse(snowcam_SWE_cm > drop_threshold, 
+                                        zoo::rollmean(snowcam_SWE_cm, k = 5, fill = NA, align = "center"), 
+                                        snowcam_SWE_cm))
 
 max_persub_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
   filter(!is.na(snowcam_SWE_cm)) %>%
   slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
   pull(Date)
+```
+
+```{r}
+#plotting to explore SWE dates
+pers_SWE_V2_plot <- ggplot() +
+  geom_line(data = persb_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm, color = "burned site")) + 
+  geom_line(data = persub_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm_smooth, color = "unburned site")) +
+  scale_color_manual(name = NULL,
+                     values = c("burned site" = "black", "unburned site" = "blue")) +
+  theme_bw()
+
+pers_SWE_V2_plot
+```
+
+```{r}
+transb_mean_SWE_V2 <- TSZ_snotel_swe %>%
+  left_join(transb_snowcam_SWE_data, by = "Date") %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (TSZ_predicted_snowdensity_kg_m3/1000) * cam_snowdepth_m, 
+         snowcam_SWE_cm = snowcam_SWE_m*100) %>%
+  filter(!Date %in% as.Date(c("2024-03-12", "2024-03-13", "2024-03-14", "2024-03-15")))  %>%
+  group_by(Date) %>%
+  summarize(snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE)) %>%
+   # Apply the moving average but exclude data below the drop threshold
+  mutate(snowcam_SWE_cm_smooth = ifelse(snowcam_SWE_cm > drop_threshold, 
+                                        zoo::rollmean(snowcam_SWE_cm, k = 5, fill = NA, align = "center"), 
+                                        snowcam_SWE_cm))
+
+max_transb_snowcamSWEdate_V2 <- transb_mean_SWE_V2 %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+transub_mean_SWE_V2 <- TSZ_snotel_swe %>%
+  left_join(transub_snowcam_SWE_data_V2, by = "Date") %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (TSZ_predicted_snowdensity_kg_m3 / 1000) * cam_snowdepth_m, 
+         snowcam_SWE_cm = snowcam_SWE_m * 100,
+         TSZ_SWE_cm = TSZ_SWE_in * 2.54) %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  filter(!Date %in% as.Date(c("2024-03-12", "2024-03-13", "2024-03-14", "2024-03-15")))  %>%
+  group_by(Date) %>%
+  summarize(TSZ_SWE_cm = mean(TSZ_SWE_cm, na.rm = TRUE), 
+            snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE), 
+            cam_snowdepth_m = mean(cam_snowdepth_m, na.rm = TRUE)) %>%
+  # Apply the moving average but exclude data below the drop threshold
+  mutate(snowcam_SWE_cm_smooth = ifelse(snowcam_SWE_cm > drop_threshold, 
+                                        zoo::rollmean(snowcam_SWE_cm, k = 5, fill = NA, align = "center"), 
+                                        snowcam_SWE_cm))
+
+max_transub_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+#plotting to explore SWE dates
+trans_SWE_V2_plot <- ggplot() +
+  geom_line(data = transb_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm_smooth, color = "burned site")) + 
+  geom_line(data = transub_mean_SWE_V2, aes(x = Date, y = TSZ_SWE_cm, color = "snotel data")) + 
+  geom_line(data = transub_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm_smooth, color = "unburned site")) +
+  scale_color_manual(name = NULL,
+                     values = c("burned site" = "black", "unburned site" = "blue", "snotel data" = "red")) +
+  theme_bw()
+
+trans_SWE_V2_plot
 ```
