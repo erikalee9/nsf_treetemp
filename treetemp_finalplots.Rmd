@@ -6908,6 +6908,10 @@ max_persub_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
 pers_SWE_V2_plot <- ggplot() +
   geom_line(data = persb_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm, color = "burned site")) + 
   geom_line(data = persub_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm_smooth, color = "unburned site")) +
+  #peak SWE burned site date
+  geom_vline(xintercept = as.Date("2024-04-06"), linetype = "dashed", color = "black") +
+  #peak SWE unburned site date
+  geom_vline(xintercept = as.Date("2024-04-28"), linetype = "dashed", color = "blue") +
   scale_color_manual(name = NULL,
                      values = c("burned site" = "black", "unburned site" = "blue")) +
   theme_bw()
@@ -6938,7 +6942,7 @@ max_transb_snowcamSWEdate_V2 <- transb_mean_SWE_V2 %>%
 
 ```{r}
 transub_mean_SWE_V2 <- TSZ_snotel_swe %>%
-  left_join(transub_snowcam_SWE_data_V2, by = "Date") %>%
+  left_join(transub_snowcam_SWE_data, by = "Date") %>%
   mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
          snowcam_SWE_m = (TSZ_predicted_snowdensity_kg_m3 / 1000) * cam_snowdepth_m, 
          snowcam_SWE_cm = snowcam_SWE_m * 100,
@@ -6965,8 +6969,12 @@ max_transub_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
 #plotting to explore SWE dates
 trans_SWE_V2_plot <- ggplot() +
   geom_line(data = transb_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm_smooth, color = "burned site")) + 
-  geom_line(data = transub_mean_SWE_V2, aes(x = Date, y = TSZ_SWE_cm, color = "snotel data")) + 
+  #geom_line(data = transub_mean_SWE_V2, aes(x = Date, y = TSZ_SWE_cm, color = "snotel data")) + 
   geom_line(data = transub_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm_smooth, color = "unburned site")) +
+  #peak SWE burned site date
+  geom_vline(xintercept = as.Date("2024-03-05"), linetype = "dashed", color = "black") +
+  #peak SWE unburned site date
+  geom_vline(xintercept = as.Date("2024-04-11"), linetype = "dashed", color = "blue") +
   scale_color_manual(name = NULL,
                      values = c("burned site" = "black", "unburned site" = "blue", "snotel data" = "red")) +
   theme_bw()
