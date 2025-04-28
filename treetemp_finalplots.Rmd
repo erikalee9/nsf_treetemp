@@ -6906,12 +6906,14 @@ max_persub_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
 ```{r}
 #plotting to explore SWE dates
 pers_SWE_V2_plot <- ggplot() +
-  geom_line(data = persb_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm, color = "burned site")) + 
+  geom_line(data = persb_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm_smooth, color = "burned site")) + 
   geom_line(data = persub_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm_smooth, color = "unburned site")) +
   #peak SWE burned site date
-  geom_vline(xintercept = as.Date("2024-04-06"), linetype = "dashed", color = "black") +
+  geom_vline(xintercept = as.Date("2024-04-08"), linetype = "dashed", color = "black") +
   #peak SWE unburned site date
   geom_vline(xintercept = as.Date("2024-04-28"), linetype = "dashed", color = "blue") +
+  #ablation, as defines in current thesis
+  geom_vline(xintercept = as.Date("2024-05-06"), linetype = "dashed", color = "red") +
   scale_color_manual(name = NULL,
                      values = c("burned site" = "black", "unburned site" = "blue")) +
   theme_bw()
@@ -6975,6 +6977,8 @@ trans_SWE_V2_plot <- ggplot() +
   geom_vline(xintercept = as.Date("2024-03-05"), linetype = "dashed", color = "black") +
   #peak SWE unburned site date
   geom_vline(xintercept = as.Date("2024-04-11"), linetype = "dashed", color = "blue") +
+   #ablation, as defines in current thesis
+  geom_vline(xintercept = as.Date("2024-04-07"), linetype = "dashed", color = "red") +
   scale_color_manual(name = NULL,
                      values = c("burned site" = "black", "unburned site" = "blue", "snotel data" = "red")) +
   theme_bw()
