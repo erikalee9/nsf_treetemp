@@ -1503,7 +1503,7 @@ TSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_dtnt_daily_gbdbub_p
              color = "grey23",                      # Line color
              size = 0.4, alpha = 0.7) +
   #snowfree date
-  geom_vline(xintercept = as.numeric(as.Date('2024-05-08')), 
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-15')), 
              linetype = "dashed",                # Dashed line
              color = "grey23",                      # Line color
              size = 0.4, alpha = 0.8) +
@@ -1756,7 +1756,11 @@ PSZ_dtnt_data <- full_pers_gbdbub_data %>%
       TRUE ~ burn_status  # Optional: Keep original value if no match
     )
   ) %>%
-  filter(day <= "2024-06-03")
+  filter(day <= "2024-06-03") %>%
+  mutate(snow_phase = recode(snow_phase,
+                             ablation = "peak ablation"),
+         snow_phase = fct_relevel(snow_phase, "accumulation", "peak ablation"))
+
 
 #TSZ
 TSZ_dtnt_data <- full_trans_gbdbub_data %>%
@@ -1772,13 +1776,20 @@ TSZ_dtnt_data <- full_trans_gbdbub_data %>%
       burn_status == "ub_temp" ~ "live",
       TRUE ~ burn_status  # Optional: Keep original value if no match
     )) %>%
-  filter(day <= "2024-06-03")
+  filter(day <= "2024-06-03") %>%
+   mutate(snow_phase = recode(snow_phase,
+                             ablation = "peak ablation"),
+         snow_phase = fct_relevel(snow_phase, "accumulation", "peak ablation")) %>%
+   mutate(snow_phase = case_when(
+  day < as.Date("2024-04-01") ~ "accumulation",
+  day >= as.Date("2024-04-01") ~ "peak ablation"))
 ```
 
 ```{r}
 PSZ_dtnt_boxplot <- ggplot(data = PSZ_dtnt_data) + 
   geom_boxplot(aes(x = interaction(phase, burn_status, sep = "_"), y = temp, fill = burn_status, alpha = phase),
                position = position_dodge(width = 0.75)) +
+  facet_wrap(~snow_phase) + 
   scale_fill_manual(
     name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = adjustcolor("#2166AC", alpha.f = 0.8)), 
@@ -1815,6 +1826,7 @@ PSZ_dtnt_boxplot
 TSZ_dtnt_boxplot <- ggplot(data = TSZ_dtnt_data) + 
   geom_boxplot(aes(x = interaction(phase, burn_status, sep = "_"), y = temp, fill = burn_status, alpha = phase),
                position = position_dodge(width = 0.75)) +
+  facet_wrap(~snow_phase) + 
   scale_fill_manual(
     name = NULL,
     values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = adjustcolor("#2166AC", alpha.f = 0.8)), 
@@ -1849,15 +1861,16 @@ TSZ_dtnt_boxplot
 ```
 
 ```{r}
-comb_dtnt_boxplot <- ggarrange(PSZ_dtnt_boxplot,  TSZ_dtnt_boxplot, ncol = 1, nrow = 2, common.legend = TRUE, legend = "bottom")
+#facet_wrapped version includes a separation by accumulation and "peak ablation" seasons, as Dave asked for this
+comb_dtnt_boxplot_facetwrapped <- ggarrange(PSZ_dtnt_boxplot,  TSZ_dtnt_boxplot, ncol = 1, nrow = 2, common.legend = TRUE, legend = "bottom")
 
-comb_dtnt_boxplot
+comb_dtnt_boxplot_facetwrapped
 ```
 
 ```{r}
 ggsave(
-  filename = "comb_dtnt_boxplot.png",  # File name
-  plot = comb_dtnt_boxplot,           # The arranged plot object
+  filename = "comb_dtnt_boxplot_facetwrapped.png",  # File name
+  plot = comb_dtnt_boxplot_facetwrapped,           # The arranged plot object
   width = 7,                                          # Adjust width as needed
   height = 9,                                         # Adjust height as needed
   dpi = 600                                            # High resolution
@@ -2015,10 +2028,10 @@ TSZ_meandaily_ns_lineplot <- ggplot(data = TSZ_mean_ns_lineplot_data) +
   ) +
   theme_bw() + 
   #ablation season beginning
-  geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
+  geom_vline(xintercept = as.numeric(as.Date('2024-04-01')), 
              linetype = "solid", color = "grey23", size = 0.4, alpha = 0.8) +
   # Snow-free date line
-  geom_vline(xintercept = as.numeric(as.Date('2024-05-08')), 
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-15')), 
              linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8) + 
     theme(
     strip.text = element_text(size = 11),  # Facet title size
