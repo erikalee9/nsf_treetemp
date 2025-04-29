@@ -4454,12 +4454,16 @@ Snow line plot with temp bar plot version!
 
 ```{r}
 PSZ_b_snowdepths_barplot <- ggplot() + 
-  # Manual snow survey date
-  #geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
-            # linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
-  #V2 of ablation begining date, based on SWE calcs
-  geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
-             linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  #beginning of peak ablation
+  #geom_vline(xintercept = as.numeric(as.Date('2024-04-21')), 
+           #  linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  #end of peak abalation/snow-free date
+ # geom_vline(xintercept = as.numeric(as.Date('2024-06-03')), 
+          #   linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  geom_rect(aes(xmin = as.Date('2024-05-06'), xmax = as.Date('2024-06-03'), 
+              ymin = -Inf, ymax = Inf), 
+          fill = "lightgrey", alpha = 0.6) +
+  
   # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
   # Mean daily tree temp (bar) - DODGED
@@ -4468,9 +4472,16 @@ PSZ_b_snowdepths_barplot <- ggplot() +
   # Burned wx station air temp (bar) - DODGED
   geom_col(data = persb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, fill = "Air Temperature"), 
            width = 0.7, position = position_dodge(width = 0.9)) +
-  # Unburned snow depth
-  #geom_line(data = pers_ub_daily_snowdepth_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
-            #linetype = "solid", linewidth = 0.8) +
+  #unburned snowdepth - filtered out
+  geom_smooth(
+  data = pers_ub_daily_snowdepth_data_V2,
+  aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"),
+  method = "loess",  # or "gam", or "lm"
+  span = 0.07,         # adjust for more or less smoothing (only for loess)
+  se = FALSE,         # turn off confidence interval ribbon
+  linetype = "solid",
+  linewidth = 0.8
+) + 
   # Burned snow depth (line)
   geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), 
             linetype = "solid", linewidth = 0.8) +
@@ -4495,8 +4506,7 @@ PSZ_b_snowdepths_barplot <- ggplot() +
   ) +
   scale_color_manual(
     name = NULL,
-    values = c("Burned Snow Depth" = "#2166AC")
-               #"Unburned Snow Depth" = "grey23")
+    values = c("Burned Snow Depth" = "#2166AC", "Unburned Snow Depth" = "grey23")
   ) +
   scale_fill_manual(
     name = NULL,
@@ -4511,10 +4521,9 @@ PSZ_b_snowdepths_barplot <- ggplot() +
     values = c("Dates that treewells developed" = 16)
   ) + 
   guides(
-    shape = "none") +  # Hides the shape legend
-   # fill = guide_legend(nrow = 2),  # Place fill (bar) legends in one row
-  #  color = guide_legend(nrow = 2)  # Place color (line) legends in another row
- # ) + 
+    shape = "none",   # Hides the shape legend
+    fill = guide_legend(nrow = 2),  # Place fill (bar) legends in one row
+    color = guide_legend(nrow = 2))+  # Place color (line) legends in another row
   theme_bw() + 
   theme(
     strip.text = element_text(size = 11),
@@ -4614,9 +4623,15 @@ TSZ_b_snowdepths_barplot <- ggplot() +
   # Manual snow survey date
   #geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
              #linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
-  #V2 of ablation begining date, based on SWE calcs
-  geom_vline(xintercept = as.numeric(as.Date('2024-03-03')), 
-             linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  #Beginning of peak ablation
+ # geom_vline(xintercept = as.numeric(as.Date('2024-04-01')), 
+             #linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  #end of peak abalation/snow-free date
+  #geom_vline(xintercept = as.numeric(as.Date('2024-05-15')), 
+            # linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  geom_rect(aes(xmin = as.Date('2024-04-01'), xmax = as.Date('2024-05-15'), 
+              ymin = -Inf, ymax = Inf), 
+          fill = "lightgrey", alpha = 0.6) +
   # Bold line at y = 0
   geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
   # Mean daily tree temp (bar) - DODGED
@@ -4626,8 +4641,8 @@ TSZ_b_snowdepths_barplot <- ggplot() +
   geom_col(data = transb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, fill = "Air Temperature"), 
            width = 0.7, position = position_dodge(width = 0.9)) +
   # Unburned snow depth
-  #geom_line(data = AG_transub_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
-          #  linetype = "solid", linewidth = 0.8) +
+  geom_line(data = AG_transub_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
+            linetype = "solid", linewidth = 0.8) +
   # Burned snow depth (line)
   geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), 
             linetype = "solid", linewidth = 0.8) +
@@ -4652,9 +4667,8 @@ TSZ_b_snowdepths_barplot <- ggplot() +
   ) +
   scale_color_manual(
     name = NULL,
-    values = c("Burned Snow Depth" = "#2166AC")) +
-               #"Unburned Snow Depth" = "grey23")
-  #) +
+    values = c("Burned Snow Depth" = "#2166AC", 
+               "Unburned Snow Depth" = "grey23")) +
   scale_fill_manual(
     name = NULL,
     values = c(
@@ -4668,10 +4682,9 @@ TSZ_b_snowdepths_barplot <- ggplot() +
     values = c("Dates that treewells developed" = 16)
   ) + 
     guides(
-    shape = "none") +  # Hides the shape legend
-   # fill = guide_legend(nrow = 2),  # Place fill (bar) legends in one row
-   # color = guide_legend(nrow = 2)  # Place color (line) legends in another row
-  #) + 
+    shape = "none", # Hides the shape legend
+    fill = guide_legend(nrow = 2),  # Place fill (bar) legends in one row
+    color = guide_legend(nrow = 2))+  # Place color (line) legends in another row) + 
   theme_bw() + 
   theme(
     strip.text = element_text(size = 11),
@@ -4702,7 +4715,7 @@ final_comb_snowdepth_barplot
 ```
 
 ```{r}
-ggsave(filename = "final_comb_snowdepth_lineplot_V4.png", 
+ggsave(filename = "final_comb_snowdepth_lineplot_V5.png", 
        plot = final_comb_snowdepth_lineplot, 
        width = 7, 
        height = 6, 
@@ -5522,7 +5535,7 @@ mean_avg_diff <- function(x, y) {
   mean(abs(x - y), na.rm = TRUE)
 }
 
-color_limits_ind <- c(0, 8)
+color_limits_ind <- c(0, 12)
 
 # Select only the temperature-related columns
 temp_varsdiff_1 <- c("tree1_DB_north", "tree1_DB_south", "tree1_GB_north", "tree1_GB_south", "tree1_live_north", "tree1_live_south")
@@ -5561,9 +5574,9 @@ pairwise_diffs_ind <- pairwise_diffs_ind %>%
 PSZ_ind_heatmap <- ggplot(pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
   geom_text(aes(label = sprintf("%.1f", mean_diff)), color = "black", size = 4) +  # Add values in squares
-  scale_fill_gradient2(low = "blue2", mid = "white", high = "orangered3", 
-                       midpoint = 4,
-                       limits = color_limits_ind) +
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
   theme_minimal() +
   labs(title = "a) PSZ",
        x = "Tree 1 Sensors",
@@ -5754,9 +5767,9 @@ TSZ_pairwise_diffs_ind <- TSZ_pairwise_diffs_ind %>%
 TSZ_ind_heatmap <- ggplot(TSZ_pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
   geom_text(aes(label = sprintf("%.1f", mean_diff)), color = "black", size = 4) +  # Add values in squares
-  scale_fill_gradient2(low = "blue2", mid = "white", high = "orangered3", 
-                       midpoint = 4,
-                       limits = color_limits_ind) +
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
   theme_minimal() +
   labs(title = "b) TSZ",
        x = "Tree 1 Sensors",
@@ -5790,7 +5803,7 @@ comb_ind_heatmap
 
 #using this!
 ggsave(
-  filename = "comb_ind_heatmap_V3.png",  # File name with extension
+  filename = "comb_ind_heatmap_V4.png",  # File name with extension
   plot = comb_ind_heatmap,  # The arranged plot object
   width = 6.5,  # Set width (adjust as needed)
   height = 4,  # Set height (adjust as needed)
@@ -6075,15 +6088,13 @@ pairwise_diffs_PSZ_day <- pairwise_diffs_PSZ_day %>%
   mutate(var1 = recode(var1, !!!rename_vars),
          var2 = recode(var2, !!!rename_vars))
 
-#setting a limit for all four plots that is incorporated into each plot, so the color gradient is equal across all plots
-color_limits <- c(0, 8)
 
 diffs_PSZ_day_heatmap <- ggplot(pairwise_diffs_PSZ_day, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
   geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 4,
-                       limits = color_limits) +  # Add color limits here
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
   theme_minimal() +
   labs(title = "a) PSZ Day",
        x = NULL,
@@ -6128,9 +6139,9 @@ pairwise_diffs_PSZ_night <- pairwise_diffs_PSZ_night %>%
 diffs_PSZ_night_heatmap <- ggplot(pairwise_diffs_PSZ_night, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
   geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
-scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 4, 
-                       limits = color_limits) + 
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
   theme_minimal() +
   labs(title = "b) PSZ Night",
        x = NULL,
@@ -6174,16 +6185,16 @@ pairwise_diffs_TSZ_day <- pairwise_diffs_TSZ_day %>%
 # Visualizing the mean absolute difference as a heatmap with values inside
 diffs_TSZ_day_heatmap <- ggplot(pairwise_diffs_TSZ_day, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
-  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +
-   scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 4, 
-                       limits = color_limits) + 
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
   theme_minimal() +
   labs(title = "c) TSZ Day",
        x = NULL,
        y = NULL,
        fill = "MAD (°C)") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
     strip.text = element_text(size = 11),  # Facet title size
     axis.title = element_text(size = 11),  # Axis title size
     axis.text = element_text(size = 11),  # Axis tick labels
@@ -6220,9 +6231,9 @@ pairwise_diffs_TSZ_night <- pairwise_diffs_TSZ_night %>%
 diffs_TSZ_night_heatmap <- ggplot(pairwise_diffs_TSZ_night, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
   geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 4, 
-                       limits = color_limits) +
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
   theme_minimal() +
   labs(title = "d) TSZ Night",
        x = NULL,
@@ -6266,7 +6277,7 @@ full_comb_heatmap
 #using this!
 
 ggsave(
-  filename = "full_comb_heatmap.png",  # File name with extension
+  filename = "full_comb_heatmap_V2.png",  # File name with extension
   plot = full_comb_heatmap,  # The arranged plot object
   width = 6.5,  # Set width (adjust as needed)
   height = 6.5,  # Set height (adjust as needed)
@@ -6350,15 +6361,13 @@ pairwise_diffs_PSZ_dtnt_n <- expand_grid(var1 = temp_vars, var2 = temp_vars) %>%
   mutate(mean_diff = mean_avg_diff(PSZ_daynight_n[[var1]], PSZ_daynight_n[[var2]])) %>%
   ungroup()
 
-#setting a limit for all four plots that is incorporated into each plot, so the color gradient is equal across all plots
-color_limits <- c(0, 12)
 
 diffs_PSZ_dtnt_n_heatmap <- ggplot(pairwise_diffs_PSZ_dtnt_n, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
   geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 4,
-                       limits = color_limits) +  # Add color limits here
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) +
   theme_minimal() + 
   labs(title = "a) PSZ North",
        x = NULL,
@@ -6387,14 +6396,14 @@ pairwise_diffs_TSZ_dtnt <- expand_grid(var1 = temp_vars, var2 = temp_vars) %>%
   ungroup()
 
 #setting a limit for all four plots that is incorporated into each plot, so the color gradient is equal across all plots
-color_limits <- c(0, 12)
+color_limits <- c(0, 12)  
 
 diffs_TSZ_dtnt_heatmap <- ggplot(pairwise_diffs_TSZ_dtnt, aes(x = var1, y = var2, fill = mean_diff)) +
   geom_tile() +  # Create heatmap tiles
   geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 4,
-                       limits = color_limits) +  # Add color limits here
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) +
   theme_minimal() +
   labs(title = "b) TSZ",
        x = NULL,
@@ -6454,9 +6463,9 @@ pairwise_diffs_PSZ_dtnt_n_V2 <- expand_grid(var_day = day_vars, var_night = nigh
 diffs_PSZ_dtnt_n_heatmap_V2 <- ggplot(pairwise_diffs_PSZ_dtnt_n_V2, aes(x = var_night, y = var_day, fill = mean_diff)) +
   geom_tile() +  
   geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 4,
-                       limits = color_limits) +  
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) +
   theme_minimal() +
   labs(title = "a) PSZ North",
        x = NULL,
@@ -6489,10 +6498,10 @@ pairwise_diffs_PSZ_dtnt_s_V2 <- expand_grid(var_day = day_vars, var_night = nigh
 # Plot: x = night temps, y = day temps
 diffs_PSZ_dtnt_s_heatmap_V2 <- ggplot(pairwise_diffs_PSZ_dtnt_s_V2, aes(x = var_night, y = var_day, fill = mean_diff)) +
   geom_tile() +  
-  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 4,
-                       limits = color_limits) +  
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +
+    scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) +
   theme_minimal() +
   labs(title = "b) PSZ South",
        x = NULL,
@@ -6530,9 +6539,9 @@ pairwise_diffs_TSZ_dtnt_n_V2 <- expand_grid(var_day = day_vars, var_night = nigh
 diffs_TSZ_dtnt_n_heatmap_V2 <- ggplot(pairwise_diffs_TSZ_dtnt_n_V2, aes(x = var_night, y = var_day, fill = mean_diff)) +
   geom_tile() +  
   geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 4,
-                       limits = color_limits) +  
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) +  
   theme_minimal() +
   labs(title = "c) TSZ North",
        x = NULL,
@@ -6566,9 +6575,9 @@ pairwise_diffs_TSZ_dtnt_s_V2 <- expand_grid(var_day = day_vars, var_night = nigh
 diffs_TSZ_dtnt_s_heatmap_V2 <- ggplot(pairwise_diffs_TSZ_dtnt_s_V2, aes(x = var_night, y = var_day, fill = mean_diff)) +
   geom_tile() +  
   geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                       midpoint = 4,
-                       limits = color_limits) +  
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) +
   theme_minimal() +
   labs(title = "d) TSZ South",
        x = NULL,
