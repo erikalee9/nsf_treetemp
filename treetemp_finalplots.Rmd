@@ -6882,7 +6882,8 @@ persb_mean_SWE_V2 <- PSZ_snotel_swe %>%
          snowcam_SWE_m = (PSZ_predicted_snowdensity_kg_m3/1000) * cam_snowdepth_m, 
          snowcam_SWE_cm = snowcam_SWE_m*100) %>%
   group_by(Date) %>%
-  summarize(snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+  summarize(predicted_snowdensity_kg_m3 = mean(PSZ_predicted_snowdensity_kg_m3),
+    snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
             snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE)) %>%
    # Apply the moving average but exclude data below the drop threshold
   mutate(snowcam_SWE_cm_smooth = ifelse(snowcam_SWE_cm > drop_threshold, 
@@ -6893,6 +6894,10 @@ max_persb_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
   filter(!is.na(snowcam_SWE_cm)) %>%
   slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
   pull(Date)
+```
+
+```{r}
+write.csv(persb_mean_SWE_V2, "nsf/snow_density/persb_mean_daily_SWE_V2.csv", row.names = FALSE)
 ```
 
 ```{r}
@@ -6911,7 +6916,8 @@ persub_mean_SWE_V2 <- PSZ_snotel_swe %>%
          snowcam_SWE_cm = snowcam_SWE_m * 100) %>%
   filter(!is.na(snowcam_SWE_cm)) %>%
   group_by(Date) %>%
-  summarize(snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+  summarize(predicted_snowdensity_kg_m3 = mean(PSZ_predicted_snowdensity_kg_m3),
+    snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
             snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE), 
             cam_snowdepth_m = mean(cam_snowdepth_m, na.rm = TRUE)) %>%
   # Apply the moving average but exclude data below the drop threshold
@@ -6923,6 +6929,10 @@ max_persub_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
   filter(!is.na(snowcam_SWE_cm)) %>%
   slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
   pull(Date)
+```
+
+```{r}
+write.csv(persub_mean_SWE_V2, "nsf/snow_density/persub_mean_daily_SWE_V2.csv", row.names = FALSE)
 ```
 
 ```{r}
@@ -6951,7 +6961,8 @@ transb_mean_SWE_V2 <- TSZ_snotel_swe %>%
          snowcam_SWE_cm = snowcam_SWE_m*100) %>%
   filter(!Date %in% as.Date(c("2024-03-12", "2024-03-13", "2024-03-14", "2024-03-15")))  %>%
   group_by(Date) %>%
-  summarize(snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+  summarize(predicted_snowdensity_kg_m3 = mean(TSZ_predicted_snowdensity_kg_m3), 
+    snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
             snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE)) %>%
    # Apply the moving average but exclude data below the drop threshold
   mutate(snowcam_SWE_cm_smooth = ifelse(snowcam_SWE_cm > drop_threshold, 
@@ -6965,6 +6976,10 @@ max_transb_snowcamSWEdate_V2 <- transb_mean_SWE_V2 %>%
 ```
 
 ```{r}
+write.csv(transb_mean_SWE_V2, "nsf/snow_density/transb_mean_daily_SWE_V2.csv", row.names = FALSE)
+```
+
+```{r}
 transub_mean_SWE_V2 <- TSZ_snotel_swe %>%
   left_join(transub_snowcam_SWE_data, by = "Date") %>%
   mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
@@ -6974,7 +6989,8 @@ transub_mean_SWE_V2 <- TSZ_snotel_swe %>%
   filter(!is.na(snowcam_SWE_cm)) %>%
   filter(!Date %in% as.Date(c("2024-03-12", "2024-03-13", "2024-03-14", "2024-03-15")))  %>%
   group_by(Date) %>%
-  summarize(TSZ_SWE_cm = mean(TSZ_SWE_cm, na.rm = TRUE), 
+  summarize(predicted_snowdensity_kg_m3 = mean(TSZ_predicted_snowdensity_kg_m3),
+    TSZ_SWE_cm = mean(TSZ_SWE_cm, na.rm = TRUE), 
             snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
             snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE), 
             cam_snowdepth_m = mean(cam_snowdepth_m, na.rm = TRUE)) %>%
@@ -6987,6 +7003,10 @@ max_transub_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
   filter(!is.na(snowcam_SWE_cm)) %>%
   slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
   pull(Date)
+```
+
+```{r}
+write.csv(transub_mean_SWE_V2, "nsf/snow_density/transub_mean_daily_SWE_V2.csv", row.names = FALSE)
 ```
 
 ```{r}
