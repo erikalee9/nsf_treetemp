@@ -7064,6 +7064,9 @@ Combining for full dataset of mean air temp, tree temp, and SW
 ```{r}
 PSZ_mean_treetemp_wx_dt <- PSZ_mean_dt_treetemp %>%
   inner_join(PSZ_mean_wx_dt, by = c("DOY", "day"))
+
+PSZ_mean_treetemp_wx_nt <- PSZ_mean_nt_treetemp %>%
+  inner_join(PSZ_mean_wx_nt, by = c("DOY", "day"))
 ```
 
 TSZ
@@ -7118,6 +7121,9 @@ TSZ_mean_wx_nt <- filtered_transb_wx_15min %>%
 ```{r}
 TSZ_mean_treetemp_wx_dt <- TSZ_mean_dt_treetemp %>%
   inner_join(TSZ_mean_wx_dt, by = c("DOY", "day"))
+
+TSZ_mean_treetemp_wx_nt <- TSZ_mean_nt_treetemp %>%
+  inner_join(TSZ_mean_wx_nt, by = c("DOY", "day"))
 ```
 
 Plotting
@@ -7126,26 +7132,7 @@ Plotting
 library(ggpmisc)
 ```
 
-```{r}
-PSZ_treeairtemp_stats <- persb_corr_data_accu %>%
-  drop_na(mean_tree_temp, AirTC_Avg) %>%
-  filter(tree_id == "1") %>%
-  summarize(
-    cor_test = list(cor.test(mean_tree_temp, AirTC_Avg, use = "complete.obs")),
-    .groups = "drop"
-  ) %>%
-  mutate(
-    cor_coeff = map_dbl(cor_test, ~ .x$estimate),  # Extract correlation coefficient (r)
-    R2 = cor_coeff^2,  # Compute R²
-    p_value = map_dbl(cor_test, ~ .x$p.value),  # Extract p-value
-    conf_low = map_dbl(cor_test, ~ .x$conf.int[1]),  # Lower bound of CI
-    conf_high = map_dbl(cor_test, ~ .x$conf.int[2]),  # Upper bound of CI
-    p_label = ifelse(p_value < 0.05, "p-value < 0.05", "p-value ≥ 0.05"),  # Conditional p-value label
-    R2_label = paste0("r = ", formatC(cor_coeff, format = "f", digits = 2), 
-                      "\nR² = ", formatC(R2, format = "f", digits = 2), 
-                      "\n", p_label)  # Ensure two decimal places
-  )
-```
+Plotting Daytime Mean Daily Values
 
 ```{r}
 PSZ_treeairtemp_db_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_dt) +
@@ -7158,13 +7145,15 @@ PSZ_treeairtemp_db_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_dt) +
     label.x.npc = "left", label.y.npc = 0.95,
     size = 4
   ) +
-  scale_size_continuous(name = "Mean SW Radiation (W/m²)") +
+  scale_size_continuous(name = "SW Radiation (W/m²)") +
   scale_color_viridis_c(name = "Day of Year") +
   labs(
     title = "a) PSZ DB",
     x = "Air Temperature (°C)",
     y = "Tree Surface Temperature (°C)"
   ) +
+  scale_x_continuous(limits = c(-15, 15)) + 
+  scale_y_continuous(limits = c(-12, 20)) +
   theme_bw()
 
 PSZ_treeairtemp_db_corr_plot
@@ -7181,13 +7170,15 @@ PSZ_treeairtemp_gb_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_dt) +
     parse = TRUE,
     size = 4
   ) +
-  scale_size_continuous(name = "Mean SW Radiation (W/m²)") +
+  scale_size_continuous(name = "SW Radiation (W/m²)") +
   scale_color_viridis_c(name = "Day of Year") +
   labs(
     title = "b) PSZ GB",
     x = "Air Temperature (°C)",
-    y = "Tree Surface Temperature (°C)"
+    y = NULL
   ) +
+  scale_x_continuous(limits = c(-15, 15)) + 
+  scale_y_continuous(limits = c(-12, 20)) +
   theme_bw()
 
 PSZ_treeairtemp_gb_corr_plot
@@ -7204,13 +7195,15 @@ PSZ_treeairtemp_ub_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_dt) +
     parse = TRUE,
     size = 4
   ) +
-  scale_size_continuous(name = "Mean SW Radiation (W/m²)") +
+  scale_size_continuous(name = "SW Radiation (W/m²)") +
   scale_color_viridis_c(name = "Day of Year") +
   labs(
     title = "c) PSZ live",
     x = "Air Temperature (°C)",
-    y = "Tree Surface Temperature (°C)"
+    y = NULL
   ) +
+  scale_x_continuous(limits = c(-15, 15)) + 
+  scale_y_continuous(limits = c(-12, 20)) +
   theme_bw()
 
 PSZ_treeairtemp_ub_corr_plot
@@ -7227,13 +7220,15 @@ TSZ_treeairtemp_db_corr_plot <- ggplot(data = TSZ_mean_treetemp_wx_dt) +
     label.x.npc = "left", label.y.npc = 0.95,
     size = 4
   ) +
-  scale_size_continuous(name = "Mean SW Radiation (W/m²)") +
+  scale_size_continuous(name = "SW Radiation (W/m²)") +
   scale_color_viridis_c(name = "Day of Year") +
   labs(
     title = "d) TSZ DB",
     x = "Air Temperature (°C)",
     y = "Tree Surface Temperature (°C)"
   ) +
+  scale_x_continuous(limits = c(-15, 15)) + 
+  scale_y_continuous(limits = c(-12, 20)) + 
   theme_bw()
 
 TSZ_treeairtemp_db_corr_plot
@@ -7250,13 +7245,15 @@ TSZ_treeairtemp_gb_corr_plot <- ggplot(data = TSZ_mean_treetemp_wx_dt) +
     parse = TRUE,
     size = 4
   ) +
-  scale_size_continuous(name = "Mean SW Radiation (W/m²)") +
+  scale_size_continuous(name = "SW Radiation (W/m²)") +
   scale_color_viridis_c(name = "Day of Year") +
   labs(
     title = "e) TSZ GB",
     x = "Air Temperature (°C)",
-    y = "Tree Surface Temperature (°C)"
+    y = NULL
   ) +
+  scale_x_continuous(limits = c(-15, 15)) + 
+  scale_y_continuous(limits = c(-12, 20)) + 
   theme_bw()
 
 TSZ_treeairtemp_gb_corr_plot
@@ -7273,14 +7270,235 @@ TSZ_treeairtemp_ub_corr_plot <- ggplot(data = TSZ_mean_treetemp_wx_dt) +
     parse = TRUE,
     size = 4
   ) +
-  scale_size_continuous(name = "Mean SW Radiation (W/m²)") +
+  scale_size_continuous(name = "SW Radiation (W/m²)") +
   scale_color_viridis_c(name = "Day of Year") +
   labs(
     title = "f) TSZ live",
     x = "Air Temperature (°C)",
-    y = "Tree Surface Temperature (°C)"
+    y = NULL
   ) +
+  scale_x_continuous(limits = c(-15, 15)) + 
+  scale_y_continuous(limits = c(-12, 20)) + 
   theme_bw()
 
 TSZ_treeairtemp_ub_corr_plot
+```
+
+Combining
+
+```{r}
+PSZ_comb_treeairtemp_scatterplot <- ggarrange(PSZ_treeairtemp_db_corr_plot, PSZ_treeairtemp_gb_corr_plot, PSZ_treeairtemp_ub_corr_plot, nrow = 1, ncol = 3, common.legend = TRUE, legend = "right")
+
+PSZ_comb_treeairtemp_scatterplot
+```
+
+```{r}
+TSZ_comb_treeairtemp_scatterplot <- ggarrange(TSZ_treeairtemp_db_corr_plot, TSZ_treeairtemp_gb_corr_plot, TSZ_treeairtemp_ub_corr_plot, nrow = 1, ncol = 3, common.legend = TRUE, legend = "right")
+
+TSZ_comb_treeairtemp_scatterplot
+```
+
+```{r}
+comb_treeairtemp_dt_scatterplot <- ggarrange(
+  PSZ_comb_treeairtemp_scatterplot, 
+  TSZ_comb_treeairtemp_scatterplot, 
+  nrow = 2, 
+  ncol = 1, 
+  common.legend = FALSE, 
+  legend = "right"
+)
+
+comb_treeairtemp_dt_scatterplot
+```
+
+```{r}
+ggsave(
+  filename = "comb_treeairtemp_dt_scatterplot.png",  # File name with extension
+  plot = comb_treeairtemp_dt_scatterplot,  # The arranged plot object
+  width = 8,  # Set width (adjust as needed)
+  height = 6,  # Set height (adjust as needed)
+  dpi = 600  # High resolution for publication-quality output
+)
+```
+
+```{r}
+PSZ_treeairtemp_db_nt_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_nt) +
+  geom_point(aes(x = dt_airtemp, y = dt_db_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_smooth(aes(x = dt_airtemp, y = dt_db_temp), method = "lm", color = "black", se = FALSE) +
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_db_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4
+  ) +
+  scale_size_continuous(name = "SW Radiation (W/m²)") +
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "a) PSZ DB",
+    x = "Air Temperature (°C)",
+    y = "Tree Surface Temperature (°C)"
+  ) +
+  scale_x_continuous(limits = c(-20, 10)) + 
+  scale_y_continuous(limits = c(-20, 10)) +
+  theme_bw()
+
+PSZ_treeairtemp_db_nt_corr_plot
+```
+
+```{r}
+PSZ_treeairtemp_gb_nt_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_nt) +
+  geom_point(aes(x = dt_airtemp, y = dt_gb_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_smooth(aes(x = dt_airtemp, y = dt_gb_temp), method = "lm", color = "black", se = FALSE) +
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_gb_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4
+  ) +
+  scale_size_continuous(name = "SW Radiation (W/m²)") +
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "b) PSZ GB",
+    x = "Air Temperature (°C)",
+    y = NULL
+  ) +
+  scale_x_continuous(limits = c(-20, 10)) + 
+  scale_y_continuous(limits = c(-20, 10)) +
+  theme_bw()
+
+PSZ_treeairtemp_gb_nt_corr_plot
+```
+
+```{r}
+PSZ_treeairtemp_ub_nt_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_nt) +
+  geom_point(aes(x = dt_airtemp, y = dt_ub_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_smooth(aes(x = dt_airtemp, y = dt_ub_temp), method = "lm", color = "black", se = FALSE) +
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_ub_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4
+  ) +
+  scale_size_continuous(name = "SW Radiation (W/m²)") +
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "c) PSZ live",
+    x = "Air Temperature (°C)",
+    y = NULL
+  ) +
+  scale_x_continuous(limits = c(-20, 10)) + 
+  scale_y_continuous(limits = c(-20, 10)) +
+  theme_bw()
+
+PSZ_treeairtemp_ub_nt_corr_plot
+```
+
+```{r}
+TSZ_treeairtemp_db_nt_corr_plot <- ggplot(data = TSZ_mean_treetemp_wx_nt) +
+  geom_point(aes(x = dt_airtemp, y = dt_db_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_smooth(aes(x = dt_airtemp, y = dt_db_temp), method = "lm", color = "black", se = FALSE) +
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_db_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4
+  ) +
+  scale_size_continuous(name = "SW Radiation (W/m²)") +
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "d) TSZ DB",
+    x = "Air Temperature (°C)",
+    y = "Tree Surface Temperature (°C)"
+  ) +
+  scale_x_continuous(limits = c(-20, 10)) + 
+  scale_y_continuous(limits = c(-20, 10)) +
+  theme_bw()
+
+TSZ_treeairtemp_db_nt_corr_plot
+```
+
+```{r}
+TSZ_treeairtemp_gb_nt_corr_plot <- ggplot(data = TSZ_mean_treetemp_wx_nt) +
+  geom_point(aes(x = dt_airtemp, y = dt_gb_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_smooth(aes(x = dt_airtemp, y = dt_gb_temp), method = "lm", color = "black", se = FALSE) +
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_gb_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4
+  ) +
+  scale_size_continuous(name = "SW Radiation (W/m²)") +
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "e) TSZ GB",
+    x = "Air Temperature (°C)",
+    y = NULL
+  ) +
+  scale_x_continuous(limits = c(-20, 10)) + 
+  scale_y_continuous(limits = c(-20, 10)) +
+  theme_bw()
+
+TSZ_treeairtemp_gb_nt_corr_plot
+```
+
+```{r}
+TSZ_treeairtemp_ub_nt_corr_plot <- ggplot(data = TSZ_mean_treetemp_wx_nt) +
+  geom_point(aes(x = dt_airtemp, y = dt_ub_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_smooth(aes(x = dt_airtemp, y = dt_ub_temp), method = "lm", color = "black", se = FALSE) +
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_ub_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4
+  ) +
+  scale_size_continuous(name = "SW Radiation (W/m²)") +
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "f) TSZ live",
+    x = "Air Temperature (°C)",
+    y = NULL
+  ) +
+  scale_x_continuous(limits = c(-20, 10)) + 
+  scale_y_continuous(limits = c(-20, 10)) +
+  theme_bw()
+
+TSZ_treeairtemp_ub_nt_corr_plot
+```
+
+```{r}
+PSZ_comb_treeairtemp_nt_scatterplot <- ggarrange(PSZ_treeairtemp_db_nt_corr_plot, PSZ_treeairtemp_gb_nt_corr_plot, PSZ_treeairtemp_ub_nt_corr_plot, nrow = 1, ncol = 3, common.legend = TRUE, legend = "right")
+
+PSZ_comb_treeairtemp_nt_scatterplot
+```
+
+```{r}
+TSZ_comb_treeairtemp_nt_scatterplot <- ggarrange(TSZ_treeairtemp_db_nt_corr_plot, TSZ_treeairtemp_gb_nt_corr_plot, TSZ_treeairtemp_ub_nt_corr_plot, nrow = 1, ncol = 3, common.legend = TRUE, legend = "right")
+
+TSZ_comb_treeairtemp_nt_scatterplot
+```
+
+```{r}
+comb_treeairtemp_nt_scatterplot <- ggarrange(
+  PSZ_comb_treeairtemp_nt_scatterplot, 
+  TSZ_comb_treeairtemp_nt_scatterplot, 
+  nrow = 2, 
+  ncol = 1, 
+  common.legend = FALSE, 
+  legend = "right"
+)
+
+comb_treeairtemp_nt_scatterplot
+```
+
+```{r}
+#printing dt and nt to compare
+comb_treeairtemp_dt_scatterplot
+
+comb_treeairtemp_nt_scatterplot
 ```
