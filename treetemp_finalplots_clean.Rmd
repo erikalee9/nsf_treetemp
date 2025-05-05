@@ -2948,7 +2948,10 @@ temp_varsdiff_2 <- c("tree2_DB_north", "tree2_DB_south", "tree2_GB_north", "tree
 pairwise_diffs_ind <- expand_grid(var1 = temp_varsdiff_1, var2 = temp_varsdiff_2) %>%
   filter(var1 != var2) %>%  # Remove self-comparisons
   rowwise() %>%
-  mutate(mean_diff = mean_avg_diff(PSZ_comb_ind_alltrees[[var1]], PSZ_comb_ind_alltrees[[var2]])) %>%
+  mutate(
+    mean_diff = mean_avg_diff(PSZ_comb_ind_alltrees[[var1]], PSZ_comb_ind_alltrees[[var2]]),
+    sd_diff = sd(PSZ_comb_ind_alltrees[[var1]] - PSZ_comb_ind_alltrees[[var2]])
+  ) %>%
   ungroup()
 
 # Create a lookup table for renaming
@@ -2992,6 +2995,31 @@ PSZ_ind_heatmap <- ggplot(pairwise_diffs_ind, aes(x = var1, y = var2, fill = mea
     legend.text = element_text(size = 11))
 
 PSZ_ind_heatmap
+```
+
+Plotting standard deviation
+
+```{r}
+# Visualizing the mean absolute difference as a heatmap with values inside
+PSZ_ind_heatmap_sd <- ggplot(pairwise_diffs_ind, aes(x = var1, y = var2, fill = sd_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = sprintf("%.1f", sd_diff)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
+  theme_minimal() +
+  labs(title = "a) PSZ",
+       x = "Tree 1 Sensors",
+       y = "Tree 2 Sensors",
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), # Remove y-axis ticks
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 10),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 11))
+
+PSZ_ind_heatmap_sd
 ```
 
 ### TSZ
@@ -3143,7 +3171,10 @@ TSZ_temp_varsdiff_2 <- c("tree2_DB_north", "tree2_DB_south", "tree2_GB_north", "
 TSZ_pairwise_diffs_ind <- expand_grid(var1 = TSZ_temp_varsdiff_1, var2 = TSZ_temp_varsdiff_2) %>%
   filter(var1 != var2) %>%  # Remove self-comparisons
   rowwise() %>%
-  mutate(mean_diff = mean_avg_diff(TSZ_comb_ind_alltrees[[var1]], TSZ_comb_ind_alltrees[[var2]])) %>%
+  mutate(
+    mean_diff = mean_avg_diff(PSZ_comb_ind_alltrees[[var1]], PSZ_comb_ind_alltrees[[var2]]),
+    sd_diff = sd(PSZ_comb_ind_alltrees[[var1]] - PSZ_comb_ind_alltrees[[var2]])
+  ) %>%
   ungroup()
 
 # Create a lookup table for renaming
@@ -3189,6 +3220,33 @@ TSZ_ind_heatmap <- ggplot(TSZ_pairwise_diffs_ind, aes(x = var1, y = var2, fill =
     legend.text = element_text(size = 11))
 
 TSZ_ind_heatmap
+```
+
+Plotting the standard deviation as well, to get stats
+
+```{r}
+# Visualizing the mean standard difference as a heatmap with values inside
+TSZ_ind_heatmap_sd <- ggplot(TSZ_pairwise_diffs_ind, aes(x = var1, y = var2, fill = sd_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = sprintf("%.1f", sd_diff)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
+  theme_minimal() +
+  labs(title = "b) TSZ",
+       x = "Tree 1 Sensors",
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.text.y = element_blank(),  # Remove y-axis text
+        axis.ticks.y = element_blank(),
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 10),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 11))
+
+TSZ_ind_heatmap_sd
 ```
 
 ```{r}
@@ -3942,7 +4000,13 @@ ggplot()+geom_col(data=burn,aes(x=label,y=diff,fill=aspect),position='dodge')
 
 # Ablation Season SWE Calculations
 
-Pers B
+Exploring when to define "ablation" as starting
+
+### V1 
+
+-   not using this snotel data, as it's from multiple different locations that do not well-represent our sitres
+
+#### PSZ Burned
 
 ```{r}
 #cleaning up snowcamera snow depth data to match SWE data 
@@ -3988,7 +4052,7 @@ max_persb_snowcamSWEdate <- persb_mean_SWE %>%
   pull(Date)
 ```
 
-Pers UB
+#### PSZ Unburned
 
 ```{r}
 #loading in Snow density data
@@ -4027,7 +4091,7 @@ pers_SWE_plot <- ggplot() +
 pers_SWE_plot
 ```
 
-Trans B
+#### TSZ Burned
 
 ```{r}
 #wrangling snow camera data to match SWE data
@@ -4068,6 +4132,8 @@ max_transb_snowcamSWEdate <- transb_mean_SWE %>%
   slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
   pull(Date)
 ```
+
+#### TSZ Unburned
 
 ```{r}
 #wrangling snow camera data to match SWE data
@@ -4128,7 +4194,13 @@ trans_SWE_plot <- ggplot() +
 trans_SWE_plot
 ```
 
-V2 - using only Joe Wright and Hourglass Lake SNOTEL sites to get predicted snow density, then applying to our snow depth data
+### V2 
+
+-   using this data for thesis!
+
+<!-- -->
+
+-   Joe Wright and Hourglass Lake SNOTEL sites to get predicted snow density, then applying to our snow depth data
 
 ```{r}
 snotel_density_data <- read_csv("nsf/snow_density/snotel_SWE_data.csv") %>%
@@ -4151,6 +4223,8 @@ PSZ_snotel_swe <- snotel_density_data %>%
 TSZ_snotel_swe <- snotel_density_data %>%
   select(Date, TSZ_SWE_in, PSZ_snowdepth_in, TSZ_predicted_snowdensity_kg_m3)
 ```
+
+#### PSZ Burned
 
 ```{r}
 
@@ -4177,6 +4251,8 @@ max_persb_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
 ```{r}
 write.csv(persb_mean_SWE_V2, "nsf/snow_density/persb_mean_daily_SWE_V2.csv", row.names = FALSE)
 ```
+
+#### PSZ Unburned
 
 ```{r}
 persub_snowcam_SWE_data <- pers_ub_daily_snowdepth_data_V2 %>%
@@ -4231,6 +4307,8 @@ pers_SWE_V2_plot <- ggplot() +
 pers_SWE_V2_plot
 ```
 
+#### TSZ Burned
+
 ```{r}
 transb_mean_SWE_V2 <- TSZ_snotel_swe %>%
   left_join(transb_snowcam_SWE_data, by = "Date") %>%
@@ -4256,6 +4334,8 @@ max_transb_snowcamSWEdate_V2 <- transb_mean_SWE_V2 %>%
 ```{r}
 write.csv(transb_mean_SWE_V2, "nsf/snow_density/transb_mean_daily_SWE_V2.csv", row.names = FALSE)
 ```
+
+#### TSZ Unburned
 
 ```{r}
 transub_mean_SWE_V2 <- TSZ_snotel_swe %>%
@@ -4308,7 +4388,9 @@ trans_SWE_V2_plot
 
 # Air Temp & Tree Temp Correlations
 
-Data Wrangling
+Used in thesis!
+
+### Data Wrangling
 
 ```{r}
 PSZ_mean_dt_treetemp <- full_15min_gbdbub %>%
@@ -4468,13 +4550,11 @@ TSZ_mean_treetemp_wx_nt <- TSZ_mean_nt_treetemp %>%
   inner_join(TSZub_mean_wx_nt, by = c("DOY", "day"))
 ```
 
-Plotting
+### Plotting
 
-```{r}
-library(ggpmisc)
-```
+#### Daytime
 
-Plotting Daytime Mean Daily Values
+-   Single mean value per-day of daytime tree temp, air temp and net SW
 
 ```{r}
 PSZ_treeairtemp_db_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_dt) +
@@ -4686,7 +4766,9 @@ ggsave(
 )
 ```
 
-Nightime
+#### Nighttime
+
+-   Single mean value per-day of nighttime tree temp, air temp and net SW
 
 ```{r}
 PSZ_treeairtemp_db_nt_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_nt) +
