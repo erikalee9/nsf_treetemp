@@ -1,0 +1,187 @@
+---
+title: "wx_station_data"
+author: "Erika Lee"
+date: "2023-11-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#installing packages / set working directory
+packages <- c('tidyverse',
+              'lterdatasampler', 'dplyr', 'ggplot2', 'readr', 'readxl', 'lubridate', 'plotly', 'openxlsx', 'plotly', 'rstatix')
+
+install.packages(packages)
+
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(openxlsx)
+library(plotly)
+library(rstatix)
+
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
+
+# Tree Temp Data
+
+### PSZ Burned
+
+```{r}
+#read in temperature data
+pers_b_tree_composite=read_excel("nsf/105E_pers_burned/105E_pers_b_composite.xlsx")
+
+#filter temp data to full data frame
+pers_b_tree_fulldata <- pers_b_tree_composite %>%
+  mutate(datetime = ymd_hms(TIMESTAMP)) %>%
+  select(datetime, everything()) %>%
+  select(-c(TIMESTAMP, RECORD))
+
+#adding in an aspect column - WITH ONLY 14 SENSORS!
+pers_b_aspects <- pers_b_tree_fulldata %>%
+  pivot_longer(cols = starts_with("Temp"),
+               names_to = "sensor_id",
+               values_to = "temp") %>%
+  #add in aspect column
+  mutate(aspect = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(1)",
+      "Temp_C_Avg(5)",
+      "Temp_C_Avg(9)",
+      "Temp_C_Avg(13)", "Temp_C_Avg(15)"
+    ),
+    "north",
+    "other"
+  )) %>%
+  mutate(aspect = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(2)",
+      "Temp_C_Avg(6)",
+      "Temp_C_Avg(10)",
+      "Temp_C_Avg(14)", "Temp_C_Avg(16)"),
+    "south",
+    aspect
+  )) %>%
+  mutate(aspect = ifelse(
+    sensor_id %in% c("Temp_C_Avg(3)", "Temp_C_Avg(7)", "Temp_C_Avg(11)"),
+    "charred",
+    aspect
+  )) %>%
+  mutate(aspect = ifelse(
+    sensor_id %in% c("Temp_C_Avg(4)", "Temp_C_Avg(8)", "Temp_C_Avg(12)"),
+    "uncharred",
+    aspect
+  )) %>%
+  #adding in sensor name column
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(1)",
+      "Temp_C_Avg(2)",
+      "Temp_C_Avg(3)",
+      "Temp_C_Avg(4)"
+    ),
+    "gb_w",
+    "other"
+  )) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(5)",
+      "Temp_C_Avg(6)",
+      "Temp_C_Avg(7)",
+      "Temp_C_Avg(8)"
+    ),
+    "gb_e",
+    tree_name
+  )) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(9)",
+      "Temp_C_Avg(10)",
+      "Temp_C_Avg(11)",
+      "Temp_C_Avg(12)"
+    ),
+    "gb_s",
+    tree_name
+  )) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c("Temp_C_Avg(13)", "Temp_C_Avg(14)"),
+    "db_n",
+    tree_name
+  )) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c("Temp_C_Avg(15)", "Temp_C_Avg(16)"),
+    "db_s",
+    tree_name
+  ))
+```
+
+### TSZ Burned
+
+```{r}
+#read in temperature data
+trans_b_tree_composite=read_excel("nsf/105E_trans_burned/105E_trans_b_composite.xlsx")
+
+#filter temp data to full data frame
+trans_b_tree_fulldata <- trans_b_tree_composite %>%
+  mutate(datetime = ymd_hms(TIMESTAMP)) %>%
+  select(datetime, everything()) %>%
+  select(-c(TIMESTAMP, Record)) %>%
+  na.omit()
+
+#adding in an aspect column - ** need to edit date on trans_b sensors, seems weird, should be 2023.12.06 around 10 am?
+trans_b_aspects <- trans_b_tree_fulldata %>%
+  pivot_longer(cols = starts_with("Temp"),
+               names_to = "sensor_id",
+               values_to = "temp") %>%
+  #add in aspect column
+  mutate(aspect = ifelse(
+    sensor_id %in% c("Temp_C_Avg(1)", "Temp_C_Avg(5)", "Temp_C_Avg(9)", "Temp_C_Avg(11)"),
+    "north",
+    "other"
+  )) %>%
+mutate(aspect = ifelse(
+    sensor_id %in% c("Temp_C_Avg(2)", "Temp_C_Avg(6)", "Temp_C_Avg(10)", "Temp_C_Avg(12)"),
+    "south",
+    aspect)) %>%
+  mutate(aspect = ifelse(
+    sensor_id %in% c("Temp_C_Avg(3)", "Temp_C_Avg(7)"),
+    "charred",
+    aspect)) %>%
+    mutate(aspect = ifelse(
+    sensor_id %in% c("Temp_C_Avg(4)", "Temp_C_Avg(8)"),
+    "uncharred",
+    aspect)) %>%
+  #adding in sensor name column
+  mutate(tree_name = ifelse(
+    sensor_id %in% c("Temp_C_Avg(1)", "Temp_C_Avg(2)", "Temp_C_Avg(3)", "Temp_C_Avg(4)"),
+    "gb_n",
+    "other"
+  )) %>%
+mutate(tree_name = ifelse(
+    sensor_id %in% c("Temp_C_Avg(5)", "Temp_C_Avg(6)", "Temp_C_Avg(7)", "Temp_C_Avg(8)"),
+    "gb_s",
+    tree_name)) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c("Temp_C_Avg(9)", "Temp_C_Avg(10)"),
+    "db_n",
+    tree_name)) %>%
+    mutate(tree_name = ifelse(
+    sensor_id %in% c("Temp_C_Avg(11)", "Temp_C_Avg(12)"),
+    "db_s",
+    tree_name))
+```
+
+```{r}
+#exporting aspect data as excel
+write.xlsx(trans_b_aspects, "nsf/105E_trans_burned/105E_trans_b_aspects.xlsx")
+```
+
+Do I need this for unburned here ? Is it somewhere else now?
