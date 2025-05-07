@@ -1,0 +1,4891 @@
+---
+title: "treetemp_finalplots"
+output: html_document
+date: "2024-10-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(openxlsx)
+library(plotly)
+library(rstatix)
+library(htmlwidgets)
+library(RColorBrewer)
+library(patchwork)
+library(ggpubr)
+library(suncalc)
+library(ggpattern)
+library(hms)
+
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
+
+```{r}
+#clear prior environment
+rm(list = ls())
+```
+
+```{r}
+#to display the colors
+display.brewer.pal(n = 8, name = "Dark2")
+
+#to get the hex number of the colors
+brewer.pal(n = 8, name = "Dark2")
+```
+
+# Loading in Data
+
+```{r}
+p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
+  mutate(
+    sunrise = as.POSIXct(sunrise, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunrise = with_tz(sunrise, tz = "MST")
+  ) %>%
+   mutate(
+    sunset = as.POSIXct(sunset, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+    sunset = with_tz(sunset, tz = "MST")
+  )
+```
+
+```{r}
+#new full dataframes to load - including burned and unburned/ all burn_status types together
+full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = with_tz(datetime, tz = 'MST')) %>%
+  mutate(day = as.Date(day, format = ("%Y-%m-%d"))) %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, north_temp, south_temp, solarNoon, sunrise, sunset, dawn, dusk)
+
+full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
+   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST')) %>%
+  mutate(day = as.Date(day, format = ("%Y-%m-%d")))
+
+full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = with_tz(datetime, tz = 'MST'), ,
+    day = as.Date(datetime, tz= "MST")) %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp, solarNoon, sunrise, sunset, dawn, dusk)
+
+#don't need hourly dbgbub dataframe! Therefore I haven't update this code line to include phase, et. 
+
+#full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv") %>%
+ # mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                     #          datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
+ # select(-1)
+
+full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
+  mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))
+```
+
+\*\* as of 2025-01-10 - new data for temp figures separated by burn status
+
+```{r}
+full_pers_gbdbub_data <- full_15min_gbdbub %>%
+  filter(zone == "PSZ")
+
+full_trans_gbdbub_data <- full_15min_gbdbub %>%
+  filter(zone == "TSZ")
+```
+
+```{r}
+#weather station data for tree well/snow depth plots
+transb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transb_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "maximum_depth(cm)") %>%
+  mutate(day = as.Date(date, format = "%Y-%m-%d")) %>%  # Update format if necessary
+  # Adjusting the treewell developed column to just yes/no
+  mutate(treewell_developed = case_when(
+    treewell_developed == "maybe" ~ "yes",
+    treewell_developed == "no snow" ~ "no",
+    TRUE ~ treewell_developed  # Keep other values unchanged
+  )) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm / 100) %>%
+  # Filtering to timerange for these plots
+  filter(day >= as.Date("2024-02-02") & day < as.Date("2024-07-01")) %>%
+  mutate(zone = "TSZ") %>%
+  mutate(burn_status = "burned")
+
+transub_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_105E_transub_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "max_depth_cm") %>%
+  mutate(day = as.Date(date, format = "%Y-%m-%d")) %>%
+  mutate(max_snowdepth_m = snowcam_max_depth_cm / 100) %>%
+  # Filtering to timerange for these plots
+  filter(day >= as.Date("2024-02-02") & day < as.Date("2024-07-01")) %>%
+  mutate(zone = "TSZ") %>%
+  mutate(burn_status = "unburned") %>%
+  select(-mortality)
+
+#Trans UB AG snow depths (closer location)
+AG_transub_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_transub_ag_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "max_depth_cm") %>%
+  mutate(day = as.Date(date, format = "%Y-%m-%d")) %>%
+  mutate(max_snowdepth_m = snowcam_max_depth_cm / 100) %>%
+  # Filtering to timerange for these plots
+  filter(day >= as.Date("2024-02-02") & day < as.Date("2024-07-01")) %>%
+  mutate(zone = "TSZ") %>%
+  mutate(burn_status = "unburned") %>%
+  select(-mortality)
+
+
+persb_snowcamera_data <- read_csv("nsf/camera_snowdepths/2024_persb_lp_highmort_east_snowdepths.csv") %>%
+  rename(snowcam_max_depth_cm = "max_depth_cm") %>%
+  mutate(day = as.Date(date)) %>%
+  rename(treewell_developed = treewell_developement) %>%
+  mutate(treewell_developed = case_when(
+    treewell_developed == "maybe" ~ "yes",
+    treewell_developed == "no snow" ~ "no",
+    TRUE ~ treewell_developed  # keep other values unchanged
+  )) %>%
+  mutate(snowcam_max_depth_m = snowcam_max_depth_cm/100) %>%
+  #filtering to timerange for these plots
+  filter(day >= as.Date("2024-02-02") & day < as.Date("2024-07-01")) %>%
+  mutate(zone = "PSZ") 
+```
+
+Weather Data
+
+```{r}
+transb_wx_15min_r <- read_csv('nsf/trans_burned/trans_burned_wx_15min_r.csv') %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = with_tz(datetime, tz = 'MST'))
+
+transub_wx_15min_r <- read_csv('nsf/trans_unburned/trans_unburned_wx_15min_r.csv') %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = with_tz(datetime, tz = 'MST'))
+
+persb_wx_hourly_r <- read_csv('nsf/pers_burned/pers_burned_wx_hourly_r.csv') %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = with_tz(datetime, tz = 'MST')) %>%
+    #removing data with low quality snow depth
+  mutate(SnowDepth_m = ifelse(Q_Avg < 180, NA, SnowDepth_m))
+
+#persub_wx_15min_r <- read_csv('nsf/pers_unburned/pers_unburned_wx_15min_r.csv') %>%
+  #mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                       #        datetime = with_tz(datetime, tz = 'MST'))
+
+#use hourly unburned and burned for PSZ
+persub_wx_hourly_r <- read_csv('nsf/pers_unburned/pers_unburned_wx_hourly_r.csv') %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = with_tz(datetime, tz = 'MST')) %>%
+  #snowdepth adjustment
+  mutate(SnowDepth_m = SnowDepth_m - 0.024) %>%
+  #removing data with low quality snow depth
+  mutate(SnowDepth_m = ifelse(Q_Avg < 180, NA, SnowDepth_m))
+```
+
+```{r}
+#filtered weather data to the datetime range that we need and added phase and NR_Avg_calcs
+filtered_transb_wx_15min <- transb_wx_15min_r %>%
+  mutate(day = as.Date.POSIXct(datetime, tz = "MST"),
+    month = as.numeric(format(datetime, "%m")),
+    datetime = with_tz(datetime, tzone = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST")) %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  mutate(zone = "TSZ", burn_status = "burned") %>%
+  filter(!is.nan(SWin_Avg)) %>%
+  #adding in my own calculated NR_Avg column
+  mutate(NR_Avg_new = (SWin_Avg - SWout_Avg) + (LWin_Avg - LWout_Avg)) %>%
+  select(datetime, day, month, phase, zone, burn_status, NR_Avg_new, everything())
+```
+
+```{r}
+filtered_transub_wx_15min <- transub_wx_15min_r %>%
+  mutate(day = as.Date.POSIXct(datetime, tz = "MST"),
+    month = as.numeric(format(datetime, "%m")),
+    datetime = with_tz(datetime, tzone = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST")) %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  mutate(zone = "TSZ", burn_status = "unburned") %>%
+  #adding in my own calculated NR_Avg column
+  mutate(NR_Avg_new = (SWin_Avg - SWout_Avg) + (LWin_Avg - LWout_Avg)) %>%
+  select(datetime, day, month, phase, zone, burn_status, NR_Avg_new, everything())
+```
+
+```{r}
+filtered_persb_wx_hourly <- persb_wx_hourly_r %>%
+  mutate(day = as.Date.POSIXct(datetime, tz = "MST"),
+    month = as.numeric(format(datetime, "%m")),
+    datetime = with_tz(datetime, tzone = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST")) %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  mutate(zone = "PSZ", burn_status = "burned") %>%
+ #adding in my own calculated NR_Avg column
+  mutate(NR_Avg_new = (SWin_Avg - SWout_Avg) + (LWin_Avg - LWout_Avg)) %>%
+  select(datetime, day, month, phase, zone, burn_status, NR_Avg_new, everything())
+```
+
+```{r}
+filtered_persub_wx_hourly <- persub_wx_hourly_r %>%
+  mutate(day = as.Date.POSIXct(datetime, tz = "MST"),
+    month = as.numeric(format(datetime, "%m")),
+    datetime = with_tz(datetime, tzone = "MST")) %>%
+  filter(datetime >= as.POSIXct("2024-02-02 00:00:00", tz = "MST") & 
+         datetime < as.POSIXct("2024-07-01 00:00:00", tz = "MST")) %>%
+  inner_join(p_b_solar_times, by = "day") %>%
+  #creating a phase column that parses by daily sunrise/sunset times
+  mutate(
+    phase = case_when(
+      datetime >= sunrise & datetime < sunset ~ "day",
+      datetime < sunrise ~ "night",
+      datetime >= sunset ~ "night",
+      TRUE ~ NA_character_)) %>%
+  mutate(zone = "PSZ", burn_status = "unburned") %>%
+  #dropping NA values for snow depths with low quality readings
+  drop_na() %>%
+  #adding in my own calculated NR_Avg column
+  mutate(NR_Avg_new = (SWin_Avg - SWout_Avg) + (LWin_Avg - LWout_Avg)) %>%
+  select(datetime, day, month, phase, zone, burn_status, NR_Avg_new, everything())
+```
+
+Raw Aspect Data with all sensors included
+
+```{r}
+filtered_pers_b_aspects_r <- read_csv("nsf/treetemp_data/filtered_pers_b_aspects_r.csv") %>%
+  select(-sensor_id) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00") %>%
+  filter(tree_name != "gb_w", aspect != c("charred", "uncharred"))
+
+filtered_pers_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_pers_ub_aspects_r.csv") %>%
+  select(-sensor_id) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00")
+
+filtered_trans_b_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_b_aspects_r.csv") %>%
+  select(-sensor_id) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00") %>%
+  filter(tree_name != "gb_w", aspect != c("charred", "uncharred"))
+
+filtered_trans_ub_aspects_r <- read_csv("nsf/treetemp_data/filtered_trans_ub_aspects_r.csv") %>%
+  select(-sensor_id) %>%
+  mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime = force_tz(datetime, tz = 'MST')) %>%
+  filter(datetime >= "2024-02-02 00:00:00" & datetime < "2024-07-01 00:00:00")
+```
+
+# Plotting
+
+## Individual Sensor Comparison Line Plot
+
+```{r}
+#datawrangling to get a dataframe with all temperatures for burned and unburned data
+full_pers_aspects <- rbind(filtered_pers_b_aspects_r, filtered_pers_ub_aspects_r)
+
+# a good full dataset to use if needed
+write.csv(full_pers_aspects, file = "nsf/treetemp_data/filtered_pers_15min_treetemp_r.csv", row.names = FALSE)
+
+full_trans_aspects <- rbind(filtered_trans_b_aspects_r, filtered_trans_ub_aspects_r)
+
+# a good full dataset to use if needed
+write.csv(full_trans_aspects, file = "nsf/treetemp_data/filtered_trans_15min_treetemp_r.csv", row.names = FALSE)
+```
+
+PSZ
+
+```{r}
+#accumulation dataframes
+PSZ_threeday_accu_comp <- full_pers_aspects %>%
+  filter(datetime >= "2024-02-10 00:00:00" & datetime <= "2024-02-12 23:45:00") %>%
+  mutate(tree_name = case_when(
+    tree_name == "gb_e" ~ "gb_n", TRUE ~ tree_name)) %>%
+  #changing tree names so I can plot line type with onyl 2 IDs
+  mutate(tree_name = case_when(
+      str_detect(tree_name, "_n$") ~ "Tree 1",  
+      str_detect(tree_name, "_s$") ~ "Tree 2",  
+      TRUE ~ tree_name  # Keep original if it doesn’t match
+    ),
+    burn_status = case_when(
+    burn_status == "green burn" ~ "GB", 
+    burn_status == "dead burn" ~ "DB",
+    burn_status == "live" ~ "live",
+    TRUE ~ burn_status))
+
+TSZ_threeday_accu_comp <- full_trans_aspects %>%
+  filter(datetime >= "2024-02-10 00:00:00" & datetime <= "2024-02-12 23:45:00") %>%
+   mutate(tree_name = case_when(
+    tree_name == "ub_e" ~ "ub_n",
+    tree_name == "ub_w" ~ "ub_s", TRUE ~ tree_name)) %>%
+  #changing tree names so I can plot line type with onyl 2 IDs
+  mutate(tree_name = case_when(
+      str_detect(tree_name, "_n$") ~ "Tree 1",  
+      str_detect(tree_name, "_s$") ~ "Tree 2",  
+      TRUE ~ tree_name  # Keep original if it doesn’t match
+    ),
+    burn_status = case_when(
+    burn_status == "green burn" ~ "GB", 
+    burn_status == "dead burn" ~ "DB",
+    burn_status == "live" ~ "live",
+    TRUE ~ burn_status))
+```
+
+```{r}
+#Ablation dataframes
+PSZ_threeday_abla_comp <- full_pers_aspects %>%
+  #had to offset the datetime for some reason, but it is still giving me the correct three-day range if I run it like this!
+  filter(datetime >= "2024-05-10 01:00:00" & datetime <= "2024-05-13 00:00:00") %>%
+  mutate(tree_name = case_when(
+    tree_name == "gb_e" ~ "gb_n", TRUE ~ tree_name)) %>%
+  #changing tree names so I can plot line type with onyl 2 IDs
+  mutate(tree_name = case_when(
+      str_detect(tree_name, "_n$") ~ "Tree 1",  
+      str_detect(tree_name, "_s$") ~ "Tree 2",  
+      TRUE ~ tree_name  # Keep original if it doesn’t match
+    ),
+    burn_status = case_when(
+    burn_status == "green burn" ~ "GB", 
+    burn_status == "dead burn" ~ "DB",
+    burn_status == "live" ~ "live",
+    TRUE ~ burn_status))
+
+TSZ_threeday_abla_comp <- full_trans_aspects %>%
+ filter(datetime >= "2024-05-10 01:00:00" & datetime <= "2024-05-13 00:00:00") %>%
+   mutate(tree_name = case_when(
+    tree_name == "ub_e" ~ "ub_n",
+    tree_name == "ub_w" ~ "ub_s", TRUE ~ tree_name)) %>%
+  #changing tree names so I can plot line type with onyl 2 IDs
+  mutate(tree_name = case_when(
+      str_detect(tree_name, "_n$") ~ "Tree 1",  
+      str_detect(tree_name, "_s$") ~ "Tree 2",  
+      TRUE ~ tree_name  # Keep original if it doesn’t match
+    ),
+    burn_status = case_when(
+    burn_status == "green burn" ~ "GB", 
+    burn_status == "dead burn" ~ "DB",
+    burn_status == "live" ~ "live",
+    TRUE ~ burn_status))
+```
+
+Accumulation Three Day Plots
+
+```{r}
+#three day lineplot PSZ
+PSZ_threeday_accu_comp_lineplot <- ggplot(data = PSZ_threeday_accu_comp) + 
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name, color = burn_status), linewidth = 0.7) +
+  facet_wrap(~aspect) +
+  scale_linetype_manual(
+    name = "Individual tree", 
+    values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
+    labels = c("Tree 1", "Tree 2")
+  ) + 
+  guides(linetype = "none") + 
+  scale_x_datetime(
+    breaks = as.POSIXct(c("2024-02-10 12:00:00", "2024-02-11 12:00:00", "2024-02-12 12:00:00"), tz = "MST"),
+    labels = function(x) format(x, "%d %b")  # Custom date format
+  ) +
+  scale_color_manual(
+    name = NULL,
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))
+  ) +
+  scale_y_continuous(limits = c(-25, 25)) +  
+  theme_bw() +
+  labs(title = "a) PSZ Accumulation", x = NULL, y = "Temperature (°C)") +
+  theme(
+    strip.text = element_text(size = 11),  
+    axis.title = element_text(size = 11),  
+    axis.text = element_text(size = 11),  
+    legend.title = element_text(size = 11),  
+    legend.text = element_text(size = 10)
+  ) + 
+  theme(
+    legend.key.width = unit(1, "cm"),  
+    legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
+  )
+
+PSZ_threeday_accu_comp_lineplot
+
+```
+
+```{r}
+#three day lineplot TSZ
+TSZ_threeday_accu_comp_lineplot <- ggplot(data = TSZ_threeday_accu_comp) + 
+      # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name, color = burn_status), linewidth = 0.7) +
+  facet_wrap(~aspect) +
+  scale_linetype_manual(
+   name = "Individual tree",  # New legend title (showing as 'Tree' instead of 'Tree Name')
+    values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
+    labels = c("Tree 1", "Tree 2")  # Ensuring the legend shows the correct labels
+  ) + 
+  #remove the linetype legend
+  guides(linetype = "none") + 
+  scale_x_datetime(
+    breaks = as.POSIXct(c("2024-02-10 12:00:00", "2024-02-11 12:00:00", "2024-02-12 12:00:00"), tz = "MST"),
+    labels = function(x) format(x, "%d %b")  # Custom date format
+  ) +
+  scale_color_manual(
+    name = NULL,
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
+ scale_y_continuous(limits = c(-25, 25)) +  # Set the y-axis limits here
+  theme_bw() +
+  labs(title = "b) TSZ Accumulation", x = "Date", y = "Temperature (°C)") +
+ theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
+  ) + 
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
+  )
+  
+TSZ_threeday_accu_comp_lineplot
+```
+
+Ablation Three Day Plots
+
+```{r}
+#three day lineplot PSZ
+PSZ_threeday_abla_comp_lineplot <- ggplot(data = PSZ_threeday_abla_comp) + 
+        # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name, color = burn_status), linewidth = 0.7) +
+  facet_wrap(~aspect) +
+  scale_linetype_manual(
+    name = "Individual tree",  # New legend title (showing as 'Tree' instead of 'Tree Name')
+    values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
+    labels = c("Tree 1", "Tree 2")  # Ensuring the legend shows the correct labels
+  ) + 
+  #remove the linetype legend
+  guides(linetype = "none") + 
+  scale_x_datetime(
+    breaks = as.POSIXct(c("2024-05-10 12:00:00", "2024-05-11 12:00:00", "2024-05-12 12:00:00"), tz = "MST"),
+    labels = c("May 10th", "May 11th", "May 12th")
+  ) +
+  scale_color_manual(
+    name = NULL,
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
+ scale_y_continuous(limits = c(-15, 35)) +  # Set the y-axis limits here
+  theme_bw() +
+  labs(title = "a) PSZ Ablation", x = NULL, y = "Temperature (°C)") +
+ theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
+  ) + 
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
+  )
+  
+  
+PSZ_threeday_abla_comp_lineplot
+```
+
+```{r}
+TSZ_threeday_abla_comp_lineplot <- ggplot(data = TSZ_threeday_abla_comp) + 
+        # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_line(aes(x = datetime, y = temp, linetype = tree_name, color = burn_status), linewidth = 0.7) +
+ facet_wrap(~aspect) +
+  scale_linetype_manual(
+    name = "Individual tree",  # New legend title (showing as 'Tree' instead of 'Tree Name')
+    values = c("Tree 1" = "dashed", "Tree 2" = "solid"),
+    labels = c("Tree 1", "Tree 2")  # Ensuring the legend shows the correct labels
+  ) + 
+    #remove the linetype legend
+  guides(linetype = "none") + 
+  scale_x_datetime(
+    breaks = as.POSIXct(c("2024-05-10 12:00:00", "2024-05-11 12:00:00", "2024-05-12 12:00:00"), tz = "MST"),
+    labels = c("May 10th", "May 11th", "May 12th")
+  ) +
+  scale_color_manual(
+    name = NULL,
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = alpha("#2166AC", 0.8))) +
+ scale_y_continuous(limits = c(-15, 35)) +  # Set the y-axis limits here
+  theme_bw() +
+  labs(title = "b) TSZ Ablation", x = "Date", y = "Temperature (°C)") +
+  theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
+  ) + 
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
+  )
+  
+  
+TSZ_threeday_abla_comp_lineplot
+```
+
+Accumulation only combined plot
+
+```{r}
+#full combined accumulation and ablation plots!
+comb_threeday_accu_comp_lineplot <- ggarrange(PSZ_threeday_accu_comp_lineplot, TSZ_threeday_accu_comp_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
+
+comb_threeday_accu_comp_lineplot
+```
+
+```{r}
+#use this plot!
+ggsave(
+  filename = "comb_threeday_accu_comp_lineplot_V2.png",  # File name
+  plot = comb_threeday_accu_comp_lineplot,           # The arranged plot object
+ width = 7,                                          # Adjust width as needed
+  height = 7,                                        # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
+```
+
+Ablation only combined plot - not using in thesis
+
+```{r}
+#full combined accumulation and ablation plots!
+comb_threeday_abla_comp_lineplot <- ggarrange(PSZ_threeday_abla_comp_lineplot, TSZ_threeday_abla_comp_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
+
+comb_threeday_abla_comp_lineplot
+```
+
+```{r}
+ggsave(
+  filename = "comb_threeday_abla_comp_lineplot.png",  # File name
+  plot = comb_threeday_abla_comp_lineplot,           # The arranged plot object
+  width = 7,                                          # Adjust width as needed
+  height = 7,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
+```
+
+### 
+
+## Daytime vs Nighttime Tree Temp Plot - GB/DB/UB with aspects
+
+```{r}
+#creating dataframe for this that has renamed zones - mean daily value!!
+dt_full_daily_gbdbub_plot_dataframe <- full_15min_gbdbub %>%
+  #selecting data that we need
+  select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp) %>%
+  filter(phase == "day") %>%
+  #summarizing for one daily value
+  group_by(day, month, phase, zone, snow_phase, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+  
+
+nt_full_daily_gbdbub_plot_dataframe <- full_15min_gbdbub %>%
+  #selecting data that we need
+  select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp) %>%
+  filter(phase == "night") %>%
+  #summarizing for one daily value
+  group_by(day, month, phase, zone, snow_phase, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+```
+
+```{r}
+stats_dtnt_byburnstatus <- full_15min_gbdbub %>%
+  group_by(zone, phase) %>%
+  summarize(mean_gb_temp = mean(gb_temp), mean_db_temp = mean(db_temp), mean_ub_temp = mean(ub_temp))
+```
+
+\*\* as of 2025-01-13 - use the below plots instead of above plots!
+
+```{r}
+#both aspects combined
+PSZ_dtnt_daily_gbdbub_plot_dataframe <- full_pers_gbdbub_data %>%
+  #selecting data that we need
+  select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
+  #summarizing for one daily value
+  group_by(day, month, phase, zone, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))  %>%
+  filter(day <= "2024-06-03")
+  
+
+TSZ_dtnt_daily_gbdbub_plot_dataframe <- full_trans_gbdbub_data %>%
+  #selecting data that we need
+  select(datetime, day, month, phase, zone, aspect, gb_temp, db_temp, ub_temp) %>%
+  #summarizing for one daily value
+  group_by(day, month, phase, zone, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp)) %>%
+  filter(day <= "2024-06-03")
+```
+
+```{r}
+#getting accumulation vs ablation stats
+PSZ_meanminmax_stats <- full_pers_gbdbub_data %>%
+  group_by(snow_phase, phase, aspect) %>%
+  summarize(mean_temp = mean(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), max_temp = max(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), min_temp = min(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), temp_range = (max_temp - min_temp))
+```
+
+```{r}
+TSZ_meanminmax_stats <- full_trans_gbdbub_data %>%
+  group_by(snow_phase, phase, aspect) %>%
+  summarize(mean_temp = mean(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), max_temp = max(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), min_temp = min(c_across(c(gb_temp, db_temp, ub_temp)), na.rm = TRUE), temp_range = (max_temp - min_temp))
+```
+
+Line Plots of mean daily temps, not separated by aspect!
+
+```{r}
+PSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = PSZ_dtnt_daily_gbdbub_plot_dataframe ) +
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_line(aes(x = day, y = db_temp, color = "DB"), alpha = 0.9, linewidth = 0.7) +
+  geom_line(aes(x = day, y = gb_temp, color = "GB"), alpha = 0.9, linewidth = 0.7) + 
+  geom_line(aes(x = day, y = ub_temp, color = "live"), linewidth = 0.7, alpha = 0.8) +
+  facet_wrap(~phase) +
+  labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
+  scale_color_manual(
+    name = NULL,
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = "#2166AC")
+  ) +
+  scale_y_continuous(limits = c(-20, 28)) +  # Set the y-axis limits here
+  theme_bw() + 
+  #beginning of ablation
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.7) +
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-06-03')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) +
+   theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
+  ) + 
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"))
+
+PSZ_dtnt_treetemp_daily_gbdbub_lineplot
+```
+
+```{r}
+TSZ_dtnt_treetemp_daily_gbdbub_lineplot <- ggplot(data = TSZ_dtnt_daily_gbdbub_plot_dataframe ) +
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_line(aes(x = day, y = db_temp, color = "DB"), alpha = 0.9, linewidth = 0.7) +
+  geom_line(aes(x = day, y = gb_temp, color = "GB"), alpha = 0.9, linewidth = 0.7) + 
+  geom_line(aes(x = day, y = ub_temp, color = "live"), linewidth = 0.7, alpha = 0.8) +
+  facet_wrap(~phase) +
+  labs(title = "b) TSZ", x = "Date", y = "Temperature (°C)") +
+  scale_color_manual(
+    name = NULL,
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = "#2166AC")
+  ) +
+  scale_y_continuous(limits = c(-20, 28)) +  # Set the y-axis limits here
+  theme_bw() + 
+  #beginning of ablation
+  geom_vline(xintercept = as.numeric(as.Date('2024-04-01')), 
+             linetype = "solid",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.7) +
+  #snowfree date
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-15')), 
+             linetype = "dashed",                # Dashed line
+             color = "grey23",                      # Line color
+             size = 0.4, alpha = 0.8) +
+   theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)  # Legend labels size
+  ) + 
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"))
+
+TSZ_dtnt_treetemp_daily_gbdbub_lineplot
+```
+
+```{r}
+comb_dtnt_daily_lineplot <- ggarrange(PSZ_dtnt_treetemp_daily_gbdbub_lineplot, TSZ_dtnt_treetemp_daily_gbdbub_lineplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
+
+comb_dtnt_daily_lineplot
+```
+
+```{r}
+ggsave(
+  filename = "comb_dtnt_daily_lineplot.png",
+  plot = comb_dtnt_daily_lineplot,           
+  width = 7,                                         
+  height = 8.5,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
+```
+
+### DTNT Box Plots
+
+Using these for thesis!
+
+```{r}
+#PSZ boxplot dataframes
+PSZ_dtnt_data <- full_pers_gbdbub_data %>%
+  pivot_longer(
+    cols = c(gb_temp, db_temp, ub_temp),  # Columns to reshape
+    names_to = "burn_status",            # New column for burn status
+    values_to = "temp"            # New column for temperature values
+  ) %>%
+ mutate(
+    burn_status = case_when(
+      burn_status == "gb_temp" ~ "GB",
+      burn_status == "db_temp" ~ "DB",
+      burn_status == "ub_temp" ~ "live",
+      TRUE ~ burn_status  # Optional: Keep original value if no match
+    )
+  ) %>%
+  filter(day <= "2024-06-03") %>%
+  mutate(snow_phase = recode(snow_phase,
+                             ablation = "peak ablation"),
+         snow_phase = fct_relevel(snow_phase, "accumulation", "peak ablation"))
+
+
+#TSZ
+TSZ_dtnt_data <- full_trans_gbdbub_data %>%
+  pivot_longer(
+    cols = c(gb_temp, db_temp, ub_temp),  # Columns to reshape
+    names_to = "burn_status",            # New column for burn status
+    values_to = "temp"            # New column for temperature values
+  ) %>%
+ mutate(
+    burn_status = case_when(
+      burn_status == "gb_temp" ~ "GB",
+      burn_status == "db_temp" ~ "DB",
+      burn_status == "ub_temp" ~ "live",
+      TRUE ~ burn_status  # Optional: Keep original value if no match
+    )) %>%
+  filter(day <= "2024-06-03") %>%
+   mutate(snow_phase = recode(snow_phase,
+                             ablation = "peak ablation"),
+         snow_phase = fct_relevel(snow_phase, "accumulation", "peak ablation")) %>%
+   mutate(snow_phase = case_when(
+  day < as.Date("2024-04-01") ~ "accumulation",
+  day >= as.Date("2024-04-01") ~ "peak ablation"))
+```
+
+```{r}
+PSZ_dtnt_boxplot <- ggplot(data = PSZ_dtnt_data) + 
+  geom_boxplot(aes(x = interaction(phase, burn_status, sep = "_"), y = temp, fill = burn_status, alpha = phase),
+               position = position_dodge(width = 0.75)) +
+  facet_wrap(~snow_phase) + 
+  scale_fill_manual(
+    name = NULL,
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = adjustcolor("#2166AC", alpha.f = 0.8)), 
+    labels = c("GB" = "GB", "DB" = "DB", "live" = "Live")
+  ) +
+  scale_alpha_manual(
+    values = c("day" = 1, "night" = 0.5)  # Day = full opacity, Night = faded
+  ) +
+  scale_x_discrete(
+    labels = rep(c("Day", "Night"), times = length(unique(PSZ_dtnt_data$burn_status)))  # Alternates Day, Night for each burn_status
+  ) +
+  labs(
+    title = "a) PSZ",
+    x = NULL,  
+    y = "Temperature (°C)"
+  ) +
+  scale_y_continuous(
+    limits = c(-25, 40)  
+  ) +
+  theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10), 
+    axis.ticks.x = element_line()) + 
+  theme_bw() +
+  guides(alpha = "none")  # Remove alpha (phase) from legend
+
+PSZ_dtnt_boxplot
+```
+
+```{r}
+TSZ_dtnt_boxplot <- ggplot(data = TSZ_dtnt_data) + 
+  geom_boxplot(aes(x = interaction(phase, burn_status, sep = "_"), y = temp, fill = burn_status, alpha = phase),
+               position = position_dodge(width = 0.75)) +
+  facet_wrap(~snow_phase) + 
+  scale_fill_manual(
+    name = NULL,
+    values = c("GB" = "#1B7837", "DB" = "#D95F02", "live" = adjustcolor("#2166AC", alpha.f = 0.8)), 
+    labels = c("GB" = "GB", "DB" = "DB", "live" = "Live")
+  ) +
+  scale_alpha_manual(
+    values = c("day" = 1, "night" = 0.5)  # Day = full opacity, Night = faded
+  ) +
+  scale_x_discrete(
+    labels = rep(c("Day", "Night"), times = length(unique(TSZ_dtnt_data$burn_status)))  # Alternates Day, Night for each burn_status
+  ) +
+  labs(
+    title = "b) TSZ",
+    x = NULL,  
+    y = "Temperature (°C)"
+  ) +
+  scale_y_continuous(
+    limits = c(-25, 40)  
+  ) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10), 
+    axis.ticks.x = element_line()) + 
+  theme_bw() +
+  guides(alpha = "none")  # Remove alpha (phase) from legend
+
+TSZ_dtnt_boxplot
+```
+
+```{r}
+#facet_wrapped version includes a separation by accumulation and "peak ablation" seasons, as Dave asked for this
+comb_dtnt_boxplot_facetwrapped <- ggarrange(PSZ_dtnt_boxplot,  TSZ_dtnt_boxplot, ncol = 1, nrow = 2, common.legend = TRUE, legend = "bottom")
+
+comb_dtnt_boxplot_facetwrapped
+```
+
+```{r}
+ggsave(
+  filename = "comb_dtnt_boxplot_facetwrapped.png",  # File name
+  plot = comb_dtnt_boxplot_facetwrapped,           # The arranged plot object
+  width = 7,                                          # Adjust width as needed
+  height = 9,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
+```
+
+## NS Comparison Line Plots
+
+Using for thesis
+
+### Data Wrangling
+
+```{r}
+#PSZ lineplot data
+PSZ_mean_ns_lineplot_data <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "day") %>%
+  mutate(day = as.Date(day)) %>%
+  mutate(
+    burn_status = case_when(
+      burn_status == "live" ~ "live",
+      burn_status == "green burn" ~ "GB",
+      burn_status == "dead burn" ~ "DB",
+      TRUE ~ burn_status  # Keep any other values unchanged
+    )) %>%
+  group_by(day, zone, burn_status) %>%
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp))
+
+#making a GBDB only dataframe to deal with live data gap issue
+PSZ_DBGB_mean_ns_lineplot_data <- PSZ_mean_ns_lineplot_data %>%
+  filter(burn_status %in% c("GB", "DB"))
+
+PSZ_UB_mean_ns_lineplot_data <- PSZ_mean_ns_lineplot_data %>%
+  filter(burn_status == "live") %>%
+  complete(
+    day = seq(as.Date("2024-02-02"), as.Date("2024-07-01"), by = "1 day"),
+    fill = list(north_temp = NA, south_temp = NA)
+  )
+```
+
+```{r}
+# Create a full sequence of dates
+all_dates <- tibble(day = seq(from = as.Date("2024-02-02"), 
+                              to = as.Date("2024-06-30"), by = "1 day"))
+
+# Filter for 'live' burn_status, then left_join to add missing dates
+PSZ_UB_mean_ns_lineplot_data <- PSZ_mean_ns_lineplot_data %>%
+  filter(burn_status == "live") %>%
+  full_join(all_dates, by = "day") %>%
+  arrange(day) %>%
+  mutate(zone = "PSZ", burn_status = "live")
+```
+
+```{r}
+#rejoining to make combined dataframe
+PSZ_mean_ns_lineplot_data_V2 <- bind_rows(PSZ_DBGB_mean_ns_lineplot_data, PSZ_UB_mean_ns_lineplot_data) %>%
+  #filtering so the lineplot ends on snow-free date for PSZ
+  filter(day <= as.Date("2024-06-03"))
+
+PSZ_mean_ns_stats <- full_15min_ns %>% 
+  filter(zone == "PSZ") %>%
+  mutate(temp_diff = north_temp - south_temp) %>%
+  group_by(burn_status) %>%
+  summarize(MAD = mean(temp_diff, na.rm = TRUE), 
+    north_higher = sum(north_temp > south_temp, na.rm = TRUE),
+    south_higher = sum(south_temp > north_temp, na.rm = TRUE),
+    equal_temps  = sum(north_temp == south_temp, na.rm = TRUE))
+```
+
+```{r}
+#TSZ lineplot data
+TSZ_mean_ns_lineplot_data <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "day") %>%
+  mutate(
+    burn_status = case_when(
+      burn_status == "live" ~ "live",
+      burn_status == "green burn" ~ "GB",
+      burn_status == "dead burn" ~ "DB",
+      TRUE ~ burn_status  # Keep any other values unchanged
+    )) %>%
+  group_by(day, zone, burn_status) %>%
+  summarize(north_temp = mean(north_temp), south_temp = mean(south_temp)) %>%
+  filter(day <= as.Date("2024-06-03"))
+
+TSZ_ns_stats <- full_15min_ns %>% 
+  filter(zone == "TSZ") %>%
+  mutate(temp_diff = north_temp - south_temp) %>%
+  group_by(snow_phase, phase, burn_status) %>%
+  summarize(MAD = mean(temp_diff, na.rm = TRUE), 
+    north_higher = sum(north_temp > south_temp, na.rm = TRUE),
+    south_higher = sum(south_temp > north_temp, na.rm = TRUE),
+    equal_temps  = sum(north_temp == south_temp, na.rm = TRUE))
+
+TSZ_mean_ns_stats <- full_15min_ns %>% 
+  filter(zone == "TSZ", phase == "day") %>%
+  mutate(temp_diff = north_temp - south_temp) %>%
+  group_by(burn_status) %>%
+  summarize(MAD = mean(temp_diff, na.rm = TRUE), 
+    north_higher = sum(north_temp > south_temp, na.rm = TRUE),
+    south_higher = sum(south_temp > north_temp, na.rm = TRUE),
+    equal_temps  = sum(north_temp == south_temp, na.rm = TRUE))
+```
+
+### Plotting
+
+```{r}
+PSZ_meandaily_ns_lineplot <- ggplot(data = PSZ_mean_ns_lineplot_data_V2) + 
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  # Line plot for GB and DB data 
+  geom_line(aes(x = day, y = north_temp, color = "north", group = burn_status), linewidth = 0.7, na.rm = TRUE) +
+    # Line plot for GB and DB data 
+  geom_line(aes(x = day, y = south_temp, color = "south", group = burn_status), linewidth = 0.7, na.rm = TRUE) +
+  facet_wrap(~burn_status, nrow = 3) +
+  labs(title = "a) PSZ", x = NULL, y = "Temperature (°C)") +
+  scale_color_manual(
+    name = NULL, 
+    values = c("north" = scales::alpha("blue2", 0.8), "south" = "orangered3"),
+    labels = c("north" = "North", "south" = "South")
+  ) +
+  theme_bw() + 
+  # Ablation date
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-06')), 
+             linetype = "solid", color = "grey23", size = 0.4, alpha = 0.8) +
+  # Snow-free date line
+  geom_vline(xintercept = as.numeric(as.Date('2024-06-03')), 
+             linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8) + 
+  theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)) + 
+  #manually setting the length of legend lines
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
+  )
+
+
+PSZ_meandaily_ns_lineplot
+```
+
+```{r}
+TSZ_meandaily_ns_lineplot <- ggplot(data = TSZ_mean_ns_lineplot_data) + 
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", size = 0.3) +
+  geom_line(aes(x = day, y = north_temp, color = "north"), linewidth = 0.7) +
+  geom_line(aes(x = day, y = south_temp, color = "south"), linewidth = 0.7) +
+  facet_wrap(~burn_status, nrow = 3) +
+  labs(title = "b) TSZ", x = "Date", y = "Temperature (°C)") +
+  scale_color_manual(
+    name = NULL, 
+   values = c("north" = scales::alpha("blue2", 0.8), "south" = "orangered3"),
+    labels = c("north" = "North", "south" = "South")
+  ) +
+  theme_bw() + 
+  #ablation season beginning
+  geom_vline(xintercept = as.numeric(as.Date('2024-04-01')), 
+             linetype = "solid", color = "grey23", size = 0.4, alpha = 0.8) +
+  # Snow-free date line
+  geom_vline(xintercept = as.numeric(as.Date('2024-05-15')), 
+             linetype = "dashed", color = "grey23", size = 0.4, alpha = 0.8) + 
+    theme(
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10)) + 
+  #manually setting the length of legend lines
+  theme(
+    legend.key.width = unit(1, "cm"),  # Increase the width of the legend keys
+    legend.key.height = unit(0.85, "cm"), legend.position = "bottom"
+  )
+
+TSZ_meandaily_ns_lineplot
+```
+
+```{r}
+#individually saving to separate plots
+#use this plot!
+ggsave(
+  filename = "PSZ_meandaytime_ns_lineplot.png",  # File name
+  plot = PSZ_meandaily_ns_lineplot,           # The arranged plot object
+  width = 7,                                          # Adjust width as needed
+  height = 9,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
+```
+
+```{r}
+ggsave(
+  filename = "TSZ_meandaytime_ns_lineplot.png",  # File name
+  plot = TSZ_meandaily_ns_lineplot,           # The arranged plot object
+  width = 7,                                          # Adjust width as needed
+  height = 9,                                         # Adjust height as needed
+  dpi = 600                                            # High resolution
+)
+```
+
+### NS Box Plots
+
+NOT using in thesis
+
+```{r}
+#Use this!
+pers_dt_ns_boxplot_data <- full_15min_ns %>%
+  filter(zone == "PSZ") %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp),  # Columns to reshape
+    names_to = "aspect",              # New column for burn status
+    values_to = "temp"                # New column for temperature values
+  ) %>%
+  mutate(
+    aspect = case_when(
+      aspect == "north_temp" ~ "north",
+      aspect == "south_temp" ~ "south",
+      TRUE ~ aspect  # Optional: Keep original value if no match
+    ),
+    aspect = factor(aspect, levels = c("north", "south")),  # Ensure 'north' comes before 'south'
+    burn_status = case_when(
+      burn_status == "live" ~ "live",
+      burn_status == "green burn" ~ "GB",
+      burn_status == "dead burn" ~ "DB",
+      TRUE ~ burn_status  # Keep any other values unchanged
+    ),
+    burn_status = factor(burn_status, levels = c("live", "GB", "DB"))  # Ensure the desired order
+  )
+
+#nt dataframe
+pers_nt_ns_boxplot_data <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "night") %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp),  # Columns to reshape
+    names_to = "aspect",              # New column for burn status
+    values_to = "temp"                # New column for temperature values
+  ) %>%
+  mutate(
+    aspect = case_when(
+      aspect == "north_temp" ~ "north",
+      aspect == "south_temp" ~ "south",
+      TRUE ~ aspect  # Optional: Keep original value if no match
+    ),
+    aspect = factor(aspect, levels = c("north", "south")),  # Ensure 'north' comes before 'south'
+    burn_status = case_when(
+      burn_status == "live" ~ "live",
+      burn_status == "green burn" ~ "GB",
+      burn_status == "dead burn" ~ "DB",
+      TRUE ~ burn_status  # Keep any other values unchanged
+    ),
+    burn_status = factor(burn_status, levels = c("live", "GB", "DB"))  # Ensure the desired order
+  )
+```
+
+```{r}
+#use this!
+trans_dt_ns_boxplot_data <- full_15min_ns %>%
+  filter(zone == "TSZ") %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp),  # Columns to reshape
+    names_to = "aspect",              # New column for burn status
+    values_to = "temp"                # New column for temperature values
+  ) %>%
+  mutate(
+    aspect = case_when(
+      aspect == "north_temp" ~ "north",
+      aspect == "south_temp" ~ "south",
+      TRUE ~ aspect  # Optional: Keep original value if no match
+    ),
+    aspect = factor(aspect, levels = c("north", "south")),  # Ensure 'north' comes before 'south'
+    burn_status = case_when(
+      burn_status == "live" ~ "live",
+      burn_status == "green burn" ~ "GB",
+      burn_status == "dead burn" ~ "DB",
+      TRUE ~ burn_status  # Keep any other values unchanged
+    ),
+    burn_status = factor(burn_status, levels = c("live", "GB", "DB"))  # Ensure the desired order
+  )
+
+#nighttime dataframe
+trans_nt_ns_boxplot_data <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "night") %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp),  # Columns to reshape
+    names_to = "aspect",              # New column for burn status
+    values_to = "temp"                # New column for temperature values
+  ) %>%
+  mutate(
+    aspect = case_when(
+      aspect == "north_temp" ~ "north",
+      aspect == "south_temp" ~ "south",
+      TRUE ~ aspect  # Optional: Keep original value if no match
+    ),
+    aspect = factor(aspect, levels = c("north", "south")),  # Ensure 'north' comes before 'south'
+    burn_status = case_when(
+      burn_status == "live" ~ "live",
+      burn_status == "green burn" ~ "GB",
+      burn_status == "dead burn" ~ "DB",
+      TRUE ~ burn_status  # Keep any other values unchanged
+    ),
+    burn_status = factor(burn_status, levels = c("live", "GB", "DB"))  # Ensure the desired order
+  )
+```
+
+```{r}
+#use this!
+pers_dt_ns_boxplot<- ggplot(pers_dt_ns_boxplot_data, aes(x = aspect, y = temp, fill = aspect)) +
+  geom_boxplot() +
+  facet_wrap(~ burn_status) +  # Facet by burn status
+  scale_fill_manual(values = c(scales::alpha("#2166AC", 0.8), "#D95F02")) +  # Custom colors for north and south
+  theme_bw() +
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) + 
+   scale_y_continuous(
+    limits = c(-25, 48)) + 
+  theme(
+    legend.text = element_text(size = 10))
+
+
+pers_dt_ns_boxplot
+```
+
+```{r}
+#use this!
+trans_dt_ns_boxplot<- ggplot(trans_dt_ns_boxplot_data, aes(x = aspect, y = temp, fill = aspect)) +
+  geom_boxplot() +
+  facet_wrap(~ burn_status) +  # Facet by burn status
+  scale_fill_manual(values = c(scales::alpha("#2166AC", 0.8), "#D95F02")) +  # Custom colors for north and south
+  theme_bw() +
+  labs(
+    title = "b) TSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) +
+   scale_y_continuous(
+    limits = c(-25, 48)) + 
+  theme(
+    legend.text = element_text(size = 10))
+
+
+trans_dt_ns_boxplot
+```
+
+```{r}
+#use this! Not only daytime anymore, but instead includes all day and night values!! 
+comb_dt_ns_boxplot_V2 <- ggarrange(pers_dt_ns_boxplot, trans_dt_ns_boxplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
+
+comb_dt_ns_boxplot_V2
+```
+
+Plotting NT to compare - not sure I am going to use the Nighttime boxplots?
+
+```{r}
+pers_nt_ns_boxplot<- ggplot(pers_nt_ns_boxplot_data, aes(x = aspect, y = temp, fill = aspect)) +
+  geom_boxplot() +
+  facet_wrap(~ burn_status) +  # Facet by burn status
+  scale_fill_manual(values = c(scales::alpha("#2166AC", 0.8), "#D95F02")) +  # Custom colors for north and south
+  theme_bw() +
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) + 
+   scale_y_continuous(
+    limits = c(-25, 48)) + 
+  theme(
+    legend.text = element_text(size = 10))
+
+
+pers_nt_ns_boxplot
+```
+
+```{r}
+trans_nt_ns_boxplot<- ggplot(trans_nt_ns_boxplot_data, aes(x = aspect, y = temp, fill = aspect)) +
+  geom_boxplot() +
+  facet_wrap(~ burn_status) +  # Facet by burn status
+  scale_fill_manual(values = c(scales::alpha("#2166AC", 0.8), "#D95F02")) +  # Custom colors for north and south
+  theme_bw() +
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) + 
+   scale_y_continuous(
+    limits = c(-25, 48))
+
+trans_nt_ns_boxplot
+```
+
+```{r}
+comb_nt_ns_boxplot_V2 <- ggarrange(pers_nt_ns_boxplot, trans_nt_ns_boxplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "right")
+
+comb_nt_ns_boxplot_V2
+```
+
+## Char vs Aspect Comparison
+
+Not using in thesis
+
+```{r}
+pers_gb_boxplot_data <- pers_dt_gb %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp, charred_temp, uncharred_temp),  # Columns to reshape
+    names_to = "burn_status",            # New column for burn status
+    values_to = "temp"            # New column for temperature values
+  ) %>%
+ mutate(
+    burn_status = case_when(
+      burn_status == "north_temp" ~ "north",
+      burn_status == "south_temp" ~ "south",
+      burn_status == "charred_temp" ~ "charred",
+      burn_status == "uncharred_temp" ~ "uncharred",
+      TRUE ~ burn_status  # Optional: Keep original value if no match
+    ))
+```
+
+```{r}
+trans_gb_boxplot_data <- trans_dt_gb %>%
+  pivot_longer(
+    cols = c(north_temp, south_temp, charred_temp, uncharred_temp),  # Columns to reshape
+    names_to = "burn_status",            # New column for burn status
+    values_to = "temp"            # New column for temperature values
+  ) %>%
+ mutate(
+    burn_status = case_when(
+      burn_status == "north_temp" ~ "north",
+      burn_status == "south_temp" ~ "south",
+      burn_status == "charred_temp" ~ "charred",
+      burn_status == "uncharred_temp" ~ "uncharred",
+      TRUE ~ burn_status  # Optional: Keep original value if no match
+    ))
+```
+
+```{r}
+pers_gb_boxplot_data$snow_phase <- fct_relevel(pers_gb_boxplot_data$snow_phase, "accumulation", "ablation")
+
+PSZ_gb_boxplot <- ggplot(data = pers_gb_boxplot_data) + 
+  geom_boxplot(aes(x = burn_status, y = temp, fill = burn_status)) +
+  scale_fill_manual(
+    name = "Char Pattern / Aspect",
+    values = c("north" = "#1B7837", "south" = "#D95F02", 
+               "uncharred" = adjustcolor("#2166AC", alpha.f = 0.8), "charred" = adjustcolor("grey23", alpha.f = 0.8))
+  ) +  # Corrected the parenthesis here
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) +
+  theme_bw()
+
+PSZ_gb_boxplot
+```
+
+```{r}
+trans_gb_boxplot_data$snow_phase <- fct_relevel(trans_gb_boxplot_data$snow_phase, "accumulation", "ablation")
+
+TSZ_gb_boxplot <- ggplot(data = trans_gb_boxplot_data) + 
+  geom_boxplot(aes(x = burn_status, y = temp, fill = burn_status)) +
+  scale_fill_manual(
+    name = "Char Pattern / Aspect",
+    values = c("north" = "#1B7837", "south" = "#D95F02", 
+               "uncharred" = adjustcolor("#2166AC", alpha.f = 0.8), "charred" = adjustcolor("grey23", alpha.f = 0.8))
+  ) +  # Corrected the parenthesis here
+  labs(
+    title = "b) TSZ",
+    x = NULL,
+    y = "Temperature (°C)"
+  ) +
+  theme_bw()
+
+TSZ_gb_boxplot
+```
+
+```{r}
+comb_charpattern_boxplot <- ggarrange(PSZ_gb_boxplot, TSZ_gb_boxplot, ncol = 1, nrow = 2, common.legend = TRUE, legend = "none")
+
+comb_charpattern_boxplot
+```
+
+```{r}
+#stats
+TSZ_mean_gb_temp_results <- trans_gb_boxplot_data %>%
+  summarize(mean_charred = mean())
+```
+
+## Simple Stats Calcs
+
+### Burn Condition Min/Max/Mean Stats
+
+```{r}
+stats_gbdbub <- full_15min_gbdbub %>%
+  group_by(zone, phase, snow_phase) %>%
+  summarize(
+    mean_gb_temp = mean(gb_temp, na.rm = TRUE), 
+    mean_db_temp = mean(db_temp, na.rm = TRUE), 
+    mean_ub_temp = mean(ub_temp, na.rm = TRUE)
+  )
+```
+
+### Daytime vs Nighttime Min/Max/Mean Stats
+
+```{r}
+stats_gbdbub_dtnt <- full_15min_gbdbub %>%
+  group_by(zone, phase, aspect, snow_phase) %>%
+  summarize(
+    mean_gb_temp = mean(gb_temp, na.rm = TRUE), 
+    mean_db_temp = mean(db_temp, na.rm = TRUE), 
+    mean_ub_temp = mean(ub_temp, na.rm = TRUE), 
+    min_gb_temp = min(gb_temp, na.rm = TRUE), 
+    min_db_temp = min(db_temp, na.rm = TRUE),
+    min_ub_temp = min(ub_temp, na.rm = TRUE), 
+    max_gb_temp = max(gb_temp, na.rm = TRUE), 
+    max_db_temp = max(db_temp, na.rm = TRUE),
+    max_ub_temp = max(ub_temp, na.rm = TRUE),
+  )
+
+write_csv(stats_gbdbub_dtnt, "nsf/treetemp_data/stats_gbdbub_dtnt_simple.csv")
+```
+
+```{r}
+#total range of temperatures for GB, DB and live trees, not accounting for day/night phase
+stats_totaltemprange_gbdbub <- full_15min_gbdbub %>%
+  group_by(zone, phase, aspect) %>%
+  filter(phase == "day") %>%
+  summarize(
+    mean_gb_temp = mean(gb_temp, na.rm = TRUE), 
+    mean_db_temp = mean(db_temp, na.rm = TRUE), 
+    mean_ub_temp = mean(ub_temp, na.rm = TRUE),
+    min_gb_temp = min(gb_temp, na.rm = TRUE), 
+    min_db_temp = min(db_temp, na.rm = TRUE), 
+    min_ub_temp = min(ub_temp, na.rm = TRUE),
+    max_gb_temp = max(gb_temp, na.rm = TRUE), 
+    max_db_temp = max(db_temp, na.rm = TRUE), 
+    max_ub_temp = max(ub_temp, na.rm = TRUE),
+    gb_temp_range = (max_gb_temp - min_gb_temp), 
+    db_temp_range = (max_db_temp - min_db_temp),
+    ub_temp_range = (max_ub_temp - min_ub_temp),
+  )
+
+stats_totalmax_gbdbub <- full_15min_gbdbub %>%
+  group_by(phase, snow_phase) %>%
+  summarize(
+    min_gb_temp = min(gb_temp, na.rm = TRUE), 
+    min_db_temp = min(db_temp, na.rm = TRUE), 
+    min_ub_temp = min(ub_temp, na.rm = TRUE),
+    max_gb_temp = max(gb_temp, na.rm = TRUE), 
+    max_db_temp = max(db_temp, na.rm = TRUE), 
+    max_ub_temp = max(ub_temp, na.rm = TRUE))
+```
+
+### North/South Min/Max/Mean Stats
+
+```{r}
+stats_totaltemprange_ns<- full_15min_ns %>%
+  group_by(zone, phase, snow_phase, burn_status) %>%
+  filter(phase == "day") %>%
+  summarize(
+    mean_north_temp = mean(north_temp, na.rm = TRUE), 
+    mean_south_temp = mean(south_temp, na.rm = TRUE), 
+    min_north_temp = min(north_temp, na.rm = TRUE), 
+    min_south_temp = min(south_temp, na.rm = TRUE),
+    max_north_temp = max(north_temp, na.rm = TRUE), 
+    max_south_temp = max(south_temp, na.rm = TRUE),
+    north_temp_range = (max_north_temp - min_north_temp), 
+    south_temp_range = (max_south_temp - min_south_temp)
+  ) %>%
+  mutate(
+    min_aspect_range = abs(min_north_temp - min_south_temp), # Range of minimum temperatures
+    mean_aspect_range = abs(mean_north_temp - mean_south_temp), # Range of mean temperatures
+    max_aspect_range = abs(max_north_temp - max_south_temp) # Range of maximum temperatures
+  )
+```
+
+### GB Char vs Aspect Stats
+
+```{r}
+#GB Stats only
+stats_gb_charpattern <- full_hourly_gb %>%
+  group_by(zone, phase) %>%
+  filter(phase == "day") %>%
+  summarize(
+    mean_charred_temp = mean(charred_temp, na.rm = TRUE), 
+    mean_uncharred_temp = mean(uncharred_temp, na.rm = TRUE),
+    mean_north_temp = mean(north_temp, na.rm = TRUE),
+    mean_south_temp = mean(south_temp, na.rm = TRUE),
+    min_charred_temp = min(charred_temp, na.rm = TRUE), 
+    min_uncharred_temp = min(uncharred_temp, na.rm = TRUE),
+    min_north_temp = min(north_temp, na.rm = TRUE),
+    min_south_temp = min(south_temp, na.rm = TRUE),
+    max_charred_temp = max(charred_temp, na.rm = TRUE), 
+    max_uncharred_temp = max(uncharred_temp, na.rm = TRUE),
+    max_north_temp = max(north_temp, na.rm = TRUE),
+    max_south_temp = max(south_temp, na.rm = TRUE)) %>%
+  mutate(
+    overall_min_temp = pmap_dbl(
+      list(min_charred_temp, min_uncharred_temp, min_north_temp, min_south_temp),
+      ~ min(c(...), na.rm = TRUE)
+    )
+  ) %>%
+  mutate(
+    overall_max_temp = pmap_dbl(
+      list(max_charred_temp, max_uncharred_temp, max_north_temp, max_south_temp),
+      ~ max(c(...), na.rm = TRUE)
+    )
+  )
+```
+
+## MAD/MRD Calcs
+
+Data Wrangling
+
+```{r}
+pers_b_diff_results <- filtered_pers_b_aspects_r %>%
+  group_by(burn_status, aspect, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+
+pers_ub_diff_results <- filtered_pers_ub_aspects_r %>%
+  group_by(burn_status, aspect, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+```
+
+```{r}
+daily_pers_b_diff_results <- filtered_pers_b_aspects_r %>%
+  group_by(burn_status, aspect) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+
+daily_pers_ub_diff_results <- filtered_pers_ub_aspects_r %>%
+  group_by(day, burn_status, aspect) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+```
+
+```{r}
+trans_b_diff_results <- filtered_pers_b_aspects_r %>%
+  group_by(burn_status, aspect, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+
+trans_ub_diff_results <- filtered_pers_ub_aspects_r %>%
+  group_by(burn_status, aspect, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+```
+
+Now doing stas as north vs south
+
+```{r}
+#creating a dataframe with individual tree temps by north and south aspect
+persb_n_aspects <- filtered_pers_b_aspects_r %>%
+  filter(aspect == "north") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+persb_s_aspects <- filtered_pers_b_aspects_r %>%
+  filter(aspect == "south") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+persb_ns_aspects <- persb_n_aspects %>%
+  inner_join(persb_s_aspects, by= c("datetime", "day", "month", "phase", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, tree_name, north, south) %>%
+  rename(north_temp = "north", south_temp = "south")
+```
+
+```{r}
+transb_n_aspects <- filtered_trans_b_aspects_r %>%
+  filter(aspect == "north") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+transb_s_aspects <- filtered_trans_b_aspects_r %>%
+  filter(aspect == "south") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+transb_ns_aspects <- transb_n_aspects %>%
+  inner_join(transb_s_aspects, by= c("datetime", "day", "month", "phase", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, tree_name, north, south) %>%
+  rename(north_temp = "north", south_temp = "south")
+```
+
+```{r}
+persub_n_aspects <- filtered_pers_ub_aspects_r %>%
+  filter(aspect == "north") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+persub_s_aspects <- filtered_pers_ub_aspects_r %>%
+  filter(aspect == "south") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+persub_ns_aspects <- persub_n_aspects %>%
+  inner_join(persub_s_aspects, by= c("datetime", "day", "month", "phase", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, tree_name, north, south) %>%
+  rename(north_temp = "north", south_temp = "south")
+```
+
+```{r}
+transub_n_aspects <- filtered_trans_ub_aspects_r %>%
+  filter(aspect == "north") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+transub_s_aspects <- filtered_trans_ub_aspects_r %>%
+  filter(aspect == "south") %>%
+  pivot_wider(names_from = aspect, values_from = temp)
+
+transub_ns_aspects <- transub_n_aspects %>%
+  inner_join(transub_s_aspects, by= c("datetime", "day", "month", "phase", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(datetime, day, month, phase, zone, snow_phase, burn_status, tree_name, north, south) %>%
+  rename(north_temp = "north", south_temp = "south")
+```
+
+```{r}
+pers_b_ns_diff_results <- persb_ns_aspects %>%
+  group_by(burn_status, phase) %>%
+  #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing one observation
+  filter((north_temp + south_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(north_temp - south_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
+
+pers_ub_ns_diff_results <- persub_ns_aspects %>%
+  group_by(burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(north_temp - south_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
+```
+
+```{r}
+trans_b_ns_diff_results <- transb_ns_aspects %>%
+  group_by(burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(north_temp - south_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
+
+trans_ub_ns_diff_results <- transub_ns_aspects %>%
+  group_by(burn_status, phase) %>%
+  #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing two observations
+  filter((north_temp + south_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(north_temp - south_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(north_temp - south_temp) / ((north_temp + south_temp) / 2), na.rm = TRUE))
+```
+
+Now doing stats as gb vs db vs live
+
+```{r}
+pers_gb_aspects <- filtered_pers_b_aspects_r %>%
+  filter(burn_status == "green burn") %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(gb_temp = "green burn") %>%
+  select("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect", "tree_name", "gb_temp")
+
+pers_db_aspects <- filtered_pers_b_aspects_r %>%
+  filter(burn_status == "dead burn") %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(db_temp = "dead burn") %>%
+  select("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect", "tree_name", "db_temp")
+
+pers_ub_aspects <- filtered_pers_ub_aspects_r %>%
+  filter(burn_status == "live") %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(ub_temp = "live") %>%
+  select("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect", "tree_name", "ub_temp")
+
+pers_gbdbub_aspects <- pers_gb_aspects %>%
+  inner_join(pers_db_aspects,  by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(pers_ub_aspects, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect"))
+```
+
+```{r}
+#gb vs db
+pers_gb_db_diff_results <- pers_gbdbub_aspects %>%
+  group_by(phase) %>%
+  filter((gb_temp + db_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(gb_temp - db_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(gb_temp - db_temp) / ((gb_temp + db_temp) / 2), na.rm = TRUE)
+  )
+
+# gb vs live
+pers_gb_live_diff_results <- pers_gbdbub_aspects %>%
+  group_by(phase) %>%
+  filter((gb_temp + ub_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(gb_temp - ub_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(gb_temp - ub_temp) / ((gb_temp + ub_temp) / 2), na.rm = TRUE)
+  )
+
+# db vs live
+pers_db_live_diff_results <- pers_gbdbub_aspects %>%
+  group_by(phase) %>%
+  filter((db_temp + ub_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(db_temp - ub_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(db_temp - ub_temp) / ((db_temp + ub_temp) / 2), na.rm = TRUE)
+  )
+```
+
+```{r}
+trans_gb_aspects <- filtered_trans_b_aspects_r %>%
+  filter(burn_status == "green burn") %>%
+  filter(aspect %in% c("north", "south")) %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(gb_temp = "green burn") %>%
+  select("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect", "tree_name", "gb_temp")
+
+trans_db_aspects <- filtered_trans_b_aspects_r %>%
+  filter(burn_status == "dead burn") %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(db_temp = "dead burn") %>%
+  select("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect", "tree_name", "db_temp")
+
+trans_ub_aspects <- filtered_trans_ub_aspects_r %>%
+  filter(burn_status == "live") %>%
+  pivot_wider(names_from = burn_status, values_from = temp) %>%
+  rename(ub_temp = "live") %>%
+  select("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect", "tree_name", "ub_temp")
+
+trans_gbdbub_aspects <- trans_gb_aspects %>%
+  inner_join(trans_db_aspects,  by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(trans_ub_aspects, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect"))
+```
+
+```{r}
+#gb vs db
+trans_gb_db_diff_results <- trans_gbdbub_aspects %>%
+  group_by(phase) %>%
+  filter((gb_temp + db_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(gb_temp - db_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(gb_temp - db_temp) / ((gb_temp + db_temp) / 2), na.rm = TRUE)
+  )
+
+# gb vs live
+trans_gb_live_diff_results <- trans_gbdbub_aspects %>%
+  group_by(phase) %>%
+  filter((gb_temp + ub_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(gb_temp - ub_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(gb_temp - ub_temp) / ((gb_temp + ub_temp) / 2), na.rm = TRUE)
+  )
+
+# db vs live
+trans_db_live_diff_results <- trans_gbdbub_aspects %>%
+  group_by(phase) %>%
+  filter((db_temp + ub_temp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(db_temp - ub_temp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(db_temp - ub_temp) / ((db_temp + ub_temp) / 2), na.rm = TRUE)
+  )
+```
+
+Day vs Night Temperatures
+
+Day only and night only stats
+
+```{r}
+pers_b_dtnt_diff_results <- filtered_pers_b_aspects_r %>%
+  group_by(burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+
+pers_ub_dtnt_diff_results <- filtered_pers_ub_aspects_r %>%
+  group_by(burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+```
+
+```{r}
+trans_b_dtnt_diff_results <- filtered_trans_b_aspects_r %>%
+  group_by(burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+
+trans_ub_dtnt_diff_results <- filtered_trans_ub_aspects_r %>%
+  group_by(burn_status, phase) %>%
+  summarise(
+    mean_avg_diff = mean(abs(diff(temp))), # Average absolute difference
+    mean_rel_diff = mean(abs(diff(temp)) / mean(temp, na.rm = TRUE)) # Relative difference
+  )
+```
+
+Day vs Night stats
+
+```{r}
+#creating a dataframe with individual columns for day and night temps by date
+persb_daytemp <- filtered_pers_b_aspects_r %>%
+  filter(phase == "day") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(daytemp = day)
+
+persb_nighttemp <- filtered_pers_b_aspects_r %>%
+  filter(phase == "night") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(nighttemp = night)
+
+persb_dtnt_aspects <- persb_daytemp %>%
+  inner_join(persb_nighttemp, by= c("daydate", "month", "aspect", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(daydate, month, aspect, zone, snow_phase, burn_status, tree_name, daytemp, nighttemp)
+```
+
+```{r}
+persub_daytemp <- filtered_pers_ub_aspects_r %>%
+  filter(phase == "day") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(daytemp = day)
+
+persub_nighttemp <- filtered_pers_ub_aspects_r %>%
+  filter(phase == "night") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(nighttemp = night)
+
+persub_dtnt_aspects <- persub_daytemp %>%
+  inner_join(persub_nighttemp, by= c("daydate", "month", "aspect", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(daydate, month, aspect, zone, snow_phase, burn_status, tree_name, daytemp, nighttemp)
+```
+
+```{r}
+pers_b_dtnt_comb_diff_results <- persb_dtnt_aspects %>%
+  group_by(burn_status) %>%
+  #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing one observation
+  filter((daytemp + nighttemp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(daytemp - nighttemp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(daytemp - nighttemp) / ((daytemp + nighttemp) / 2), na.rm = TRUE))
+
+pers_ub_dtnt_comb_diff_results <- persub_dtnt_aspects %>%
+  group_by(burn_status) %>%
+  #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing one observation
+  filter((daytemp + nighttemp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(daytemp - nighttemp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(daytemp - nighttemp) / ((daytemp + nighttemp) / 2), na.rm = TRUE))
+```
+
+```{r}
+transb_daytemp <- filtered_trans_b_aspects_r %>%
+  filter(phase == "day") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(daytemp = day)
+
+transb_nighttemp <- filtered_trans_b_aspects_r %>%
+  filter(phase == "night") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(nighttemp = night)
+
+transb_dtnt_aspects <- transb_daytemp %>%
+  inner_join(transb_nighttemp, by= c("daydate", "month", "aspect", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(daydate, month, aspect, zone, snow_phase, burn_status, tree_name, daytemp, nighttemp)
+```
+
+```{r}
+transub_daytemp <- filtered_trans_ub_aspects_r %>%
+  filter(phase == "day") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(daytemp = day)
+
+transub_nighttemp <- filtered_trans_ub_aspects_r %>%
+  filter(phase == "night") %>%
+  rename(daydate = "day") %>%
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(nighttemp = night)
+
+transub_dtnt_aspects <- transub_daytemp %>%
+  inner_join(transub_nighttemp, by= c("daydate", "month", "aspect", "zone", "snow_phase", "burn_status", "tree_name")) %>%
+  select(daydate, month, aspect, zone, snow_phase, burn_status, tree_name, daytemp, nighttemp)
+```
+
+```{r}
+trans_b_dtnt_comb_diff_results <- transb_dtnt_aspects %>%
+  group_by(burn_status) %>%
+  #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing one observation
+  filter((daytemp + nighttemp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(daytemp - nighttemp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(daytemp - nighttemp) / ((daytemp + nighttemp) / 2), na.rm = TRUE))
+
+trans_ub_dtnt_comb_diff_results <- transub_dtnt_aspects %>%
+  group_by(burn_status) %>%
+  #adding this in so that I can fix any issues with differenced data that is close to 0 for the MRD column - it's only removing one observation
+  filter((daytemp + nighttemp) != 0) %>%
+  summarise(
+    mean_avg_diff = mean(abs(daytemp - nighttemp), na.rm = TRUE),
+    mean_relative_diff = mean(abs(daytemp - nighttemp) / ((daytemp + nighttemp) / 2), na.rm = TRUE))
+```
+
+## Snow Depth Plots
+
+### Data Wrangling
+
+Data frames for when tree wells were present
+
+```{r}
+#creating a new dataframe with snow depths and treewell development, as well as tree_LWout so that I can put points on snowdepths instead of total treeLWout line in plots
+persb_treewell_dates <- persb_snowcamera_data %>%
+  select(zone, burn_status, date, conditions, treewell_developed, snowcam_max_depth_m) %>%
+  rename(day = date) %>%
+  inner_join(p_b_dt_avg_temp) %>%
+  filter(treewell_developed == "yes")
+
+transb_treewell_dates <- transb_snowcamera_data %>%
+  select(zone, date, conditions, treewell_developed, snowcam_max_depth_m) %>%
+  rename(day = date) %>%
+  inner_join(t_b_dt_avg_temp) %>%
+  filter(treewell_developed == "yes")
+```
+
+Snow depth data - from cameras
+
+```{r}
+#mountain campus snowcam snow depths
+transub_snowcamera_data_V2 <- transub_snowcamera_data %>%
+  filter(day < "2024-05-12")
+
+#Use this dataset for trans UB snowdepths, as it's more accurate than mountain campus snow depths!
+AG_transub_snowcamera_data_V2 <- AG_transub_snowcamera_data %>%
+  filter(day < "2024-05-13") %>%
+  mutate(day = day - day(1))
+```
+
+------------------------------------------------------------------------
+
+```{r}
+#need to use weather data for trans ub snow depths
+pers_ub_daily_snowdepth_data_V1 <- filtered_persub_wx_hourly %>%
+  group_by(datetime, day, zone, phase, burn_status) %>%
+  mutate(SnowDepth_m = if_else(Q_Avg < 180, NA_real_, SnowDepth_m)) %>%
+  summarize(max_snowdepth_m = max(SnowDepth_m), mean_airtemp = mean(AirTC_Avg))
+  
+
+#this is the mean of day and night, to give proper mean daytime temps and maximum day and night snow depths! Use V2 for plotting
+pers_ub_daily_snowdepth_data_V2 <- pers_ub_daily_snowdepth_data_V1 %>%
+  group_by(day, zone, burn_status) %>%
+  summarize(max_snowdepth_m = max(max_snowdepth_m), mean_airtemp = max(mean_airtemp)) %>%
+  filter(day <"2024-06-12")
+```
+
+Mean daily tree temp of GB and DB trees by zone, for snow depth and air temp plot!
+
+```{r}
+PSZ_meanday_treetemp <- PSZ_dtnt_data %>%
+  filter(phase == "day", burn_status %in% c("DB", "GB")) %>%
+  group_by(day) %>%
+  summarize(mean_dt_treetemp = mean(temp))
+```
+
+```{r}
+TSZ_meanday_treetemp <- TSZ_dtnt_data %>%
+  filter(phase == "day", burn_status %in% c("DB", "GB")) %>%
+  group_by(day) %>%
+  summarize(mean_dt_treetemp = mean(temp))
+```
+
+Air temp & NR data!
+
+```{r}
+persb_wx_data <- filtered_persb_wx_hourly %>%
+  group_by(day, phase, zone, burn_status) %>%
+  summarize(mean_airtemp = mean(AirTC_Avg), mean_SW_net = mean(SWnet_Avg), mean_LW_net = mean(LWnet_Avg), mean_NR_Avg = mean(NR_Avg_new))
+
+#use V2 version
+persb_wx_data_V2 <- persb_wx_data %>%
+  group_by(day, zone, burn_status) %>%
+  summarize(mean_airtemp = max(mean_airtemp), mean_SW_net = mean(mean_SW_net), mean_LW_net = mean(mean_LW_net), mean_NR_Avg = mean(mean_NR_Avg)) %>%
+  filter(day <= "2024-06-12")
+```
+
+```{r}
+transb_wx_data <- filtered_transb_wx_15min %>%
+  group_by(day, phase, zone, burn_status) %>%
+  summarize(mean_airtemp = mean(AirTC_Avg), mean_SW_net = mean(SWnet_Avg), mean_LW_net = mean(LWnet_Avg), mean_NR_Avg = mean(NR_Avg_new))
+
+#use V2 version
+transb_wx_data_V2 <- transb_wx_data %>%
+  group_by(day, zone, burn_status) %>%
+  summarize(mean_airtemp = max(mean_airtemp), mean_SW_net = mean(mean_SW_net), mean_LW_net = mean(mean_LW_net), mean_NR_Avg = mean(mean_NR_Avg)) %>%
+  filter(day <= "2024-06-12")
+```
+
+```{r}
+#selecting correct columns for join
+persb_snowcamera_data_V2 <- persb_snowcamera_data %>%
+  select(day, zone, burn_status, snowcam_max_depth_m, treewell_developed) %>%
+  rename(max_snowdepth_m = snowcam_max_depth_m) %>%
+  left_join(persb_wx_data_V2, by = c("day", "zone", "burn_status")) %>%
+  #filter(!day %in% as.Date(c("2024-03-14", "2024-03-15", "2024-04-16", "2024-04-17"))) %>%
+  filter(day <= "2024-06-03")
+
+
+transb_snowcamera_data_V2 <- transb_snowcamera_data %>%
+  select(day, zone, burn_status, snowcam_max_depth_m, treewell_developed) %>%
+  rename(max_snowdepth_m = snowcam_max_depth_m)  %>%
+  left_join(transb_wx_data_V2, by = c("day", "zone", "burn_status")) %>%
+  #filter(!day %in% as.Date(c("2024-03-12", "2024-03-13", "2024-03-14", "2024-03-15", "2024-03-16", "2024-03-17", "2024-03-18", "2024-03-19", "2024-03-20"))) %>%
+  filter(day <= "2024-05-08")
+```
+
+```{r}
+persb_treewell_dates <- persb_snowcamera_data_V2 %>%
+  filter(treewell_developed == "yes") %>%
+  filter(day <= "2024-06-03")
+
+transb_treewell_dates <- transb_snowcamera_data_V2 %>%
+  filter(treewell_developed == "yes") %>%
+  filter(day <= "2024-05-08")
+```
+
+### Plotting
+
+Version with Air Temp!
+
+```{r}
+scaling_factor <- 0.07
+```
+
+PSZ - Snow depth line plot with temps as bar plots
+
+```{r}
+PSZ_b_snowdepths_barplot <- ggplot() + 
+  #beginning of peak ablation
+  #geom_vline(xintercept = as.numeric(as.Date('2024-04-21')), 
+           #  linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  #end of peak abalation/snow-free date
+ # geom_vline(xintercept = as.numeric(as.Date('2024-06-03')), 
+          #   linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  geom_rect(aes(xmin = as.Date('2024-05-06'), xmax = as.Date('2024-06-03'), 
+              ymin = -Inf, ymax = Inf), 
+          fill = "lightgrey", alpha = 0.6) +
+  
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
+  # Mean daily tree temp (bar) - DODGED
+  geom_col(data = PSZ_meanday_treetemp, aes(x = day, y = mean_dt_treetemp * scaling_factor, fill = "Tree Temperature"), 
+           width = 0.7, position = position_dodge(width = 0.9)) +
+  # Burned wx station air temp (bar) - DODGED
+  geom_col(data = persb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, fill = "Air Temperature"), 
+           width = 0.7, position = position_dodge(width = 0.9)) +
+  #unburned snowdepth - filtered out
+  geom_smooth(
+  data = pers_ub_daily_snowdepth_data_V2,
+  aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"),
+  method = "loess",  # or "gam", or "lm"
+  span = 0.07,         # adjust for more or less smoothing (only for loess)
+  se = FALSE,         # turn off confidence interval ribbon
+  linetype = "solid",
+  linewidth = 0.8
+) + 
+  # Burned snow depth (line)
+  geom_line(data = persb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), 
+            linetype = "solid", linewidth = 0.8) +
+  # Treewell dates
+  geom_point(data = persb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  labs(
+    title = "a) PSZ",
+    x = NULL,
+    y = "Snow Depth (m)",
+    fill = "Legend Title"  # Title for the fill legend
+  ) +
+  scale_y_continuous(
+    name = "Snow Depth (m)",
+    limits = c(-1, 2),
+    sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis for temperature
+  ) +
+  scale_x_date(
+    name = NULL,
+    limits = c(min(pers_ub_daily_snowdepth_data_V2$day, na.rm = TRUE), max(pers_ub_daily_snowdepth_data_V2$day, na.rm = TRUE)), 
+    expand = c(0, 0)
+  ) +
+  scale_color_manual(
+    name = NULL,
+    values = c("Burned Snow Depth" = "#2166AC", "Unburned Snow Depth" = "grey23")
+  ) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "Tree Temperature" = alpha("#D95F02", 0.7),  # Lower alpha for transparency
+      "Air Temperature" = alpha("#666666", 0.6)
+    ),
+    breaks = c("Tree Temperature", "Air Temperature")  # Sets legend order
+  ) +
+  scale_shape_manual(
+    name = NULL,
+    values = c("Dates that treewells developed" = 16)
+  ) + 
+  guides(
+    shape = "none",   # Hides the shape legend
+    fill = guide_legend(nrow = 2),  # Place fill (bar) legends in one row
+    color = guide_legend(nrow = 2))+  # Place color (line) legends in another row
+  theme_bw() + 
+  theme(
+    strip.text = element_text(size = 11),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 11),
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1, "cm"),
+    legend.key.height = unit(0.85, "cm"),
+    legend.position = "bottom"  # Put the legend at the bottom
+  )
+
+
+PSZ_b_snowdepths_barplot
+```
+
+```{r}
+#stats on mean tree temp during ablation for PSZ and TSZ - used in limitation section of thesis!
+PSZ_meantreetemp_abla_stats <- PSZ_meanday_treetemp %>%
+  filter(day >= "2024-05-03") %>%
+  summarize(mean_treetemp = mean(mean_dt_treetemp))
+
+TSZ_meantreetemp_abla_stats <- TSZ_meanday_treetemp %>%
+  filter(day >= "2024-04-12" & day <= "2024-05-12") %>%
+  summarize(mean_treetemp = mean(mean_dt_treetemp))
+```
+
+TSZ - Snow depth line plot with temps as bar plots
+
+```{r}
+TSZ_b_snowdepths_barplot <- ggplot() + 
+  # Manual snow survey date
+  #geom_vline(xintercept = as.numeric(as.Date('2024-04-06')), 
+             #linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  #Beginning of peak ablation
+ # geom_vline(xintercept = as.numeric(as.Date('2024-04-01')), 
+             #linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  #end of peak abalation/snow-free date
+  #geom_vline(xintercept = as.numeric(as.Date('2024-05-15')), 
+            # linetype = "dashed", color = "grey23", size = 0.6, alpha = 0.8) +
+  geom_rect(aes(xmin = as.Date('2024-04-01'), xmax = as.Date('2024-05-15'), 
+              ymin = -Inf, ymax = Inf), 
+          fill = "lightgrey", alpha = 0.6) +
+  # Bold line at y = 0
+  geom_hline(yintercept = 0, linetype = "solid", color = "grey23", alpha = 0.7, size = 0.3) +
+  # Mean daily tree temp (bar) - DODGED
+  geom_col(data = TSZ_meanday_treetemp, aes(x = day, y = mean_dt_treetemp * scaling_factor, fill = "Tree Temperature"), 
+           width = 0.7, position = position_dodge(width = 0.9)) +
+  # Burned wx station air temp (bar) - DODGED
+  geom_col(data = transb_wx_data_V2, aes(x = day, y = mean_airtemp * scaling_factor, fill = "Air Temperature"), 
+           width = 0.7, position = position_dodge(width = 0.9)) +
+  # Unburned snow depth
+  geom_line(data = AG_transub_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Unburned Snow Depth"), 
+            linetype = "solid", linewidth = 0.8) +
+  # Burned snow depth (line)
+  geom_line(data = transb_snowcamera_data_V2, aes(x = day, y = max_snowdepth_m, color = "Burned Snow Depth"), 
+            linetype = "solid", linewidth = 0.8) +
+  # Treewell dates
+  geom_point(data = transb_treewell_dates, aes(x = day, y = max_snowdepth_m, shape = "Dates that treewells developed"), 
+             color = "black", fill = "black", size = 1.5) +
+  labs(
+    title = "b) TSZ",
+    x = "Date",
+    y = "Snow Depth (m)",
+    fill = "Legend Title"  # Title for the fill legend
+  ) +
+  scale_y_continuous(
+    name = "Snow Depth (m)",
+    limits = c(-1, 2),
+    sec.axis = sec_axis(~ . / scaling_factor, name = "Temperature (°C)")  # Secondary y-axis for temperature
+  ) +
+  scale_x_date(
+    name = NULL,
+    limits = c(min(pers_ub_daily_snowdepth_data_V2$day, na.rm = TRUE), max(pers_ub_daily_snowdepth_data_V2$day, na.rm = TRUE)), 
+    expand = c(0, 0)
+  ) +
+  scale_color_manual(
+    name = NULL,
+    values = c("Burned Snow Depth" = "#2166AC", 
+               "Unburned Snow Depth" = "grey23")) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "Tree Temperature" = alpha("#D95F02", 0.7),  # Lower alpha for transparency
+      "Air Temperature" = alpha("#666666", 0.6)
+    ),
+    breaks = c("Tree Temperature", "Air Temperature")  # Sets legend order
+  ) +
+  scale_shape_manual(
+    name = NULL,
+    values = c("Dates that treewells developed" = 16)
+  ) + 
+    guides(
+    shape = "none", # Hides the shape legend
+    fill = guide_legend(nrow = 2),  # Place fill (bar) legends in one row
+    color = guide_legend(nrow = 2))+  # Place color (line) legends in another row) + 
+  theme_bw() + 
+  theme(
+    strip.text = element_text(size = 11),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 11),
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1, "cm"),
+    legend.key.height = unit(0.85, "cm"),
+    legend.position = "bottom"  # Put the legend at the bottom
+  )
+
+TSZ_b_snowdepths_barplot
+```
+
+```{r}
+#final combined plot
+final_comb_snowdepth_barplot <- ggarrange(PSZ_b_snowdepths_barplot, TSZ_b_snowdepths_barplot, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
+
+final_comb_snowdepth_barplot
+```
+
+```{r}
+ggsave(filename = "final_comb_snowdepth_barplot_V5.png", 
+       plot = final_comb_snowdepth_barplot, 
+       width = 6.5, 
+       height = 8, 
+       dpi = 600)
+```
+
+### Snow Depth Stats by Zone
+
+```{r}
+persb_snowdepth_stats <- persb_snowcamera_data_V2 %>%
+  summarize(mean_snowdepth_m = mean(max_snowdepth_m), min_snowdepth_m = min(max_snowdepth_m), max_snowdepth_m = max(max_snowdepth_m))
+```
+
+```{r}
+persub_snowdepth_stats <- pers_ub_daily_snowdepth_data_V2 %>%
+  ungroup() %>%  # Ensure there is no grouping
+  summarize(
+    mean_snowdepth_m = mean(max_snowdepth_m, na.rm = TRUE),
+    min_snowdepth_m = min(max_snowdepth_m, na.rm = TRUE),
+    max_snowdepth_m = max(max_snowdepth_m, na.rm = TRUE)
+  )
+```
+
+```{r}
+transb_snowdepth_stats <- transb_snowcamera_data_V2 %>%
+  summarize(mean_snowdepth_m = mean(max_snowdepth_m), min_snowdepth_m = min(max_snowdepth_m), max_snowdepth_m = max(max_snowdepth_m))
+```
+
+```{r}
+transub_snowdepth_stats <- trans_ub_daily_snowdepth_data_V2 %>%
+  ungroup() %>%  # Ensure there is no grouping
+  summarize(
+    mean_snowdepth_m = mean(max_snowdepth_m, na.rm = TRUE),
+    min_snowdepth_m = min(max_snowdepth_m, na.rm = TRUE),
+    max_snowdepth_m = max(max_snowdepth_m, na.rm = TRUE)
+  )
+```
+
+# T-Test Stats
+
+\*\* Not actually using for thesis
+
+## Day/Night
+
+```{r}
+#dataframes
+PSZ_dtnt_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "PSZ") %>%
+  group_by(zone, datetime, day, phase) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+
+TSZ_dtnt_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "TSZ") %>%
+  group_by(zone, datetime, day, phase) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp))
+```
+
+```{r}
+#DB dataframes
+PSZ_db_dtnt_dataframes <- PSZ_dtnt_dataframe %>%
+  select(zone, datetime, day, phase, db_temp) %>%
+  group_by(zone, day, phase) %>%
+  rename(date = "day") %>%
+  summarize(temp = mean(db_temp, na.rm = TRUE)) %>%  # Ensure grouping is removed
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(day_temp = day, night_temp = night)
+
+TSZ_db_dtnt_dataframes <- TSZ_dtnt_dataframe %>%
+  select(zone, datetime, day, phase, db_temp) %>%
+  group_by(zone, day, phase) %>%
+  rename(date = "day") %>%
+  summarize(temp = mean(db_temp, na.rm = TRUE)) %>%  # Ensure grouping is removed
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(day_temp = day, night_temp = night)
+```
+
+```{r}
+#GB dataframes
+PSZ_gb_dtnt_dataframes <- PSZ_dtnt_dataframe %>%
+  select(zone, datetime, day, phase, gb_temp) %>%
+  group_by(zone, day, phase) %>%
+  rename(date = "day") %>%
+  summarize(temp = mean(gb_temp, na.rm = TRUE)) %>%  # Ensure grouping is removed
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(day_temp = day, night_temp = night)
+
+TSZ_gb_dtnt_dataframes <- TSZ_dtnt_dataframe %>%
+  select(zone, datetime, day, phase, gb_temp) %>%
+  group_by(zone, day, phase) %>%
+  rename(date = "day") %>%
+  summarize(temp = mean(gb_temp, na.rm = TRUE)) %>%  # Ensure grouping is removed
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(day_temp = day, night_temp = night)
+```
+
+```{r}
+#GB dataframes
+PSZ_ub_dtnt_dataframes <- PSZ_dtnt_dataframe %>%
+  select(zone, datetime, day, phase, ub_temp) %>%
+  group_by(zone, day, phase) %>%
+  rename(date = "day") %>%
+  summarize(temp = mean(ub_temp, na.rm = TRUE)) %>%  # Ensure grouping is removed
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(day_temp = day, night_temp = night)
+
+TSZ_ub_dtnt_dataframes <- TSZ_dtnt_dataframe %>%
+  select(zone, datetime, day, phase, ub_temp) %>%
+  group_by(zone, day, phase) %>%
+  rename(date = "day") %>%
+  summarize(temp = mean(ub_temp, na.rm = TRUE)) %>%  # Ensure grouping is removed
+  pivot_wider(names_from = phase, values_from = temp) %>%
+  rename(day_temp = day, night_temp = night)
+```
+
+T-Tests
+
+```{r}
+p_db_dtnt_ttest_results <- t.test(PSZ_db_dtnt_dataframes$day_temp, PSZ_db_dtnt_dataframes$night_temp)
+
+p_db_dtnt_ttest_results
+```
+
+```{r}
+t_db_dtnt_ttest_results <- t.test(TSZ_db_dtnt_dataframes$day_temp, TSZ_db_dtnt_dataframes$night_temp)
+
+t_db_dtnt_ttest_results
+```
+
+```{r}
+p_gb_dtnt_ttest_results <- t.test(PSZ_gb_dtnt_dataframes$day_temp, PSZ_gb_dtnt_dataframes$night_temp)
+
+p_gb_dtnt_ttest_results
+```
+
+```{r}
+t_gb_dtnt_ttest_results <- t.test(TSZ_gb_dtnt_dataframes$day_temp, TSZ_gb_dtnt_dataframes$night_temp)
+
+t_gb_dtnt_ttest_results
+```
+
+```{r}
+p_ub_dtnt_ttest_results <- t.test(PSZ_ub_dtnt_dataframes$day_temp, PSZ_ub_dtnt_dataframes$night_temp)
+
+p_ub_dtnt_ttest_results
+```
+
+```{r}
+t_ub_dtnt_ttest_results <- t.test(TSZ_ub_dtnt_dataframes$day_temp, TSZ_ub_dtnt_dataframes$night_temp)
+
+t_ub_dtnt_ttest_results
+```
+
+## North vs South
+
+```{r}
+#dataframes
+#dataframes
+PSZ_db_accu_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "accumulation", burn_status == "dead burn")
+
+PSZ_db_abla_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "ablation", burn_status == "dead burn")
+
+TSZ_db_accu_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "accumulation", burn_status == "dead burn")
+
+TSZ_db_abla_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "ablation", burn_status == "dead burn")
+```
+
+```{r}
+PSZ_gb_accu_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "accumulation", burn_status == "green burn")
+
+PSZ_gb_abla_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "ablation", burn_status == "green burn")
+
+TSZ_gb_accu_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "accumulation", burn_status == "green burn")
+
+TSZ_gb_abla_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "ablation", burn_status == "green burn")
+```
+
+```{r}
+PSZ_ub_accu_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "accumulation", burn_status == "live")
+
+PSZ_ub_abla_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", snow_phase == "ablation", burn_status == "live")
+
+TSZ_ub_accu_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "accumulation", burn_status == "live")
+
+TSZ_ub_abla_ns_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", snow_phase == "ablation", burn_status == "live")
+```
+
+T-tests DB
+
+```{r}
+p_db_accu_ns_ttest_results <- t.test(PSZ_db_accu_ns_dataframe$north_temp, PSZ_db_accu_ns_dataframe$south_temp)
+
+p_db_accu_ns_ttest_results
+```
+
+```{r}
+p_db_abla_ns_ttest_results <- t.test(PSZ_db_abla_ns_dataframe$north_temp, PSZ_db_abla_ns_dataframe$south_temp)
+
+p_db_abla_ns_ttest_results
+```
+
+```{r}
+t_db_accu_ns_ttest_results <- t.test(TSZ_db_accu_ns_dataframe$north_temp, TSZ_db_accu_ns_dataframe$south_temp)
+
+t_db_accu_ns_ttest_results
+```
+
+```{r}
+t_db_abla_ns_ttest_results <- t.test(TSZ_db_abla_ns_dataframe$north_temp, TSZ_db_abla_ns_dataframe$south_temp)
+
+t_db_abla_ns_ttest_results
+```
+
+T-tests GB
+
+```{r}
+p_gb_accu_ns_ttest_results <- t.test(PSZ_gb_accu_ns_dataframe$north_temp, PSZ_gb_accu_ns_dataframe$south_temp)
+
+p_gb_accu_ns_ttest_results
+```
+
+```{r}
+p_gb_abla_ns_ttest_results <- t.test(PSZ_gb_abla_ns_dataframe$north_temp, PSZ_gb_abla_ns_dataframe$south_temp)
+
+p_gb_abla_ns_ttest_results
+```
+
+```{r}
+t_gb_accu_ns_ttest_results <- t.test(TSZ_gb_accu_ns_dataframe$north_temp, TSZ_gb_accu_ns_dataframe$south_temp)
+
+t_gb_accu_ns_ttest_results
+```
+
+```{r}
+t_gb_abla_ns_ttest_results <- t.test(TSZ_gb_abla_ns_dataframe$north_temp, TSZ_gb_abla_ns_dataframe$south_temp)
+
+t_gb_abla_ns_ttest_results
+```
+
+T-tests Live
+
+```{r}
+p_ub_accu_ns_ttest_results <- t.test(PSZ_ub_accu_ns_dataframe$north_temp, PSZ_ub_accu_ns_dataframe$south_temp)
+
+p_ub_accu_ns_ttest_results
+```
+
+```{r}
+p_ub_abla_ns_ttest_results <- t.test(PSZ_ub_abla_ns_dataframe$north_temp, PSZ_ub_abla_ns_dataframe$south_temp)
+
+p_ub_abla_ns_ttest_results
+```
+
+```{r}
+t_ub_accu_ns_ttest_results <- t.test(TSZ_ub_accu_ns_dataframe$north_temp, TSZ_ub_accu_ns_dataframe$south_temp)
+
+t_ub_accu_ns_ttest_results
+```
+
+```{r}
+t_ub_abla_ns_ttest_results <- t.test(TSZ_ub_abla_ns_dataframe$north_temp, TSZ_ub_abla_ns_dataframe$south_temp)
+
+t_ub_abla_ns_ttest_results
+```
+
+N/S tests NOT separated by accu/abla but day/night instead
+
+DB
+
+```{r}
+PSZ_db_ns_dt_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "day", burn_status == "dead burn")
+
+PSZ_db_ns_nt_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "night", burn_status == "dead burn")
+
+TSZ_db_ns_dt_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "day", burn_status == "dead burn")
+
+TSZ_db_ns_nt_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "night", burn_status == "dead burn")
+```
+
+```{r}
+p_db_ns_dt_ttest_results <- t.test(PSZ_db_ns_dt_dataframe$north_temp, PSZ_db_ns_dt_dataframe$south_temp)
+
+p_db_ns_dt_ttest_results
+
+p_db_ns_nt_ttest_results <- t.test(PSZ_db_ns_nt_dataframe$north_temp, PSZ_db_ns_nt_dataframe$south_temp)
+
+p_db_ns_nt_ttest_results
+```
+
+```{r}
+t_db_ns_dt_ttest_results <- t.test(TSZ_db_ns_dt_dataframe$north_temp, TSZ_db_ns_dt_dataframe$south_temp)
+
+t_db_ns_dt_ttest_results
+
+t_db_ns_nt_ttest_results <- t.test(TSZ_db_ns_nt_dataframe$north_temp, TSZ_db_ns_nt_dataframe$south_temp)
+
+t_db_ns_nt_ttest_results
+```
+
+GB
+
+```{r}
+PSZ_gb_ns_dt_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "day", burn_status == "green burn")
+
+PSZ_gb_ns_nt_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "night", burn_status == "green burn")
+
+TSZ_gb_ns_dt_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "day", burn_status == "green burn")
+
+TSZ_gb_ns_nt_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "night", burn_status == "green burn")
+```
+
+```{r}
+p_gb_ns_dt_ttest_results <- t.test(PSZ_gb_ns_dt_dataframe$north_temp, PSZ_gb_ns_dt_dataframe$south_temp)
+
+p_gb_ns_dt_ttest_results
+
+p_gb_ns_nt_ttest_results <- t.test(PSZ_gb_ns_nt_dataframe$north_temp, PSZ_gb_ns_nt_dataframe$south_temp)
+
+p_gb_ns_nt_ttest_results
+```
+
+```{r}
+t_gb_ns_dt_ttest_results <- t.test(TSZ_gb_ns_dt_dataframe$north_temp, TSZ_gb_ns_dt_dataframe$south_temp)
+
+t_gb_ns_dt_ttest_results
+
+t_gb_ns_nt_ttest_results <- t.test(TSZ_gb_ns_nt_dataframe$north_temp, TSZ_gb_ns_nt_dataframe$south_temp)
+
+t_gb_ns_nt_ttest_results
+```
+
+Live
+
+```{r}
+PSZ_ub_ns_dt_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "day", burn_status == "live")
+
+PSZ_ub_ns_nt_dataframe <- full_15min_ns %>%
+  filter(zone == "PSZ", phase == "night", burn_status == "live")
+
+TSZ_ub_ns_dt_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "day", burn_status == "live")
+
+TSZ_ub_ns_nt_dataframe <- full_15min_ns %>%
+  filter(zone == "TSZ", phase == "night", burn_status == "live")
+```
+
+```{r}
+p_ub_ns_dt_ttest_results <- t.test(PSZ_ub_ns_dt_dataframe$north_temp, PSZ_ub_ns_dt_dataframe$south_temp)
+
+p_ub_ns_dt_ttest_results
+
+p_ub_ns_nt_ttest_results <- t.test(PSZ_ub_ns_nt_dataframe$north_temp, PSZ_ub_ns_nt_dataframe$south_temp)
+
+p_ub_ns_nt_ttest_results
+```
+
+```{r}
+t_ub_ns_dt_ttest_results <- t.test(TSZ_ub_ns_dt_dataframe$north_temp, TSZ_ub_ns_dt_dataframe$south_temp)
+
+t_ub_ns_dt_ttest_results
+
+t_ub_ns_nt_ttest_results <- t.test(TSZ_ub_ns_nt_dataframe$north_temp, TSZ_ub_ns_nt_dataframe$south_temp)
+
+t_ub_ns_nt_ttest_results
+```
+
+## GB vs DB vs Live
+
+```{r}
+#dataframes - not separated by north and south, but if I want to do that, I just need to add "aspect" into group_by then make a north and south-specific dataframe to run tests on
+PSZ_gbdbub_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "PSZ") %>%
+  group_by(zone, phase) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp), ub_temp = mean(ub_temp))
+
+TSZ_gbdbub_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "TSZ") %>%
+  group_by(zone, datetime) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp), ub_temp = mean(ub_temp), ub_temp = mean(ub_temp))
+```
+
+```{r}
+#mean stats comparisons for db vs gb 
+PSZ_dbgb_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "PSZ") %>%
+  select(-ub_temp) %>%
+  group_by(zone, phase, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp))
+
+TSZ_dbgb_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "TSZ") %>%
+  select(-ub_temp) %>%
+  group_by(zone, phase, aspect) %>%
+  summarize(gb_temp = mean(gb_temp), db_temp = mean(db_temp))
+```
+
+```{r}
+#mean stats comparisons for db vs ub vs gb -> getting average difference in temp!
+
+PSZ_dbubgb_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "PSZ") %>%
+  group_by(zone) %>%
+  summarize(ub_temp = mean(ub_temp, na.rm = TRUE), 
+           db_temp = mean(db_temp, na.rm = TRUE), 
+           gb_temp = mean(gb_temp,na.rm = TRUE))
+
+TSZ_dbubgb_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "TSZ") %>%
+  drop_na()
+
+#%>%
+#  group_by(zone, phase, aspect) %>%
+ # summarize(ub_temp = mean(ub_temp, na.rm = TRUE), 
+  #          db_temp = mean(db_temp, na.rm = TRUE), 
+   #         gb_temp = mean(gb_temp,na.rm = TRUE))
+```
+
+GB vs DB
+
+```{r}
+p_gb_db_ttest_results <- t.test(PSZ_gbdbub_dataframe$db_temp, PSZ_gbdbub_dataframe$gb_temp)
+
+p_gb_db_ttest_results
+```
+
+```{r}
+t_gb_db_ttest_results <- t.test(TSZ_gbdbub_dataframe$db_temp, TSZ_gbdbub_dataframe$gb_temp)
+
+t_gb_db_ttest_results
+```
+
+DB vs Live
+
+```{r}
+p_db_ub_ttest_results <- t.test(PSZ_gbdbub_dataframe$db_temp, PSZ_gbdbub_dataframe$ub_temp)
+
+p_db_ub_ttest_results
+```
+
+```{r}
+t_db_ub_ttest_results <- t.test(TSZ_gbdbub_dataframe$db_temp, TSZ_gbdbub_dataframe$ub_temp)
+
+t_db_ub_ttest_results
+```
+
+GB vs Live
+
+```{r}
+p_gb_ub_ttest_results <- t.test(PSZ_gbdbub_dataframe$gb_temp, PSZ_gbdbub_dataframe$ub_temp)
+
+p_gb_ub_ttest_results 
+```
+
+```{r}
+t_gb_ub_ttest_results <- t.test(TSZ_gbdbub_dataframe$gb_temp, TSZ_gbdbub_dataframe$ub_temp)
+
+t_gb_ub_ttest_results
+```
+
+Separating by Day and Night for GB vs DB vs UB comparisons
+
+```{r}
+PSZ_dbubgb_dt_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "PSZ", phase == "day")
+
+PSZ_dbubgb_nt_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "PSZ", phase == "night")
+
+TSZ_dbubgb_dt_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "TSZ", phase == "day")
+
+TSZ_dbubgb_nt_dataframe <- full_15min_gbdbub %>%
+  filter(zone == "TSZ", phase == "night")
+```
+
+```{r}
+p_gb_db_ttest_results_dt <- t.test(PSZ_dbubgb_dt_dataframe$db_temp, PSZ_dbubgb_dt_dataframe$gb_temp)
+
+p_gb_db_ttest_results_dt
+
+p_db_ub_ttest_results_dt <- t.test(PSZ_dbubgb_dt_dataframe$db_temp, PSZ_dbubgb_dt_dataframe$ub_temp)
+
+p_db_ub_ttest_results_dt
+
+p_gb_ub_ttest_results_dt <- t.test(PSZ_dbubgb_dt_dataframe$gb_temp, PSZ_dbubgb_dt_dataframe$ub_temp)
+
+p_gb_ub_ttest_results_dt
+```
+
+```{r}
+p_gb_db_ttest_results_nt <- t.test(PSZ_dbubgb_nt_dataframe$db_temp, PSZ_dbubgb_nt_dataframe$gb_temp)
+
+p_gb_db_ttest_results_nt
+
+p_db_ub_ttest_results_nt <- t.test(PSZ_dbubgb_nt_dataframe$db_temp, PSZ_dbubgb_nt_dataframe$ub_temp)
+
+p_db_ub_ttest_results_nt
+
+p_gb_ub_ttest_results_nt <- t.test(PSZ_dbubgb_nt_dataframe$gb_temp, PSZ_dbubgb_nt_dataframe$ub_temp)
+
+p_gb_ub_ttest_results_nt
+```
+
+```{r}
+t_gb_db_ttest_results_dt <- t.test(TSZ_dbubgb_dt_dataframe$db_temp, TSZ_dbubgb_dt_dataframe$gb_temp)
+
+t_gb_db_ttest_results_dt
+
+t_db_ub_ttest_results_dt <- t.test(TSZ_dbubgb_dt_dataframe$db_temp, TSZ_dbubgb_dt_dataframe$ub_temp)
+
+t_db_ub_ttest_results_dt
+
+t_gb_ub_ttest_results_dt <- t.test(TSZ_dbubgb_dt_dataframe$gb_temp, TSZ_dbubgb_dt_dataframe$ub_temp)
+
+t_gb_ub_ttest_results_dt
+```
+
+```{r}
+t_gb_db_ttest_results_nt <- t.test(TSZ_dbubgb_nt_dataframe$db_temp, TSZ_dbubgb_nt_dataframe$gb_temp)
+
+t_gb_db_ttest_results_nt
+
+t_db_ub_ttest_results_nt <- t.test(TSZ_dbubgb_nt_dataframe$db_temp, TSZ_dbubgb_nt_dataframe$ub_temp)
+
+t_db_ub_ttest_results_nt
+
+t_gb_ub_ttest_results_nt <- t.test(TSZ_dbubgb_nt_dataframe$gb_temp, TSZ_dbubgb_nt_dataframe$ub_temp)
+
+t_gb_ub_ttest_results_nt
+```
+
+# Temperature Matrix
+
+## Individual Sensors
+
+### PSZ
+
+North Aspect PSZ - Tree 1
+
+```{r}
+PSZ_ind_sensor_tree1_n <- PSZ_ind_sensor_fullperiod %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 1", aspect == "north") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree1_DB_north = "DB", tree1_GB_north = "GB", tree1_live_north = "live") %>%
+  select(-c(aspect, tree_name))
+  
+PSZ_ind_DB_tree1_n <- PSZ_ind_sensor_tree1_n %>%
+  select(-c(tree1_GB_north, tree1_live_north)) %>%
+  drop_na()
+
+PSZ_ind_GB_tree1_n <- PSZ_ind_sensor_tree1_n %>%
+  select(-c(tree1_DB_north, tree1_live_north)) %>%
+  drop_na()
+
+PSZ_ind_live_tree1_n <- PSZ_ind_sensor_tree1_n %>%
+  select(-c(tree1_DB_north, tree1_GB_north)) %>%
+  drop_na()
+
+PSZ_ind_tree1_n_final <- PSZ_ind_DB_tree1_n %>%
+  inner_join(PSZ_ind_GB_tree1_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(PSZ_ind_live_tree1_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree1_DB_north", "tree1_GB_north", "tree1_live_north"))
+```
+
+South Aspect PSZ
+
+```{r}
+PSZ_ind_sensor_tree1_s <- PSZ_ind_sensor_fullperiod %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 1", aspect == "south") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree1_DB_south = "DB", tree1_GB_south = "GB", tree1_live_south = "live") %>%
+  select(-c(aspect, tree_name))
+  
+PSZ_ind_DB_tree1_s <- PSZ_ind_sensor_tree1_s %>%
+  select(-c(tree1_GB_south, tree1_live_south)) %>%
+  drop_na()
+
+PSZ_ind_GB_tree1_s <- PSZ_ind_sensor_tree1_s %>%
+  select(-c(tree1_DB_south, tree1_live_south)) %>%
+  drop_na()
+
+PSZ_ind_live_tree1_s <- PSZ_ind_sensor_tree1_s %>%
+  select(-c(tree1_DB_south, tree1_GB_south)) %>%
+  drop_na()
+
+PSZ_ind_tree1_s_final <- PSZ_ind_DB_tree1_s %>%
+  inner_join(PSZ_ind_GB_tree1_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(PSZ_ind_live_tree1_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree1_DB_south", "tree1_GB_south", "tree1_live_south"))
+```
+
+```{r}
+#combining north and south
+PSZ_comb_ind_tree1 <- PSZ_ind_tree1_n_final %>%
+  inner_join(PSZ_ind_tree1_s_final, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+North Ind. PSZ - Tree 2
+
+```{r}
+PSZ_ind_sensor_tree2_n <- PSZ_ind_sensor_fullperiod %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 2", aspect == "north") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree2_DB_north = "DB", tree2_GB_north = "GB", tree2_live_north = "live") %>%
+  select(-c(aspect, tree_name))
+  
+PSZ_ind_DB_tree2_n <- PSZ_ind_sensor_tree2_n %>%
+  select(-c(tree2_GB_north, tree2_live_north)) %>%
+  drop_na()
+
+PSZ_ind_GB_tree2_n <- PSZ_ind_sensor_tree2_n %>%
+  select(-c(tree2_DB_north, tree2_live_north)) %>%
+  drop_na()
+
+PSZ_ind_live_tree2_n <- PSZ_ind_sensor_tree2_n %>%
+  select(-c(tree2_DB_north, tree2_GB_north)) %>%
+  drop_na()
+
+PSZ_ind_tree2_n_final <- PSZ_ind_DB_tree2_n %>%
+  inner_join(PSZ_ind_GB_tree2_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(PSZ_ind_live_tree2_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree2_DB_north", "tree2_GB_north", "tree2_live_north"))
+```
+
+```{r}
+#south tree 2 
+PSZ_ind_sensor_tree2_s <- PSZ_ind_sensor_fullperiod %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 2", aspect == "south") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree2_DB_south = "DB", tree2_GB_south = "GB", tree2_live_south = "live") %>%
+  select(-c(aspect, tree_name))
+  
+PSZ_ind_DB_tree2_s <- PSZ_ind_sensor_tree2_s %>%
+  select(-c(tree2_GB_south, tree2_live_south)) %>%
+  drop_na()
+
+PSZ_ind_GB_tree2_s <- PSZ_ind_sensor_tree2_s %>%
+  select(-c(tree2_DB_south, tree2_live_south)) %>%
+  drop_na()
+
+PSZ_ind_live_tree2_s <- PSZ_ind_sensor_tree2_s %>%
+  select(-c(tree2_DB_south, tree2_GB_south)) %>%
+  drop_na()
+
+PSZ_ind_tree2_s_final <- PSZ_ind_DB_tree2_s %>%
+  inner_join(PSZ_ind_GB_tree2_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(PSZ_ind_live_tree2_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree2_DB_south", "tree2_GB_south", "tree2_live_south"))
+```
+
+```{r}
+PSZ_comb_ind_tree2 <- PSZ_ind_tree2_n_final %>%
+  inner_join(PSZ_ind_tree2_s_final, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+```{r}
+#combining tree 1 and tree 2
+PSZ_comb_ind_alltrees <- PSZ_comb_ind_tree1 %>%
+  inner_join(PSZ_comb_ind_tree2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+#### Plotting
+
+```{r}
+mean_avg_diff <- function(x, y) {
+  mean(abs(x - y), na.rm = TRUE)
+}
+
+color_limits_ind <- c(0, 12)
+
+# Select only the temperature-related columns
+temp_varsdiff_1 <- c("tree1_DB_north", "tree1_DB_south", "tree1_GB_north", "tree1_GB_south", "tree1_live_north", "tree1_live_south")
+
+temp_varsdiff_2 <- c("tree2_DB_north", "tree2_DB_south", "tree2_GB_north", "tree2_GB_south", "tree2_live_north", "tree2_live_south")
+
+# Compute pairwise mean absolute differences
+pairwise_diffs_ind <- expand_grid(var1 = temp_varsdiff_1, var2 = temp_varsdiff_2) %>%
+  filter(var1 != var2) %>%  # Remove self-comparisons
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(PSZ_comb_ind_alltrees[[var1]], PSZ_comb_ind_alltrees[[var2]])) %>%
+  ungroup()
+
+# Create a lookup table for renaming
+rename_vars_ind <- c(
+  "tree1_DB_north" = "DB N",
+  "tree1_DB_south" = "DB S",
+  "tree1_GB_north" = "GB N",
+  "tree1_GB_south" = "GB S",
+  "tree1_live_north" = "Live N",
+  "tree1_live_south" = "Live S", 
+  "tree2_DB_north" = "DB N",
+  "tree2_DB_south" = "DB S",
+  "tree2_GB_north" = "GB N",
+  "tree2_GB_south" = "GB S",
+  "tree2_live_north" = "Live N",
+  "tree2_live_south" = "Live S"
+)
+
+# Rename the variables in the dataframe
+pairwise_diffs_ind <- pairwise_diffs_ind %>%
+  mutate(var1 = recode(var1, !!!rename_vars_ind),
+         var2 = recode(var2, !!!rename_vars_ind))
+
+# Visualizing the mean absolute difference as a heatmap with values inside
+PSZ_ind_heatmap <- ggplot(pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = sprintf("%.1f", mean_diff)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
+  theme_minimal() +
+  labs(title = "a) PSZ",
+       x = "Tree 1 Sensors",
+       y = "Tree 2 Sensors",
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), # Remove y-axis ticks
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 10),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 11))
+
+PSZ_ind_heatmap
+```
+
+### TSZ
+
+Tree1
+
+```{r}
+TSZ_ind_sensor_tree1_n <- TSZ_ind_sensor_fullperiod %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 1", aspect == "north") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree1_DB_north = "DB", tree1_GB_north = "GB", tree1_live_north = "live") %>%
+  select(-c(aspect, tree_name))
+  
+TSZ_ind_DB_tree1_n <- TSZ_ind_sensor_tree1_n %>%
+  select(-c(tree1_GB_north, tree1_live_north)) %>%
+  drop_na()
+
+TSZ_ind_GB_tree1_n <- TSZ_ind_sensor_tree1_n %>%
+  select(-c(tree1_DB_north, tree1_live_north)) %>%
+  drop_na()
+
+TSZ_ind_live_tree1_n <- TSZ_ind_sensor_tree1_n %>%
+  select(-c(tree1_DB_north, tree1_GB_north)) %>%
+  drop_na()
+
+TSZ_ind_tree1_n_final <- TSZ_ind_DB_tree1_n %>%
+  inner_join(TSZ_ind_GB_tree1_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(TSZ_ind_live_tree1_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree1_DB_north", "tree1_GB_north", "tree1_live_north"))
+
+```
+
+```{r}
+TSZ_ind_sensor_tree1_s <- TSZ_ind_sensor_fullperiod %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 1", aspect == "south") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree1_DB_south = "DB", tree1_GB_south = "GB", tree1_live_south = "live") %>%
+  select(-c(aspect, tree_name))
+  
+TSZ_ind_DB_tree1_s <- TSZ_ind_sensor_tree1_s %>%
+  select(-c(tree1_GB_south, tree1_live_south)) %>%
+  drop_na()
+
+TSZ_ind_GB_tree1_s <- TSZ_ind_sensor_tree1_s %>%
+  select(-c(tree1_DB_south, tree1_live_south)) %>%
+  drop_na()
+
+TSZ_ind_live_tree1_s <- TSZ_ind_sensor_tree1_s %>%
+  select(-c(tree1_DB_south, tree1_GB_south)) %>%
+  drop_na()
+
+TSZ_ind_tree1_s_final <- TSZ_ind_DB_tree1_s %>%
+  inner_join(TSZ_ind_GB_tree1_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(TSZ_ind_live_tree1_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree1_DB_south", "tree1_GB_south", "tree1_live_south"))
+```
+
+```{r}
+#combining north and south
+TSZ_comb_ind_tree1 <- TSZ_ind_tree1_n_final %>%
+  inner_join(TSZ_ind_tree1_s_final, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+Tree 2
+
+```{r}
+TSZ_ind_sensor_tree2_n <- TSZ_ind_sensor_fullperiod %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 2", aspect == "north") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree2_DB_north = "DB", tree2_GB_north = "GB", tree2_live_north = "live") %>%
+  select(-c(aspect, tree_name))
+  
+TSZ_ind_DB_tree2_n <- TSZ_ind_sensor_tree2_n %>%
+  select(-c(tree2_GB_north, tree2_live_north)) %>%
+  drop_na()
+
+TSZ_ind_GB_tree2_n <- TSZ_ind_sensor_tree2_n %>%
+  select(-c(tree2_DB_north, tree2_live_north)) %>%
+  drop_na()
+
+TSZ_ind_live_tree2_n <- TSZ_ind_sensor_tree2_n %>%
+  select(-c(tree2_DB_north, tree2_GB_north)) %>%
+  drop_na()
+
+TSZ_ind_tree2_n_final <- TSZ_ind_DB_tree2_n %>%
+  inner_join(TSZ_ind_GB_tree2_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(TSZ_ind_live_tree2_n, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree2_DB_north", "tree2_GB_north", "tree2_live_north"))
+```
+
+```{r}
+#south tree 2 
+TSZ_ind_sensor_tree2_s <- TSZ_ind_sensor_fullperiod %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(tree_name == "Tree 2", aspect == "south") %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = temp) %>%
+  rename(tree2_DB_south = "DB", tree2_GB_south = "GB", tree2_live_south = "live") %>%
+  select(-c(aspect, tree_name))
+  
+TSZ_ind_DB_tree2_s <- TSZ_ind_sensor_tree2_s %>%
+  select(-c(tree2_GB_south, tree2_live_south)) %>%
+  drop_na()
+
+TSZ_ind_GB_tree2_s <- TSZ_ind_sensor_tree2_s %>%
+  select(-c(tree2_DB_south, tree2_live_south)) %>%
+  drop_na()
+
+TSZ_ind_live_tree2_s <- TSZ_ind_sensor_tree2_s %>%
+  select(-c(tree2_DB_south, tree2_GB_south)) %>%
+  drop_na()
+
+TSZ_ind_tree2_s_final <- TSZ_ind_DB_tree2_s %>%
+  inner_join(TSZ_ind_GB_tree2_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(TSZ_ind_live_tree2_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  select(c("datetime", "day", "month", "phase", "zone", "snow_phase", "tree2_DB_south", "tree2_GB_south", "tree2_live_south"))
+```
+
+```{r}
+TSZ_comb_ind_tree2 <- TSZ_ind_tree2_n_final %>%
+  inner_join(TSZ_ind_tree2_s_final, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+```{r}
+#combining tree 1 and tree 2
+TSZ_comb_ind_alltrees <- TSZ_comb_ind_tree1 %>%
+  inner_join(TSZ_comb_ind_tree2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+#### Plotting
+
+```{r}
+mean_avg_diff <- function(x, y) {
+  mean(abs(x - y), na.rm = TRUE)
+}
+
+# Select only the temperature-related columns
+TSZ_temp_varsdiff_1 <- c("tree1_DB_north", "tree1_DB_south", "tree1_GB_north", "tree1_GB_south", "tree1_live_north", "tree1_live_south")
+
+TSZ_temp_varsdiff_2 <- c("tree2_DB_north", "tree2_DB_south", "tree2_GB_north", "tree2_GB_south", "tree2_live_north", "tree2_live_south")
+
+# Compute pairwise mean absolute differences
+TSZ_pairwise_diffs_ind <- expand_grid(var1 = TSZ_temp_varsdiff_1, var2 = TSZ_temp_varsdiff_2) %>%
+  filter(var1 != var2) %>%  # Remove self-comparisons
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(TSZ_comb_ind_alltrees[[var1]], TSZ_comb_ind_alltrees[[var2]])) %>%
+  ungroup()
+
+# Create a lookup table for renaming
+rename_vars_ind <- c(
+  "tree1_DB_north" = "DB N",
+  "tree1_DB_south" = "DB S",
+  "tree1_GB_north" = "GB N",
+  "tree1_GB_south" = "GB S",
+  "tree1_live_north" = "Live N",
+  "tree1_live_south" = "Live S", 
+  "tree2_DB_north" = "DB N",
+  "tree2_DB_south" = "DB S",
+  "tree2_GB_north" = "GB N",
+  "tree2_GB_south" = "GB S",
+  "tree2_live_north" = "Live N",
+  "tree2_live_south" = "Live S"
+)
+
+# Rename the variables in the dataframe
+TSZ_pairwise_diffs_ind <- TSZ_pairwise_diffs_ind %>%
+  mutate(var1 = recode(var1, !!!rename_vars_ind),
+         var2 = recode(var2, !!!rename_vars_ind))
+
+# Visualizing the mean absolute difference as a heatmap with values inside
+TSZ_ind_heatmap <- ggplot(TSZ_pairwise_diffs_ind, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = sprintf("%.1f", mean_diff)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
+  theme_minimal() +
+  labs(title = "b) TSZ",
+       x = "Tree 1 Sensors",
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.text.y = element_blank(),  # Remove y-axis text
+        axis.ticks.y = element_blank(),
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 10),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 11))
+
+TSZ_ind_heatmap
+```
+
+```{r}
+library(patchwork)
+
+#USING THIS VERSION OF COMBINED PLOTS
+comb_ind_heatmap <- PSZ_ind_heatmap + TSZ_ind_heatmap +
+  plot_layout(ncol = 2, guides = "collect") &
+  theme(legend.position = "right")
+
+comb_ind_heatmap
+```
+
+```{r}
+#currently saving full timeperiod matrix, if I just want the three-day period, us V2 in thesis_figures file.
+
+#using this!
+ggsave(
+  filename = "comb_ind_heatmap_V4.png",  # File name with extension
+  plot = comb_ind_heatmap,  # The arranged plot object
+  width = 6.5,  # Set width (adjust as needed)
+  height = 4,  # Set height (adjust as needed)
+  dpi = 600  # High resolution for publication-quality output
+)
+```
+
+\
+V2 - full period of observation, not just three-day period
+
+Data Wrangling
+
+```{r}
+PSZ_ind_sensor_fullperiod <- full_pers_aspects %>%
+  filter(datetime < "2024-05-24 00:00:00") %>%
+  mutate(tree_name = case_when(
+    tree_name == "gb_e" ~ "gb_n", TRUE ~ tree_name)) %>%
+  #changing tree names so I can plot line type with onyl 2 IDs
+  mutate(tree_name = case_when(
+      str_detect(tree_name, "_n$") ~ "Tree 1",  
+      str_detect(tree_name, "_s$") ~ "Tree 2",  
+      TRUE ~ tree_name  # Keep original if it doesn’t match
+    ),
+    burn_status = case_when(
+    burn_status == "green burn" ~ "GB", 
+    burn_status == "dead burn" ~ "DB",
+    burn_status == "live" ~ "live",
+    TRUE ~ burn_status))
+
+TSZ_ind_sensor_fullperiod <- full_trans_aspects %>%
+  filter(datetime < "2024-04-26 00:00:00") %>%
+   mutate(tree_name = case_when(
+    tree_name == "ub_e" ~ "ub_n",
+    tree_name == "ub_w" ~ "ub_s", TRUE ~ tree_name)) %>%
+  #changing tree names so I can plot line type with onyl 2 IDs
+  mutate(tree_name = case_when(
+      str_detect(tree_name, "_n$") ~ "Tree 1",  
+      str_detect(tree_name, "_s$") ~ "Tree 2",  
+      TRUE ~ tree_name  # Keep original if it doesn’t match
+    ),
+    burn_status = case_when(
+    burn_status == "green burn" ~ "GB", 
+    burn_status == "dead burn" ~ "DB",
+    burn_status == "live" ~ "live",
+    TRUE ~ burn_status))
+```
+
+\
+\*\* switched out three_day dataframe in above code for full period. If I want to go back to three-day analysis, switch back!\
+\
+Column Visualization of MAD
+
+```{r}
+PSZ_ind_wide <- PSZ_threeday_accu_comp %>%
+  pivot_wider(names_from = c(burn_status, tree_name), 
+              values_from = temp, 
+              names_sep = "_") %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk, sensor_label))
+
+PSZ_db1 <- PSZ_ind_wide %>%
+  select(-c(DB_Tree2, GB_Tree1, GB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+PSZ_db2 <- PSZ_ind_wide %>%
+  select(-c(DB_Tree1, GB_Tree1, GB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+PSZ_gb1 <- PSZ_ind_wide %>%
+  select(-c(GB_Tree2, DB_Tree1, DB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+PSZ_gb2 <- PSZ_ind_wide %>%
+  select(-c(GB_Tree1, DB_Tree1, DB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+PSZ_live1 <- PSZ_ind_wide %>%
+  select(-c(live_Tree2, DB_Tree1, DB_Tree2, GB_Tree1, GB_Tree2)) %>%
+  drop_na()
+
+PSZ_live2 <- PSZ_ind_wide %>%
+  select(-c(live_Tree1, DB_Tree1, DB_Tree2, GB_Tree1, GB_Tree2)) %>%
+  drop_na()
+
+PSZ_ind_comb <- PSZ_db1 %>%
+  inner_join(PSZ_db2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(PSZ_gb1, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(PSZ_gb2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(PSZ_live1, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(PSZ_live2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  select(c(datetime, day, month, phase, zone, snow_phase, aspect, DB_Tree1, DB_Tree2, GB_Tree1, GB_Tree2, live_Tree1, live_Tree2))
+
+PSZ_ind_MAD <- PSZ_ind_comb %>%
+  group_by(zone, aspect) %>%
+  summarize(
+    DB_MAD = mean(abs(DB_Tree1 - DB_Tree2)),
+    GB_MAD = mean(abs(GB_Tree1 - GB_Tree2)),
+    live_MAD = mean(abs(live_Tree1 - live_Tree2)))
+```
+
+TSZ
+
+```{r}
+TSZ_ind_wide <- TSZ_threeday_accu_comp %>%
+  mutate(
+    tree_name = str_replace(tree_name, "Tree 1", "Tree1"),
+    tree_name = str_replace(tree_name, "Tree 2", "Tree2")
+  ) %>%
+  pivot_wider(names_from = c(burn_status, tree_name), 
+              values_from = temp, 
+              names_sep = "_") %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk))
+
+TSZ_db1 <- TSZ_ind_wide %>%
+  select(-c(DB_Tree2, GB_Tree1, GB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+TSZ_db2 <- TSZ_ind_wide %>%
+  select(-c(DB_Tree1, GB_Tree1, GB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+TSZ_gb1 <- TSZ_ind_wide %>%
+  select(-c(GB_Tree2, DB_Tree1, DB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+TSZ_gb2 <- TSZ_ind_wide %>%
+  select(-c(GB_Tree1, DB_Tree1, DB_Tree2, live_Tree1, live_Tree2)) %>%
+  drop_na()
+
+TSZ_live1 <- TSZ_ind_wide %>%
+  select(-c(live_Tree2, DB_Tree1, DB_Tree2, GB_Tree1, GB_Tree2)) %>%
+  drop_na()
+
+TSZ_live2 <- TSZ_ind_wide %>%
+  select(-c(live_Tree1, DB_Tree1, DB_Tree2, GB_Tree1, GB_Tree2)) %>%
+  drop_na()
+
+TSZ_ind_comb <- TSZ_db1 %>%
+  inner_join(TSZ_db2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(TSZ_gb1, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(TSZ_gb2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(TSZ_live1, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  inner_join(TSZ_live2, by = c("datetime", "day", "month", "phase", "zone", "snow_phase", "aspect")) %>%
+  select(c(datetime, day, month, phase, zone, snow_phase, aspect, DB_Tree1, DB_Tree2, GB_Tree1, GB_Tree2, live_Tree1, live_Tree2))
+
+TSZ_ind_MAD <- TSZ_ind_comb %>%
+  group_by(zone, aspect) %>%
+  summarize(
+    DB_MAD = mean(abs(DB_Tree1 - DB_Tree2)),
+    GB_MAD = mean(abs(GB_Tree1 - GB_Tree2)),
+    live_MAD = mean(abs(live_Tree1 - live_Tree2)))
+```
+
+Plotting
+
+```{r}
+# Reshape the data to long format
+# Reshape the data to long format
+PSZ_ind_MAD_long <- PSZ_ind_MAD %>%
+  pivot_longer(cols = c(DB_MAD, GB_MAD, live_MAD), 
+               names_to = "MAD_type", 
+               values_to = "MAD_value")
+
+# Plot the data
+PSZ_ind_MAD_barplot <- ggplot(PSZ_ind_MAD_long, aes(x = MAD_type, y = MAD_value, fill = aspect)) +
+  geom_col(position = "dodge") +  # Use dodge position to separate bars
+  labs(x = "MAD Type", y = "Mean Average Difference (°C)", fill = "Aspect") +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(limits = c(0, 8))  # Set y-axis limits from 0 to 8
+
+PSZ_ind_MAD_barplot
+```
+
+## Mean Temp Matrix
+
+\*\* by burn status and aspect
+
+```{r}
+#north temp only dataframes
+full_15min_n_wide <- full_15min_ns %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = north_temp) %>%
+  rename(DB_north = "dead burn", GB_north = "green burn", live_north = "live") %>%
+  select(-south_temp)
+
+DB_n_wide <- full_15min_n_wide %>%
+  select(-c(GB_north, live_north)) %>%
+  drop_na()
+
+GB_n_wide <- full_15min_n_wide %>%
+  select(-c(DB_north, live_north)) %>%
+  drop_na()
+
+live_n_wide <- full_15min_n_wide %>%
+  select(-c(DB_north, GB_north)) %>%
+  drop_na()
+
+full_15min_n <- DB_n_wide %>%
+  inner_join(GB_n_wide, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(live_n_wide, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+```{r}
+#south temp only dataframes
+full_15min_s_wide <- full_15min_ns %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  pivot_wider(names_from = burn_status, 
+              values_from = south_temp) %>%
+  rename(DB_south = "dead burn", GB_south = "green burn", live_south = "live") %>%
+  select(-north_temp)
+
+DB_s_wide <- full_15min_s_wide %>%
+  select(-c(GB_south, live_south)) %>%
+  drop_na()
+
+GB_s_wide <- full_15min_s_wide %>%
+  select(-c(DB_south, live_south)) %>%
+  drop_na()
+
+live_s_wide <- full_15min_s_wide %>%
+  select(-c(DB_south, GB_south)) %>%
+  drop_na()
+
+full_15min_s <- DB_s_wide %>%
+  inner_join(GB_s_wide, by = c("datetime", "day", "month", "phase", "zone", "snow_phase")) %>%
+  inner_join(live_s_wide, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+```{r}
+#creating full north and south wide dataframe with temps by burn status and aspect
+
+comb_full_ns_data <- full_15min_n %>%
+  inner_join(full_15min_s, by = c("datetime", "day", "month", "phase", "zone", "snow_phase"))
+```
+
+Making Function & Plotting
+
+```{r}
+PSZ_ns_day <- comb_full_ns_data %>%
+  filter(phase == "day", zone == "PSZ")
+
+PSZ_ns_night <- comb_full_ns_data %>%
+  filter(phase == "night", zone == "PSZ")
+
+TSZ_ns_day <- comb_full_ns_data %>%
+  filter(phase == "day", zone == "TSZ")
+
+TSZ_ns_night <- comb_full_ns_data %>%
+  filter(phase == "night", zone == "TSZ")
+```
+
+#### Plotting
+
+```{r}
+# Define function for mean absolute difference
+# Define function for mean absolute difference
+mean_avg_diff <- function(x, y) {
+  mean(abs(x - y), na.rm = TRUE)
+}
+
+# Select only the temperature-related columns
+temp_vars <- c("DB_north", "DB_south", "GB_north", "GB_south", "live_north", "live_south")
+
+pairwise_diffs_PSZ_day <- expand_grid(var1 = temp_vars, var2 = temp_vars) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(PSZ_ns_day[[var1]], PSZ_ns_day[[var2]])) %>%
+  ungroup()
+
+# Step 2: Create a lookup table for renaming
+rename_vars <- c(
+  "DB_north" = "DB N",
+  "DB_south" = "DB S",
+  "GB_north" = "GB N",
+  "GB_south" = "GB S",
+  "live_north" = "Live N",
+  "live_south" = "Live S"
+)
+
+# Step 3: Rename the variables in the dataframe
+pairwise_diffs_PSZ_day <- pairwise_diffs_PSZ_day %>%
+  mutate(var1 = recode(var1, !!!rename_vars),
+         var2 = recode(var2, !!!rename_vars))
+
+
+diffs_PSZ_day_heatmap <- ggplot(pairwise_diffs_PSZ_day, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
+  theme_minimal() +
+  labs(title = "a) PSZ Day",
+       x = NULL,
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        strip.text = element_text(size = 11),  # Facet title size
+        axis.title = element_text(size = 11),  # Axis title size
+        axis.text = element_text(size = 10),  # Axis tick labels
+        legend.title = element_text(size = 11),  # Legend title size
+        legend.text = element_text(size = 11))
+
+# Print the plot
+diffs_PSZ_day_heatmap
+```
+
+```{r}
+# Select only the temperature-related columns
+temp_vars_PSZn <- c("DB_north", "DB_south", "GB_north", "GB_south", "live_north", "live_south")
+
+pairwise_diffs_PSZ_night <- expand_grid(var1 = temp_vars_PSZn, var2 = temp_vars_PSZn) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(PSZ_ns_night[[var1]], PSZ_ns_night[[var2]])) %>%
+  ungroup()
+
+# Step 2: Create a lookup table for renaming
+rename_vars <- c(
+  "DB_north" = "DB N",
+  "DB_south" = "DB S",
+  "GB_north" = "GB N",
+  "GB_south" = "GB S",
+  "live_north" = "Live N",
+  "live_south" = "Live S"
+)
+
+# Step 3: Rename the variables in the dataframe
+pairwise_diffs_PSZ_night <- pairwise_diffs_PSZ_night %>%
+  mutate(var1 = recode(var1, !!!rename_vars),
+         var2 = recode(var2, !!!rename_vars))
+
+# Visualizing the mean absolute difference as a heatmap with values inside
+diffs_PSZ_night_heatmap <- ggplot(pairwise_diffs_PSZ_night, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
+  theme_minimal() +
+  labs(title = "b) PSZ Night",
+       x = NULL,
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.text.y = element_blank(),  # Remove y-axis text
+        axis.ticks.y = element_blank(),  # Remove y-axis ticks
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10))
+
+diffs_PSZ_night_heatmap
+```
+
+```{r}
+temp_vars_TSZd <- c("DB_north", "DB_south", "GB_north", "GB_south", "live_north", "live_south")
+
+pairwise_diffs_TSZ_day <- expand_grid(var1 = temp_vars_TSZd, var2 = temp_vars_TSZd) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(TSZ_ns_day[[var1]], TSZ_ns_day[[var2]])) %>%
+  ungroup()
+
+# Step 2: Create a lookup table for renaming
+rename_vars <- c(
+  "DB_north" = "DB N",
+  "DB_south" = "DB S",
+  "GB_north" = "GB N",
+  "GB_south" = "GB S",
+  "live_north" = "Live N",
+  "live_south" = "Live S"
+)
+
+# Step 3: Rename the variables in the dataframe
+pairwise_diffs_TSZ_day <- pairwise_diffs_TSZ_day %>%
+  mutate(var1 = recode(var1, !!!rename_vars),
+         var2 = recode(var2, !!!rename_vars))
+
+# Visualizing the mean absolute difference as a heatmap with values inside
+diffs_TSZ_day_heatmap <- ggplot(pairwise_diffs_TSZ_day, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
+  theme_minimal() +
+  labs(title = "c) TSZ Day",
+       x = NULL,
+       y = NULL,
+       fill = "MAD (°C)") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10))
+
+diffs_TSZ_day_heatmap
+```
+
+```{r}
+temp_vars_TSZn <- c("DB_north", "DB_south", "GB_north", "GB_south", "live_north", "live_south")
+
+pairwise_diffs_TSZ_night <- expand_grid(var1 = temp_vars_TSZn, var2 = temp_vars_TSZn) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(TSZ_ns_night[[var1]], TSZ_ns_night[[var2]])) %>%
+  ungroup()
+
+# Step 2: Create a lookup table for renaming
+rename_vars <- c(
+  "DB_north" = "DB N",
+  "DB_south" = "DB S",
+  "GB_north" = "GB N",
+  "GB_south" = "GB S",
+  "live_north" = "Live N",
+  "live_south" = "Live S"
+)
+
+# Step 3: Rename the variables in the dataframe
+pairwise_diffs_TSZ_night <- pairwise_diffs_TSZ_night %>%
+  mutate(var1 = recode(var1, !!!rename_vars),
+         var2 = recode(var2, !!!rename_vars))
+
+# Visualizing the mean absolute difference as a heatmap with values inside
+diffs_TSZ_night_heatmap <- ggplot(pairwise_diffs_TSZ_night, aes(x = var1, y = var2, fill = mean_diff)) +
+  geom_tile() +  # Create heatmap tiles
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  # Add values in squares
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) + 
+  theme_minimal() +
+  labs(title = "d) TSZ Night",
+       x = NULL,
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        axis.text.y = element_blank(),  # Remove y-axis text
+        axis.ticks.y = element_blank(),  # Remove y-axis ticks
+    strip.text = element_text(size = 11),  # Facet title size
+    axis.title = element_text(size = 11),  # Axis title size
+    axis.text = element_text(size = 11),  # Axis tick labels
+    legend.title = element_text(size = 11),  # Legend title size
+    legend.text = element_text(size = 10))
+
+diffs_TSZ_night_heatmap
+```
+
+```{r}
+PSZ_comb_heatmap <- ggarrange(diffs_PSZ_day_heatmap, diffs_PSZ_night_heatmap, nrow =1, ncol = 2, common.legend = TRUE, legend = "right", 
+  align = "v",         # Align vertically
+  heights = c(2, 2.5))
+
+PSZ_comb_heatmap 
+```
+
+```{r}
+TSZ_comb_heatmap <- ggarrange(diffs_TSZ_day_heatmap, diffs_TSZ_night_heatmap, nrow =1, ncol = 2, common.legend = TRUE, legend = "right", 
+                              align = "v",         # Align vertically
+  heights = c(2, 2.5))
+
+TSZ_comb_heatmap
+```
+
+```{r}
+full_comb_heatmap <- ggarrange(PSZ_comb_heatmap, TSZ_comb_heatmap, nrow =2, ncol = 1, common.legend = FALSE, legend = "right")
+
+full_comb_heatmap
+```
+
+```{r}
+#using this!
+
+ggsave(
+  filename = "full_comb_heatmap_V2.png",  # File name with extension
+  plot = full_comb_heatmap,  # The arranged plot object
+  width = 6.5,  # Set width (adjust as needed)
+  height = 6.5,  # Set height (adjust as needed)
+  dpi = 600)
+```
+
+## Day vs Night Matrix
+
+Data Wrangling
+
+```{r}
+#Day dataframe
+full_day <- full_15min_gbdbub %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(phase == "day") %>%
+  rename(`DB day` = db_temp, `GB day` = gb_temp, `live day` = ub_temp) %>%
+  group_by(day, zone, aspect, snow_phase) %>%
+  summarize(`DB day` = mean(`DB day`, na.rm = TRUE), 
+            `GB day` = mean(`GB day`, na.rm = TRUE), 
+            `live day` = mean(`live day`, na.rm = TRUE), 
+            .groups = "drop")
+  
+
+full_night <- full_15min_gbdbub %>%
+  select(-c(solarNoon, sunrise, sunset, dawn, dusk)) %>%
+  filter(phase == "night") %>%
+  rename(`DB night` = db_temp, `GB night` = gb_temp, `live night` = ub_temp) %>%
+  group_by(day, zone, aspect, snow_phase) %>%
+  summarize(`DB night` = mean(`DB night`, na.rm = TRUE), 
+            `GB night` = mean(`GB night`, na.rm = TRUE), 
+            `live night` = mean(`live night`, na.rm = TRUE), 
+            .groups = "drop")
+
+final_daynight_comb <- full_day %>%
+  inner_join(full_night, by = c("day", "zone", "aspect", "snow_phase"))
+```
+
+```{r}
+PSZ_daynight_n <- final_daynight_comb %>%
+  filter(zone == "PSZ", aspect == "north")
+
+TSZ_daynight_n <- final_daynight_comb %>%
+  filter(zone == "TSZ", aspect == "north")
+
+PSZ_daynight_s <- final_daynight_comb %>%
+  filter(zone == "PSZ", aspect == "south")
+
+TSZ_daynight_s <- final_daynight_comb %>%
+  filter(zone == "TSZ", aspect == "south")
+```
+
+### Plotting
+
+Split differently so that Day temps are on one axis and night temps are on the other
+
+PSZ
+
+```{r}
+# Separate day and night variables
+day_vars <- c("DB day", "GB day", "live day")
+night_vars <- c("DB night", "GB night", "live night")
+
+#PSZ North
+
+# Only compare day (y-axis) vs. night (x-axis)
+pairwise_diffs_PSZ_dtnt_n_V2 <- expand_grid(var_day = day_vars, var_night = night_vars) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(PSZ_daynight_n[[var_day]], PSZ_daynight_n[[var_night]])) %>%
+  ungroup()
+
+# Plot: x = night temps, y = day temps
+diffs_PSZ_dtnt_n_heatmap_V2 <- ggplot(pairwise_diffs_PSZ_dtnt_n_V2, aes(x = var_night, y = var_day, fill = mean_diff)) +
+  geom_tile() +  
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) +
+  theme_minimal() +
+  labs(title = "a) PSZ North",
+       x = NULL,
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        strip.text = element_text(size = 11),
+        axis.title = element_text(size = 11),
+        axis.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        legend.text = element_text(size = 11))
+
+# Print the plot
+diffs_PSZ_dtnt_n_heatmap_V2
+```
+
+```{r}
+# Separate day and night variables
+day_vars <- c("DB day", "GB day", "live day")
+night_vars <- c("DB night", "GB night", "live night")
+
+#PSZ South
+
+# Only compare day (y-axis) vs. night (x-axis)
+pairwise_diffs_PSZ_dtnt_s_V2 <- expand_grid(var_day = day_vars, var_night = night_vars) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(PSZ_daynight_s[[var_day]], PSZ_daynight_s[[var_night]])) %>%
+  ungroup()
+
+# Plot: x = night temps, y = day temps
+diffs_PSZ_dtnt_s_heatmap_V2 <- ggplot(pairwise_diffs_PSZ_dtnt_s_V2, aes(x = var_night, y = var_day, fill = mean_diff)) +
+  geom_tile() +  
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +
+    scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) +
+  theme_minimal() +
+  labs(title = "b) PSZ South",
+       x = NULL,
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        axis.text.y = element_blank(),  # Remove y-axis text
+        axis.ticks.y = element_blank(),
+        strip.text = element_text(size = 11),
+        axis.title = element_text(size = 11),
+        axis.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        legend.text = element_text(size = 11))
+
+# Print the plot
+diffs_PSZ_dtnt_s_heatmap_V2
+```
+
+TSZ
+
+```{r}
+# Separate day and night variables
+day_vars <- c("DB day", "GB day", "live day")
+night_vars <- c("DB night", "GB night", "live night")
+
+#TSZ North
+
+# Only compare day (y-axis) vs. night (x-axis)
+pairwise_diffs_TSZ_dtnt_n_V2 <- expand_grid(var_day = day_vars, var_night = night_vars) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(TSZ_daynight_n[[var_day]], TSZ_daynight_n[[var_night]])) %>%
+  ungroup()
+
+# Plot: x = night temps, y = day temps
+diffs_TSZ_dtnt_n_heatmap_V2 <- ggplot(pairwise_diffs_TSZ_dtnt_n_V2, aes(x = var_night, y = var_day, fill = mean_diff)) +
+  geom_tile() +  
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) +  
+  theme_minimal() +
+  labs(title = "c) TSZ North",
+       x = NULL,
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        strip.text = element_text(size = 11),
+        axis.title = element_text(size = 11),
+        axis.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        legend.text = element_text(size = 11))
+
+# Print the plot
+diffs_TSZ_dtnt_n_heatmap_V2
+```
+
+```{r}
+# Separate day and night variables
+day_vars <- c("DB day", "GB day", "live day")
+night_vars <- c("DB night", "GB night", "live night")
+
+#TSZ North
+
+# Only compare day (y-axis) vs. night (x-axis)
+pairwise_diffs_TSZ_dtnt_s_V2 <- expand_grid(var_day = day_vars, var_night = night_vars) %>%
+  rowwise() %>%
+  mutate(mean_diff = mean_avg_diff(TSZ_daynight_s[[var_day]], TSZ_daynight_s[[var_night]])) %>%
+  ungroup()
+
+# Plot: x = night temps, y = day temps
+diffs_TSZ_dtnt_s_heatmap_V2 <- ggplot(pairwise_diffs_TSZ_dtnt_s_V2, aes(x = var_night, y = var_day, fill = mean_diff)) +
+  geom_tile() +  
+  geom_text(aes(label = round(mean_diff, 1)), color = "black", size = 4) +  
+  scale_fill_gradient2(low = "white", mid = "orangered3", high = "red4", 
+                       midpoint = 6,
+                       limits = c(0, 12)) +
+  theme_minimal() +
+  labs(title = "d) TSZ South",
+       x = NULL,
+       y = NULL,
+       fill = "MAD (°C)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        axis.text.y = element_blank(),  # Remove y-axis text
+        axis.ticks.y = element_blank(),
+        strip.text = element_text(size = 11),
+        axis.title = element_text(size = 11),
+        axis.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        legend.text = element_text(size = 11))
+
+# Print the plot
+diffs_TSZ_dtnt_s_heatmap_V2
+```
+
+```{r}
+PSZ_comb_dtnt_heatmap_V2 <- diffs_PSZ_dtnt_n_heatmap_V2 + diffs_PSZ_dtnt_s_heatmap_V2 +
+  plot_layout(ncol = 2, guides = "collect") &
+  theme(legend.position = "right")
+
+PSZ_comb_dtnt_heatmap_V2
+```
+
+```{r}
+TSZ_comb_dtnt_heatmap_V2 <- diffs_TSZ_dtnt_n_heatmap_V2 + diffs_TSZ_dtnt_s_heatmap_V2 +
+  plot_layout(ncol = 2, guides = "collect") &
+  theme(legend.position = "right")
+
+TSZ_comb_dtnt_heatmap_V2
+```
+
+```{r}
+comb_dtnt_heatmap_V2 <- ggarrange(PSZ_comb_dtnt_heatmap_V2, TSZ_comb_dtnt_heatmap_V2, 
+                                  nrow = 2, ncol = 1, common.legend = FALSE, legend = "right")
+
+comb_dtnt_heatmap_V2
+```
+
+```{r}
+ggsave(
+  filename = "comb_dtnt_heatmap_V2.png",  # File name with extension
+  plot = comb_dtnt_heatmap_V2,  # The arranged plot object
+  width = 6.5,  # Set width (adjust as needed)
+  height = 6.5,  # Set height (adjust as needed)
+  dpi = 600  # High resolution for publication-quality output
+)
+```
+
+Stephanie's ideas for visualization:
+
+```{r}
+data=read_csv('temps.csv')
+
+replicate=filter(data,compare=='replicate')
+
+ggplot()+geom_boxplot(data=replicate,aes(x=label,y=diff))
+
+ns=filter(data,compare=='NS')
+
+ggplot()+geom_col(data=ns,aes(x=label,y=diff))
+
+burn=filter(data,compare=='burn')
+
+ggplot()+geom_col(data=burn,aes(x=label,y=diff,fill=aspect),position='dodge')
+```
+
+# Ablation Season SWE Calculations
+
+Pers B
+
+```{r}
+#cleaning up snowcamera snow depth data to match SWE data 
+persb_snowcam_SWE_data <- persb_snowcamera_data_V2 %>%
+  select(day, max_snowdepth_m) %>%
+  rename(Date = day, cam_snowdepth_m = max_snowdepth_m)
+```
+
+```{r}
+#loading in Snow density data
+persb_SWE <- read_csv("nsf/snow_density/persb_SWE.csv") %>%
+  mutate(Date = as.Date(Date, format = "%m/%d/%y"),
+         Predicted_Snow_Density = as.numeric (Predicted_Snow_Density), 
+         SWE_m = as.numeric(SWE_m),
+         SWE_cm = as.numeric(SWE_cm),
+         SWE_m_adjusted = as.numeric(SWE_m_adjusted))
+
+persb_mean_SWE <- persb_SWE %>%
+  filter(Water_Year == "2024") %>%
+  filter(Date >= as.Date("2024-02-02") & Date <= as.Date("2024-07-01")) %>%
+  left_join(persb_snowcam_SWE_data, by = "Date") %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (Predicted_Snow_Density * cam_snowdepth_m)/1000, 
+         snowcam_SWE_cm = snowcam_SWE_m*100) %>%
+  filter(!Date %in% as.Date(c("2024-03-14", "2024-03-15", "2024-04-16", "2024-04-17"))) %>%
+  group_by(Date) %>%
+  summarize(SWE_m = mean(SWE_m, na.rm = TRUE),
+            SWE_cm = mean(SWE_cm, na.rm = TRUE), 
+            SWE_m_adjusted = mean(SWE_m_adjusted, na.rm = TRUE), 
+            SWE_cm_adjusted = SWE_m_adjusted * 100, 
+            snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE))
+
+#getting the date that the SWE hits maximum
+max_persb_wxSWEdate <- persb_mean_SWE %>%
+  filter(!is.na(SWE_cm)) %>%
+  slice_max(order_by = SWE_cm, n = 1) %>%
+  pull(Date)
+
+max_persb_snowcamSWEdate <- persb_mean_SWE %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+Pers UB
+
+```{r}
+#loading in Snow density data
+persub_SWE <- read_csv("nsf/snow_density/persub_SWE.csv") %>%
+  mutate(Date = as.Date(datetime, format = "%m/%d/%y"),
+         SWE_m = as.numeric(SWE_m),
+         SWE_cm = as.numeric(SWE_cm),
+         SWE_m_adjusted = as.numeric(SWE_m_adjusted)) %>%
+  select(Date, everything())
+
+persub_mean_SWE <- persub_SWE %>%
+  filter(Water_Year == "2024") %>%
+  filter(Date >= as.Date("2024-02-02") & Date <= as.Date("2024-07-01")) %>%
+  group_by(Date) %>%
+  summarize(SWE_m = mean(SWE_m, na.rm = TRUE),
+            SWE_cm = mean(SWE_cm, na.rm = TRUE), 
+            SWE_m_adjusted = mean(SWE_m_adjusted, na.rm = TRUE), 
+            SWE_cm_adjusted = SWE_m_adjusted * 100)
+
+#getting the date that the SWE hits maximum
+max_persub_SWEdate <- persub_mean_SWE %>%
+  filter(!is.na(SWE_cm)) %>%
+  slice_max(order_by = SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+#plotting to explore SWE dates
+pers_SWE_plot <- ggplot() +
+  geom_line(data = persb_mean_SWE, aes(x = Date, y = snowcam_SWE_cm, color = "burned site")) +
+  geom_line(data = persub_mean_SWE, aes(x = Date, y = SWE_cm, color = "unburned site")) +
+  scale_color_manual(name = NULL,
+                     values = c("burned site" = "black", "unburned site" = "blue")) +
+  theme_bw()
+
+pers_SWE_plot
+```
+
+Trans B
+
+```{r}
+#wrangling snow camera data to match SWE data
+transb_snowcam_SWE_data <- transb_snowcamera_data %>%
+  select(date, snowcam_max_depth_m) %>%
+  rename(Date = date, cam_snowdepth_m = snowcam_max_depth_m)
+```
+
+```{r}
+#loading in Snow density data
+transb_SWE <- read_csv("nsf/snow_density/transb_SWE.csv") %>%
+  mutate(Date = as.Date(Date, format = "%m/%d/%y"),
+         SWE_m = as.numeric(SWE_m),
+         SWE_cm = as.numeric(SWE_cm)) %>%
+  select(-TIMESTAMP)
+
+transb_mean_SWE <- transb_SWE %>%
+  filter(Date >= as.Date("2024-02-02") & Date <= as.Date("2024-07-01")) %>%
+  left_join(transb_snowcam_SWE_data, by = "Date") %>%
+  filter(!Date %in% as.Date(c("2024-03-12", "2024-03-13", "2024-03-14", "2024-03-15", "2024-03-16", "2024-03-17", "2024-03-18", "2024-03-19", "2024-03-20"))) %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (Predicted_Snow_Density * cam_snowdepth_m)/1000, 
+         snowcam_SWE_cm = snowcam_SWE_m*100) %>%
+  group_by(Date) %>%
+  summarize(SWE_m = mean(SWE_m, na.rm = TRUE),
+            SWE_cm = mean(SWE_cm, na.rm = TRUE),
+            snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE))
+
+#getting the date that the SWE hits maximum
+max_transb_wxSWEdate <- transb_mean_SWE %>%
+  filter(!is.na(SWE_cm)) %>%
+  slice_max(order_by = SWE_cm, n = 1) %>%
+  pull(Date)
+
+max_transb_snowcamSWEdate <- transb_mean_SWE %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+#wrangling snow camera data to match SWE data
+transub_snowcam_SWE_data <- AG_transub_snowcamera_data_V2 %>%
+  select(date, max_snowdepth_m) %>%
+  rename(Date = date, cam_snowdepth_m = max_snowdepth_m)
+
+#version using mountain campus snowcamera data
+transub_snowcam_SWE_data_V2 <- transub_snowcamera_data_V2 %>%
+  select(date, max_snowdepth_m,) %>%
+  rename(Date = date, cam_snowdepth_m = max_snowdepth_m)
+```
+
+```{r}
+#loading in Snow density data
+transub_SWE <- read_csv("nsf/snow_density/transub_SWE.csv") %>%
+  mutate(Date = as.Date(Date, format = "%m/%d/%y"),
+         SWE_m = as.numeric(SWE_m),
+         SWE_cm = as.numeric(SWE_cm)) %>%
+  select(-datetime)
+
+transub_mean_SWE <- transub_SWE %>%
+  filter(Date >= as.Date("2024-02-02") & Date <= as.Date("2024-07-01")) %>%
+  left_join(transub_snowcam_SWE_data, by = "Date") %>%
+  filter(!Date %in% as.Date(c("2024-03-12", "2024-03-13", "2024-03-14", "2024-03-15", "2024-03-16", "2024-03-17", "2024-03-18", "2024-03-19", "2024-03-20"))) %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (Predicted_Snow_Density * cam_snowdepth_m)/1000, 
+         snowcam_SWE_cm = snowcam_SWE_m*100) %>%
+  group_by(Date) %>%
+  summarize(SWE_m = mean(SWE_m, na.rm = TRUE),
+            SWE_cm = mean(SWE_cm, na.rm = TRUE),
+            snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE), 
+            cam_snowdepth_m = mean(cam_snowdepth_m, na.rm = TRUE))
+
+
+#getting the date that the SWE hits maximum
+max_transub_wxSWEdate <- transub_mean_SWE %>%
+  filter(!is.na(SWE_cm)) %>%
+  slice_max(order_by = SWE_cm, n = 1) %>%
+  pull(Date) 
+
+max_transub_snowcamSWEdate <- transub_mean_SWE %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+#plotting to explore SWE dates
+trans_SWE_plot <- ggplot() +
+  geom_line(data = transb_mean_SWE, aes(x = Date, y = snowcam_SWE_cm, color = "burned site")) +
+  geom_line(data = transub_mean_SWE, aes(x = Date, y = SWE_cm, color = "unburned site")) +
+  scale_color_manual(name = NULL,
+                     values = c("burned site" = "black", "unburned site" = "blue")) +
+  theme_bw()
+
+trans_SWE_plot
+```
+
+V2 - using only Joe Wright and Hourglass Lake SNOTEL sites to get predicted snow density, then applying to our snow depth data
+
+```{r}
+snotel_density_data <- read_csv("nsf/snow_density/snotel_SWE_data.csv") %>%
+  mutate(Date = as.Date(Date, format = "%y-%m-%d"), 
+         TSZ_SWE_in = as.numeric(TSZ_SWE_in),
+         TSZ_snowdepth_in = as.numeric(TSZ_snowdepth_in), 
+         TSZ_predicted_snowdensity_kg_m3 = as.numeric(TSZ_predicted_snowdensity_kg_m3),
+         PSZ_SWE_in = as.numeric(PSZ_SWE_in),
+         PSZ_snowdepth_in = as.numeric(PSZ_snowdepth_in), 
+         PSZ_predicted_snowdensity_kg_m3 = as.numeric(PSZ_predicted_snowdensity_kg_m3)) %>%
+  filter(Date >= as.Date("2024-02-02") & Date <= as.Date("2024-07-01"))
+```
+
+```{r}
+PSZ_snotel_swe <- snotel_density_data %>%
+  select(Date, PSZ_SWE_in, PSZ_snowdepth_in, PSZ_predicted_snowdensity_kg_m3)
+```
+
+```{r}
+TSZ_snotel_swe <- snotel_density_data %>%
+  select(Date, TSZ_SWE_in, PSZ_snowdepth_in, TSZ_predicted_snowdensity_kg_m3)
+```
+
+```{r}
+
+persb_mean_SWE_V2 <- PSZ_snotel_swe %>%
+  left_join(persb_snowcam_SWE_data, by = "Date") %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (PSZ_predicted_snowdensity_kg_m3/1000) * cam_snowdepth_m, 
+         snowcam_SWE_cm = snowcam_SWE_m*100) %>%
+  group_by(Date) %>%
+  summarize(predicted_snowdensity_kg_m3 = mean(PSZ_predicted_snowdensity_kg_m3),
+    snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE)) %>%
+   # Apply the moving average but exclude data below the drop threshold
+  mutate(snowcam_SWE_cm_smooth = ifelse(snowcam_SWE_cm > drop_threshold, 
+                                        zoo::rollmean(snowcam_SWE_cm, k = 5, fill = NA, align = "center"), 
+                                        snowcam_SWE_cm))
+
+max_persb_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+write.csv(persb_mean_SWE_V2, "nsf/snow_density/persb_mean_daily_SWE_V2.csv", row.names = FALSE)
+```
+
+```{r}
+persub_snowcam_SWE_data <- pers_ub_daily_snowdepth_data_V2 %>%
+  select(day, max_snowdepth_m) %>%
+  rename(Date = day, cam_snowdepth_m = max_snowdepth_m)
+```
+
+```{r}
+drop_threshold <- 10
+
+persub_mean_SWE_V2 <- PSZ_snotel_swe %>%
+  left_join(persub_snowcam_SWE_data, by = "Date") %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (PSZ_predicted_snowdensity_kg_m3 / 1000) * cam_snowdepth_m, 
+         snowcam_SWE_cm = snowcam_SWE_m * 100) %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  group_by(Date) %>%
+  summarize(predicted_snowdensity_kg_m3 = mean(PSZ_predicted_snowdensity_kg_m3),
+    snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE), 
+            cam_snowdepth_m = mean(cam_snowdepth_m, na.rm = TRUE)) %>%
+  # Apply the moving average but exclude data below the drop threshold
+  mutate(snowcam_SWE_cm_smooth = ifelse(snowcam_SWE_cm > drop_threshold, 
+                                        zoo::rollmean(snowcam_SWE_cm, k = 5, fill = NA, align = "center"), 
+                                        snowcam_SWE_cm))
+
+max_persub_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+write.csv(persub_mean_SWE_V2, "nsf/snow_density/persub_mean_daily_SWE_V2.csv", row.names = FALSE)
+```
+
+```{r}
+#plotting to explore SWE dates
+pers_SWE_V2_plot <- ggplot() +
+  geom_line(data = persb_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm_smooth, color = "burned site")) + 
+  geom_line(data = persub_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm_smooth, color = "unburned site")) +
+  #peak SWE burned site date
+  geom_vline(xintercept = as.Date("2024-04-08"), linetype = "dashed", color = "black") +
+  #peak SWE unburned site date
+  geom_vline(xintercept = as.Date("2024-04-28"), linetype = "dashed", color = "blue") +
+  #ablation, as defines in current thesis
+  geom_vline(xintercept = as.Date("2024-05-06"), linetype = "dashed", color = "red") +
+  scale_color_manual(name = NULL,
+                     values = c("burned site" = "black", "unburned site" = "blue")) +
+  theme_bw()
+
+pers_SWE_V2_plot
+```
+
+```{r}
+transb_mean_SWE_V2 <- TSZ_snotel_swe %>%
+  left_join(transb_snowcam_SWE_data, by = "Date") %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (TSZ_predicted_snowdensity_kg_m3/1000) * cam_snowdepth_m, 
+         snowcam_SWE_cm = snowcam_SWE_m*100) %>%
+  filter(!Date %in% as.Date(c("2024-03-12", "2024-03-13", "2024-03-14", "2024-03-15")))  %>%
+  group_by(Date) %>%
+  summarize(predicted_snowdensity_kg_m3 = mean(TSZ_predicted_snowdensity_kg_m3), 
+    snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE)) %>%
+   # Apply the moving average but exclude data below the drop threshold
+  mutate(snowcam_SWE_cm_smooth = ifelse(snowcam_SWE_cm > drop_threshold, 
+                                        zoo::rollmean(snowcam_SWE_cm, k = 5, fill = NA, align = "center"), 
+                                        snowcam_SWE_cm))
+
+max_transb_snowcamSWEdate_V2 <- transb_mean_SWE_V2 %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+write.csv(transb_mean_SWE_V2, "nsf/snow_density/transb_mean_daily_SWE_V2.csv", row.names = FALSE)
+```
+
+```{r}
+transub_mean_SWE_V2 <- TSZ_snotel_swe %>%
+  left_join(transub_snowcam_SWE_data, by = "Date") %>%
+  mutate(cam_snowdepth_m = as.numeric(cam_snowdepth_m), 
+         snowcam_SWE_m = (TSZ_predicted_snowdensity_kg_m3 / 1000) * cam_snowdepth_m, 
+         snowcam_SWE_cm = snowcam_SWE_m * 100,
+         TSZ_SWE_cm = TSZ_SWE_in * 2.54) %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  filter(!Date %in% as.Date(c("2024-03-12", "2024-03-13", "2024-03-14", "2024-03-15")))  %>%
+  group_by(Date) %>%
+  summarize(predicted_snowdensity_kg_m3 = mean(TSZ_predicted_snowdensity_kg_m3),
+    TSZ_SWE_cm = mean(TSZ_SWE_cm, na.rm = TRUE), 
+            snowcam_SWE_m = mean(snowcam_SWE_m, na.rm = TRUE), 
+            snowcam_SWE_cm = mean(snowcam_SWE_cm, na.rm = TRUE), 
+            cam_snowdepth_m = mean(cam_snowdepth_m, na.rm = TRUE)) %>%
+  # Apply the moving average but exclude data below the drop threshold
+  mutate(snowcam_SWE_cm_smooth = ifelse(snowcam_SWE_cm > drop_threshold, 
+                                        zoo::rollmean(snowcam_SWE_cm, k = 5, fill = NA, align = "center"), 
+                                        snowcam_SWE_cm))
+
+max_transub_snowcamSWEdate_V2 <- persb_mean_SWE_V2 %>%
+  filter(!is.na(snowcam_SWE_cm)) %>%
+  slice_max(order_by = snowcam_SWE_cm, n = 1) %>%
+  pull(Date)
+```
+
+```{r}
+write.csv(transub_mean_SWE_V2, "nsf/snow_density/transub_mean_daily_SWE_V2.csv", row.names = FALSE)
+```
+
+```{r}
+#plotting to explore SWE dates
+trans_SWE_V2_plot <- ggplot() +
+  geom_line(data = transb_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm_smooth, color = "burned site")) + 
+  #geom_line(data = transub_mean_SWE_V2, aes(x = Date, y = TSZ_SWE_cm, color = "snotel data")) + 
+  geom_line(data = transub_mean_SWE_V2, aes(x = Date, y = snowcam_SWE_cm_smooth, color = "unburned site")) +
+  #peak SWE burned site date
+  geom_vline(xintercept = as.Date("2024-03-05"), linetype = "dashed", color = "black") +
+  #peak SWE unburned site date
+  geom_vline(xintercept = as.Date("2024-04-11"), linetype = "dashed", color = "blue") +
+   #ablation, as defines in current thesis
+  geom_vline(xintercept = as.Date("2024-04-07"), linetype = "dashed", color = "red") +
+  scale_color_manual(name = NULL,
+                     values = c("burned site" = "black", "unburned site" = "blue", "snotel data" = "red")) +
+  theme_bw()
+
+trans_SWE_V2_plot
+```
+
+# Air Temp & Tree Temp Correlations
+
+Data Wrangling
+
+```{r}
+PSZ_mean_dt_treetemp <- full_15min_gbdbub %>%
+  filter(phase == "day", zone == "PSZ") %>%
+  mutate(DOY = yday(day)) %>%
+  filter(day >= "2024-02-02" & day <= "2024-06-03") %>%
+  group_by(DOY, day) %>%
+  #averaging out aspects instead of including a north and south aspect here
+  summarize(dt_gb_temp = mean(gb_temp),
+            dt_db_temp = mean(db_temp), 
+            dt_ub_temp = mean(ub_temp),
+            dt_burned_temp = mean((gb_temp + db_temp)/2))
+
+
+PSZ_mean_nt_treetemp <- full_15min_gbdbub %>%
+  filter(phase == "night", zone == "PSZ") %>%
+  mutate(DOY = yday(day)) %>%
+  filter(day >= "2024-02-02" & day <= "2024-06-03") %>%
+  group_by(DOY, day) %>%
+  #averaging out aspects instead of including a north and south aspect here
+  summarize(dt_gb_temp = mean(gb_temp),
+            dt_db_temp = mean(db_temp), 
+            dt_ub_temp = mean(ub_temp),
+            dt_burned_temp = mean((gb_temp + db_temp)/2))
+```
+
+```{r}
+PSZ_mean_wx_dt <- filtered_persb_wx_hourly %>%
+  filter(phase == "day") %>%
+  mutate(DOY = yday(day)) %>%
+  filter(day >= "2024-02-02" & day <= "2024-06-03") %>%
+  group_by(DOY, day) %>%
+  summarize(dt_airtemp = mean(AirTC_Avg),
+            dt_SWin = mean(SWin_Avg), 
+            dt_SWout = mean(SWout_Avg), 
+            dt_SWnet = mean(SWnet_Avg))
+
+PSZub_mean_wx_dt <- filtered_persub_wx_hourly %>%
+  filter(phase == "day") %>%
+  mutate(DOY = yday(day)) %>%
+  filter(day >= "2024-02-02" & day <= "2024-06-03") %>%
+  group_by(DOY, day) %>%
+  summarize(dt_ub_airtemp = mean(AirTC_Avg),
+            dt_ub_SWin = mean(SWin_Avg), 
+            dt_ub_SWout = mean(SWout_Avg), 
+            dt_ub_SWnet = mean(SWnet_Avg))
+
+PSZ_mean_wx_nt <- filtered_persb_wx_hourly %>%
+  filter(phase == "night") %>%
+  mutate(DOY = yday(day)) %>%
+  filter(day >= "2024-02-02" & day <= "2024-06-03") %>%
+  group_by(DOY, day) %>%
+  summarize(dt_airtemp = mean(AirTC_Avg),
+            dt_SWin = mean(SWin_Avg), 
+            dt_SWout = mean(SWout_Avg), 
+            dt_SWnet = mean(SWnet_Avg))
+
+PSZub_mean_wx_nt <- filtered_persub_wx_hourly %>%
+  filter(phase == "night") %>%
+  mutate(DOY = yday(day)) %>%
+  filter(day >= "2024-02-02" & day <= "2024-06-03") %>%
+  group_by(DOY, day) %>%
+  summarize(dt_ub_airtemp = mean(AirTC_Avg),
+            dt_ub_SWin = mean(SWin_Avg), 
+            dt_ub_SWout = mean(SWout_Avg), 
+            dt_ub_SWnet = mean(SWnet_Avg))
+```
+
+Combining for full dataset of mean air temp, tree temp, and SW
+
+```{r}
+PSZ_mean_treetemp_wx_dt <- PSZ_mean_dt_treetemp %>%
+  inner_join(PSZ_mean_wx_dt, by = c("DOY", "day")) %>%
+  inner_join(PSZub_mean_wx_dt, by = c("DOY", "day"))
+
+PSZ_mean_treetemp_wx_nt <- PSZ_mean_nt_treetemp %>%
+  inner_join(PSZ_mean_wx_nt, by = c("DOY", "day"))  %>%
+  inner_join(PSZub_mean_wx_nt, by = c("DOY", "day"))
+```
+
+TSZ
+
+```{r}
+TSZ_mean_dt_treetemp <- full_15min_gbdbub %>%
+  filter(phase == "day", zone == "TSZ") %>%
+  mutate(DOY = yday(day)) %>%
+  filter(day >= "2024-02-02" & day <= "2024-06-03") %>%
+  group_by(DOY, day) %>%
+  #averaging out aspects instead of including a north and south aspect here
+  summarize(dt_gb_temp = mean(gb_temp),
+            dt_db_temp = mean(db_temp), 
+            dt_ub_temp = mean(ub_temp),
+            dt_burned_temp = mean((gb_temp + db_temp)/2))
+
+
+TSZ_mean_nt_treetemp <- full_15min_gbdbub %>%
+  filter(phase == "night", zone == "TSZ") %>%
+  mutate(DOY = yday(day)) %>%
+  filter(day >= "2024-02-02" & day <= "2024-06-03") %>%
+  group_by(DOY, day) %>%
+  #averaging out aspects instead of including a north and south aspect here
+  summarize(dt_gb_temp = mean(gb_temp),
+            dt_db_temp = mean(db_temp), 
+            dt_ub_temp = mean(ub_temp),
+            dt_burned_temp = mean((gb_temp + db_temp)/2))
+```
+
+```{r}
+TSZ_mean_wx_dt <- filtered_transb_wx_15min %>%
+  filter(phase == "day") %>%
+  mutate(DOY = yday(day)) %>%
+  filter(day >= "2024-02-02" & day <= "2024-06-03") %>%
+  group_by(DOY, day) %>%
+  summarize(dt_airtemp = mean(AirTC_Avg),
+            dt_SWin = mean(SWin_Avg), 
+            dt_SWout = mean(SWout_Avg), 
+            dt_SWnet = mean(SWnet_Avg))
+
+TSZub_mean_wx_dt <- filtered_transub_wx_15min %>%
+  filter(phase == "day") %>%
+  mutate(DOY = yday(day)) %>%
+  filter(day >= "2024-02-02" & day <= "2024-06-03") %>%
+  group_by(DOY, day) %>%
+  summarize(dt_ub_airtemp = mean(AirTC_Avg),
+            dt_ub_SWin = mean(SWin_Avg), 
+            dt_ub_SWout = mean(SWout_Avg), 
+            dt_ub_SWnet = mean(SWnet_Avg))
+
+TSZ_mean_wx_nt <- filtered_transb_wx_15min %>%
+  filter(phase == "night") %>%
+  mutate(DOY = yday(day)) %>%
+  filter(day >= "2024-02-02" & day <= "2024-06-03") %>%
+  group_by(DOY, day) %>%
+  summarize(dt_airtemp = mean(AirTC_Avg),
+            dt_SWin = mean(SWin_Avg), 
+            dt_SWout = mean(SWout_Avg), 
+            dt_SWnet = mean(SWnet_Avg))
+
+TSZub_mean_wx_nt <- filtered_transub_wx_15min %>%
+  filter(phase == "night") %>%
+  mutate(DOY = yday(day)) %>%
+  filter(day >= "2024-02-02" & day <= "2024-06-03") %>%
+  group_by(DOY, day) %>%
+  summarize(dt_ub_airtemp = mean(AirTC_Avg),
+            dt_ub_SWin = mean(SWin_Avg), 
+            dt_ub_SWout = mean(SWout_Avg), 
+            dt_ub_SWnet = mean(SWnet_Avg))
+```
+
+```{r}
+TSZ_mean_treetemp_wx_dt <- TSZ_mean_dt_treetemp %>%
+  inner_join(TSZ_mean_wx_dt, by = c("DOY", "day")) %>%
+  inner_join(TSZub_mean_wx_dt, by = c("DOY", "day"))
+
+TSZ_mean_treetemp_wx_nt <- TSZ_mean_nt_treetemp %>%
+  inner_join(TSZ_mean_wx_nt, by = c("DOY", "day")) %>%
+  inner_join(TSZub_mean_wx_nt, by = c("DOY", "day"))
+```
+
+Plotting
+
+```{r}
+library(ggpmisc)
+```
+
+Plotting Daytime Mean Daily Values
+
+```{r}
+PSZ_treeairtemp_db_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_dt) +
+  geom_point(aes(x = dt_airtemp, y = dt_db_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, color = "grey40") + 
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_db_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4) +
+  scale_size_continuous(
+  name = "SW Radiation (W/m²)",
+  range = c(1, 5),
+  limits = c(0, 600),
+  breaks = c(0, 200, 400, 600)  # Show only these 4 size levels in the legend
+) + 
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "a) PSZ DB",
+    x = "Air Temperature (°C)",
+    y = "Tree Surface Temperature (°C)"
+  ) +
+  scale_x_continuous(limits = c(-15, 20)) + 
+  scale_y_continuous(limits = c(-15, 20)) +
+  theme_bw()
+
+PSZ_treeairtemp_db_corr_plot
+```
+
+```{r}
+PSZ_treeairtemp_gb_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_dt) +
+  geom_point(aes(x = dt_airtemp, y = dt_gb_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, color = "grey40") + 
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_gb_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4) +
+    scale_size_continuous(
+  name = "SW Radiation (W/m²)",
+  range = c(1, 5),
+  limits = c(0, 600),
+  breaks = c(0, 200, 400, 600)  # Show only these 4 size levels in the legend
+) + 
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "b) PSZ GB",
+    x = "Air Temperature (°C)",
+    y = NULL
+  ) +
+  scale_x_continuous(limits = c(-15, 20)) + 
+  scale_y_continuous(limits = c(-15, 20)) +
+  theme_bw()
+
+PSZ_treeairtemp_gb_corr_plot
+```
+
+```{r}
+PSZ_treeairtemp_ub_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_dt) +
+  geom_point(aes(x = dt_ub_airtemp, y = dt_ub_temp, color = DOY, size = dt_ub_SWnet), alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, color = "grey40") + 
+  stat_poly_eq(
+    aes(x = dt_ub_airtemp, y = dt_ub_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4) +
+  scale_size_continuous(
+  name = "SW Radiation (W/m²)",
+  range = c(1, 5),
+  limits = c(0, 600),
+  breaks = c(0, 200, 400, 600)  # Show only these 4 size levels in the legend
+) + 
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "c) PSZ live",
+    x = "Air Temperature (°C)",
+    y = NULL
+  ) +
+  scale_x_continuous(limits = c(-15, 20)) + 
+  scale_y_continuous(limits = c(-15, 20)) +
+  theme_bw()
+
+PSZ_treeairtemp_ub_corr_plot
+```
+
+```{r}
+TSZ_treeairtemp_db_corr_plot <- ggplot(data = TSZ_mean_treetemp_wx_dt) +
+  geom_point(aes(x = dt_airtemp, y = dt_db_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, color = "grey40") + 
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_db_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4) +
+  scale_size_continuous(
+  name = "SW Radiation (W/m²)",
+  range = c(1, 5),
+  limits = c(0, 600),
+  breaks = c(0, 200, 400, 600)  # Show only these 4 size levels in the legend
+) + 
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "d) TSZ DB",
+    x = "Air Temperature (°C)",
+    y = "Tree Surface Temperature (°C)"
+  ) +
+  scale_x_continuous(limits = c(-15, 20)) + 
+  scale_y_continuous(limits = c(-15, 20)) +
+  theme_bw()
+
+TSZ_treeairtemp_db_corr_plot
+```
+
+```{r}
+TSZ_treeairtemp_gb_corr_plot <- ggplot(data = TSZ_mean_treetemp_wx_dt) +
+  geom_point(aes(x = dt_airtemp, y = dt_gb_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, color = "grey40") + 
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_gb_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4) +
+ scale_size_continuous(
+  name = "SW Radiation (W/m²)",
+  range = c(1, 5),
+  limits = c(0, 600),
+  breaks = c(0, 200, 400, 600)  # Show only these 4 size levels in the legend
+) + 
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "e) TSZ GB",
+    x = "Air Temperature (°C)",
+    y = NULL
+  ) +
+  scale_x_continuous(limits = c(-15, 20)) + 
+  scale_y_continuous(limits = c(-15, 20)) +
+  theme_bw()
+
+TSZ_treeairtemp_gb_corr_plot
+```
+
+```{r}
+TSZ_treeairtemp_ub_corr_plot <- ggplot(data = TSZ_mean_treetemp_wx_dt) +
+  geom_point(aes(x = dt_ub_airtemp, y = dt_ub_temp, color = DOY, size = dt_ub_SWnet), alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, color = "grey40") + 
+  stat_poly_eq(
+    aes(x = dt_ub_airtemp, y = dt_ub_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4) +
+  scale_size_continuous(
+  name = "SW Radiation (W/m²)",
+  range = c(1, 5),
+  limits = c(0, 600),
+  breaks = c(0, 200, 400, 600)  # Show only these 4 size levels in the legend
+) + 
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "f) TSZ live",
+    x = "Air Temperature (°C)",
+    y = NULL
+  ) +
+  scale_x_continuous(limits = c(-15, 20)) + 
+  scale_y_continuous(limits = c(-15, 20)) +
+  theme_bw()
+
+TSZ_treeairtemp_ub_corr_plot
+```
+
+Combining
+
+```{r}
+PSZ_comb_treeairtemp_scatterplot <- ggarrange(PSZ_treeairtemp_db_corr_plot, PSZ_treeairtemp_gb_corr_plot, PSZ_treeairtemp_ub_corr_plot, nrow = 1, ncol = 3, common.legend = TRUE, legend = "right")
+
+PSZ_comb_treeairtemp_scatterplot
+```
+
+```{r}
+TSZ_comb_treeairtemp_scatterplot <- ggarrange(TSZ_treeairtemp_db_corr_plot, TSZ_treeairtemp_gb_corr_plot, TSZ_treeairtemp_ub_corr_plot, nrow = 1, ncol = 3, common.legend = TRUE, legend = "right")
+
+TSZ_comb_treeairtemp_scatterplot
+```
+
+```{r}
+comb_treeairtemp_dt_scatterplot <- ggarrange(
+  PSZ_comb_treeairtemp_scatterplot, 
+  TSZ_comb_treeairtemp_scatterplot, 
+  nrow = 2, 
+  ncol = 1, 
+  common.legend = FALSE, 
+  legend = "right")
+
+comb_treeairtemp_dt_scatterplot
+```
+
+```{r}
+ggsave(
+  filename = "comb_treeairtemp_dt_scatterplot.png",  # File name with extension
+  plot = comb_treeairtemp_dt_scatterplot,  # The arranged plot object
+  width = 8.5,  # Set width (adjust as needed)
+  height = 6.25,  # Set height (adjust as needed)
+  dpi = 600  # High resolution for publication-quality output
+)
+```
+
+Nightime
+
+```{r}
+PSZ_treeairtemp_db_nt_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_nt) +
+  geom_point(aes(x = dt_airtemp, y = dt_db_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, color = "grey40") + 
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_db_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4) +
+  scale_size_continuous(
+  name = "SW Radiation (W/m²)",
+  range = c(1, 5),        # adjust this range to control visual size scaling
+  limits = c(-2, 2)       # Any value >600 will be treated as 600
+) + 
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "a) PSZ DB",
+    x = "Air Temperature (°C)",
+    y = "Tree Surface Temperature (°C)"
+  ) +
+  scale_x_continuous(limits = c(-20, 10)) + 
+  scale_y_continuous(limits = c(-20, 10)) +
+  theme_bw()
+
+PSZ_treeairtemp_db_nt_corr_plot
+```
+
+```{r}
+PSZ_treeairtemp_gb_nt_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_nt) +
+  geom_point(aes(x = dt_airtemp, y = dt_gb_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, color = "grey40") + 
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_gb_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4) +
+  scale_size_continuous(
+  name = "SW Radiation (W/m²)",
+  range = c(1, 5),       # adjust this range to control visual size scaling
+  limits = c(-2, 2)       # Any value >600 will be treated as 600
+) + 
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "b) PSZ GB",
+    x = "Air Temperature (°C)",
+    y = NULL
+  ) +
+  scale_x_continuous(limits = c(-20, 10)) + 
+  scale_y_continuous(limits = c(-20, 10)) +
+  theme_bw()
+
+PSZ_treeairtemp_gb_nt_corr_plot
+```
+
+```{r}
+PSZ_treeairtemp_ub_nt_corr_plot <- ggplot(data = PSZ_mean_treetemp_wx_nt) +
+  geom_point(aes(x = dt_ub_airtemp, y = dt_ub_temp, color = DOY, size = dt_ub_SWnet), alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, color = "grey40") + 
+  stat_poly_eq(
+    aes(x = dt_ub_airtemp, y = dt_ub_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4) +
+  scale_size_continuous(
+  name = "SW Radiation (W/m²)",
+  range = c(1, 5),         # adjust this range to control visual size scaling
+  limits = c(-2, 2)       # Any value >600 will be treated as 600
+) + 
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "c) PSZ live",
+    x = "Air Temperature (°C)",
+    y = NULL
+  ) +
+  scale_x_continuous(limits = c(-20, 10)) + 
+  scale_y_continuous(limits = c(-20, 10)) +
+  theme_bw()
+
+PSZ_treeairtemp_ub_nt_corr_plot
+```
+
+```{r}
+TSZ_treeairtemp_db_nt_corr_plot <- ggplot(data = TSZ_mean_treetemp_wx_nt) +
+  geom_point(aes(x = dt_airtemp, y = dt_db_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, color = "grey40") + 
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_db_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4) +
+  scale_size_continuous(
+  name = "SW Radiation (W/m²)",
+  range = c(1, 5),         # adjust this range to control visual size scaling
+  limits = c(-2, 2)       # Any value >600 will be treated as 600
+) + 
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "d) TSZ DB",
+    x = "Air Temperature (°C)",
+    y = "Tree Surface Temperature (°C)"
+  ) +
+  scale_x_continuous(limits = c(-20, 10)) + 
+  scale_y_continuous(limits = c(-20, 10)) +
+  theme_bw()
+
+TSZ_treeairtemp_db_nt_corr_plot
+```
+
+```{r}
+TSZ_treeairtemp_gb_nt_corr_plot <- ggplot(data = TSZ_mean_treetemp_wx_nt) +
+  geom_point(aes(x = dt_airtemp, y = dt_gb_temp, color = DOY, size = dt_SWnet), alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, color = "grey40") + 
+  stat_poly_eq(
+    aes(x = dt_airtemp, y = dt_gb_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4) +
+  scale_size_continuous(
+  name = "SW Radiation (W/m²)",
+  range = c(1, 5),         # adjust this range to control visual size scaling
+  limits = c(-2, 2)       # Any value >600 will be treated as 600
+) + 
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "e) TSZ GB",
+    x = "Air Temperature (°C)",
+    y = NULL
+  ) +
+  scale_x_continuous(limits = c(-20, 10)) + 
+  scale_y_continuous(limits = c(-20, 10)) +
+  theme_bw()
+
+TSZ_treeairtemp_gb_nt_corr_plot
+```
+
+```{r}
+TSZ_treeairtemp_ub_nt_corr_plot <- ggplot(data = TSZ_mean_treetemp_wx_nt) +
+  geom_point(aes(x = dt_ub_airtemp, y = dt_ub_temp, color = DOY, size = dt_ub_SWnet), alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, color = "grey40") + 
+  stat_poly_eq(
+    aes(x = dt_ub_airtemp, y = dt_ub_temp),
+    formula = y ~ x,
+    parse = TRUE,
+    label.x.npc = "left", label.y.npc = 0.95,
+    size = 4) +
+  scale_size_continuous(
+  name = "SW Radiation (W/m²)",
+  range = c(1, 5),         # adjust this range to control visual size scaling
+  limits = c(-2, 2)       # Any value >600 will be treated as 600
+) + 
+  scale_color_viridis_c(name = "Day of Year") +
+  labs(
+    title = "f) TSZ live",
+    x = "Air Temperature (°C)",
+    y = NULL
+  ) +
+  scale_x_continuous(limits = c(-20, 10)) + 
+  scale_y_continuous(limits = c(-20, 10)) +
+  theme_bw()
+
+TSZ_treeairtemp_ub_nt_corr_plot
+```
+
+```{r}
+PSZ_comb_treeairtemp_nt_scatterplot <- ggarrange(PSZ_treeairtemp_db_nt_corr_plot, PSZ_treeairtemp_gb_nt_corr_plot, PSZ_treeairtemp_ub_nt_corr_plot, nrow = 1, ncol = 3, common.legend = TRUE, legend = "right")
+
+PSZ_comb_treeairtemp_nt_scatterplot
+```
+
+```{r}
+TSZ_comb_treeairtemp_nt_scatterplot <- ggarrange(TSZ_treeairtemp_db_nt_corr_plot, TSZ_treeairtemp_gb_nt_corr_plot, TSZ_treeairtemp_ub_nt_corr_plot, nrow = 1, ncol = 3, common.legend = TRUE, legend = "right")
+
+TSZ_comb_treeairtemp_nt_scatterplot
+```
+
+```{r}
+comb_treeairtemp_nt_scatterplot <- ggarrange(
+  PSZ_comb_treeairtemp_nt_scatterplot, 
+  TSZ_comb_treeairtemp_nt_scatterplot, 
+  nrow = 2, 
+  ncol = 1, 
+  common.legend = FALSE, 
+  legend = "right")
+
+comb_treeairtemp_nt_scatterplot
+```
+
+```{r}
+ggsave(
+  filename = "comb_treeairtemp_nt_scatterplot.png",  # File name with extension
+  plot = comb_treeairtemp_nt_scatterplot,  # The arranged plot object
+  width = 8.5,  # Set width (adjust as needed)
+  height = 6.25,  # Set height (adjust as needed)
+  dpi = 600  # High resolution for publication-quality output
+)
+```
