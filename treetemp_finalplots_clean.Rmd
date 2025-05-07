@@ -63,46 +63,20 @@ p_b_solar_times <- read_csv("nsf/treetemp_data/p_b_solar_times.csv") %>%
 full_15min_ns <- read_csv("nsf/treetemp_data/full_15min_ns.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = with_tz(datetime, tz = 'MST')) %>%
-  mutate(day = as.Date(day, format = ("%Y-%m-%d"))) %>%
-  inner_join(p_b_solar_times, by = "day") %>%
-  #creating a phase column that parses by daily sunrise/sunset times
-  mutate(
-    phase = case_when(
-      datetime >= sunrise & datetime < sunset ~ "day",
-      datetime < sunrise ~ "night",
-      datetime >= sunset ~ "night",
-      TRUE ~ NA_character_)) %>%
-  select(datetime, day, month, phase, zone, snow_phase, burn_status, north_temp, south_temp, solarNoon, sunrise, sunset, dawn, dusk)
-
-full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
-   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime_hour = force_tz(datetime_hour, tz = 'MST')) %>%
   mutate(day = as.Date(day, format = ("%Y-%m-%d")))
 
 full_15min_gbdbub <- read_csv("nsf/treetemp_data/full_15min_gbdbub.csv") %>%
   mutate(datetime = as.POSIXct(datetime, format=("%Y-%m-%d %H:%M:%S")),
                                datetime = with_tz(datetime, tz = 'MST'), ,
-    day = as.Date(datetime, tz= "MST")) %>%
-  inner_join(p_b_solar_times, by = "day") %>%
-  #creating a phase column that parses by daily sunrise/sunset times
-  mutate(
-    phase = case_when(
-      datetime >= sunrise & datetime < sunset ~ "day",
-      datetime < sunrise ~ "night",
-      datetime >= sunset ~ "night",
-      TRUE ~ NA_character_)) %>%
-  select(datetime, day, month, phase, zone, snow_phase, aspect, gb_temp, db_temp, ub_temp, solarNoon, sunrise, sunset, dawn, dusk)
+    day = as.Date(datetime, tz= "MST"))
+```
 
-#don't need hourly dbgbub dataframe! Therefore I haven't update this code line to include phase, et. 
-
-#full_hourly_gbdbub <- read_csv("nsf/treetemp_data/full_hourly_gbdbub.csv") %>%
- # mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
-                     #          datetime_hour = force_tz(datetime_hour, tz = 'MST'))  %>%
- # select(-1)
-
-full_hourly_gb <- read_csv("nsf/treetemp_data/full_hourly_gb.csv") %>%
-  mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
-                               datetime_hour = force_tz(datetime_hour, tz = 'MST'))
+```{r}
+#don't think I use this dataframe, but here to load if needed
+full_hourly_ns <- read_csv("nsf/treetemp_data/full_hourly_ns.csv") %>%
+   mutate(datetime_hour = as.POSIXct(datetime_hour, format=("%Y-%m-%d %H:%M:%S")),
+                               datetime_hour = force_tz(datetime_hour, tz = 'MST')) %>%
+  mutate(day = as.Date(day, format = ("%Y-%m-%d")))
 ```
 
 \*\* as of 2025-01-10 - new data for temp figures separated by burn status
@@ -4002,7 +3976,7 @@ ggplot()+geom_col(data=burn,aes(x=label,y=diff,fill=aspect),position='dodge')
 
 Exploring when to define "ablation" as starting
 
-### V1 
+### V1
 
 -   not using this snotel data, as it's from multiple different locations that do not well-represent our sitres
 
@@ -4194,7 +4168,7 @@ trans_SWE_plot <- ggplot() +
 trans_SWE_plot
 ```
 
-### V2 
+### V2
 
 -   using this data for thesis!
 
