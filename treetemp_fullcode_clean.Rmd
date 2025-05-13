@@ -39,7 +39,13 @@ setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
 
 # Initial Data Processing
 
-Processing composite datasets
+Processing composite datasets - includes 2-m sensors (2023-2025) and 1/0.5-m sensors (2024-2025)
+
+-   2-m sensor data for burned sites did not change from 23/24 winter to 24/25 winter
+
+-   2-m sensor data for unburned sites DID change between 23/24 and 24/25 -\> moved one tree's sensors to other tree, therefore the new composite unburned data (24/25 winter) includes both 2-m and 0.5-m sensor data
+
+-   If processing -\> change location of where excel sheets are being read from to whatever your working directory is
 
 ## 2-m sensor Data
 
