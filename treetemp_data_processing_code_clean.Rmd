@@ -123,7 +123,68 @@ pers_b_aspects <- pers_b_tree_fulldata %>%
   ))
 ```
 
-### TSZ Burned
+```{r}
+#exporting aspect data as excel
+write.xlsx(pers_b_aspects, "nsf/105E_pers_burned/105E_pers_b_aspects.xlsx")
+```
+
+### PSZ Unburned
+
+```{r}
+#read in temperature data
+pers_ub_tree_composite=read_excel("nsf/105E_pers_unburned/105E_pers_ub_composite.xlsx")
+
+#filter temp data to full data frame
+pers_ub_tree_fulldata <- pers_ub_tree_composite %>%
+  mutate(datetime = as.POSIXct(TIMESTAMP, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST')) %>%
+  select(datetime, everything()) %>%
+  select(-c(TIMESTAMP, RECORD))
+
+#adding in an aspect column - WITH ONLY 14 SENSORS!
+pers_ub_aspects <- pers_ub_tree_fulldata %>%
+  pivot_longer(cols = starts_with("Temp"),
+               names_to = "sensor_id",
+               values_to = "temp") %>%
+  #add in aspect column
+  mutate(aspect = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(1)",
+      "Temp_C_Avg(3)"),
+    "north",
+    "other"
+  )) %>%
+  mutate(aspect = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(2)",
+      "Temp_C_Avg(4)"),
+    "south",
+    aspect
+  )) %>%
+  #adding in sensor name column
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(1)",
+      "Temp_C_Avg(2)"
+    ),
+    "ub_n",
+    "other"
+  )) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(3)", 
+      "Temp_C_Avg(4)"
+    ),
+    "ub_s",
+    tree_name
+  )) 
+```
+
+```{r}
+#exporting aspect data as excel
+write.xlsx(pers_ub_aspects, "nsf/105E_pers_unburned/105E_pers_ub_aspects.xlsx")
+```
+
+###  TSZ Burned
 
 ```{r}
 #read in temperature data
@@ -184,4 +245,57 @@ mutate(tree_name = ifelse(
 write.xlsx(trans_b_aspects, "nsf/105E_trans_burned/105E_trans_b_aspects.xlsx")
 ```
 
-Do I need this for unburned here ? Is it somewhere else now?
+### TSZ Unburned
+
+```{r}
+trans_ub_tree_composite=read_excel("nsf/105E_trans_unburned/105E_trans_ub_composite.xlsx")
+
+#filter temp data to full data frame
+trans_ub_tree_fulldata <- trans_ub_tree_composite %>%
+  mutate(datetime = as.POSIXct(TIMESTAMP, format = ("%Y-%m-%d %H:%M:%S")),
+         datetime = force_tz(datetime, tz = 'MST'))%>%
+  select(datetime, everything()) %>%
+  select(-c(TIMESTAMP,RECORD))
+
+#adding in an aspect column - WITH ONLY 14 SENSORS!
+trans_ub_aspects <- trans_ub_tree_fulldata %>%
+  pivot_longer(cols = starts_with("Temp"),
+               names_to = "sensor_id",
+               values_to = "temp") %>%
+  #add in aspect column
+  mutate(aspect = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(1)",
+      "Temp_C_Avg(3)"),
+    "north",
+    "other"
+  )) %>%
+  mutate(aspect = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(2)",
+      "Temp_C_Avg(4)"),
+    "south",
+    aspect
+  )) %>%
+  #adding in sensor name column
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(1)",
+      "Temp_C_Avg(2)"
+    ),
+    "ub_w",
+    "other"
+  )) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(3)", 
+      "Temp_C_Avg(4)"
+    ),
+    "ub_e",
+    tree_name
+  )) 
+```
+
+```{r}
+write.xlsx(trans_ub_aspects, "nsf/105E_trans_unburned/105E_trans_ub_aspects.xlsx")
+```
