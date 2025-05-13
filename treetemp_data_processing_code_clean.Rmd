@@ -184,7 +184,7 @@ pers_ub_aspects <- pers_ub_tree_fulldata %>%
 write.xlsx(pers_ub_aspects, "nsf/105E_pers_unburned/105E_pers_ub_aspects.xlsx")
 ```
 
-###  TSZ Burned
+### TSZ Burned
 
 ```{r}
 #read in temperature data
@@ -197,7 +197,7 @@ trans_b_tree_fulldata <- trans_b_tree_composite %>%
   select(-c(TIMESTAMP, Record)) %>%
   na.omit()
 
-#adding in an aspect column - ** need to edit date on trans_b sensors, seems weird, should be 2023.12.06 around 10 am?
+#adding in an aspect column - 
 trans_b_aspects <- trans_b_tree_fulldata %>%
   pivot_longer(cols = starts_with("Temp"),
                names_to = "sensor_id",
