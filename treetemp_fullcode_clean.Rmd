@@ -1,0 +1,461 @@
+---
+title: "treetemp_fullcode_clean"
+author: "Erika Lee"
+date: "2025-05-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#installing packages / set working directory
+packages <- c('tidyverse',
+              'lterdatasampler', 'dplyr', 'ggplot2', 'readr', 'readxl', 'lubridate', 'plotly', 'openxlsx', 'plotly', 'rstatix')
+
+install.packages(packages)
+
+library(tidyverse)
+library(lterdatasampler)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(lubridate)
+library(plotly)
+library(openxlsx)
+library(plotly)
+library(rstatix)
+library(htmlwidgets)
+library(RColorBrewer)
+library(patchwork)
+library(ggpubr)
+library(suncalc)
+
+#adjust working directly as appropriate for where data is stored
+setwd("/Volumes/wcnr-network/Research/Kampf/Private/field_data")
+```
+
+# Initial Data Processing
+
+Processing composite datasets
+
+## 2-m sensor Data
+
+### PSZ Burned
+
+```{r}
+#read in temperature data
+pers_b_tree_composite=read_excel("nsf/105E_pers_burned/105E_pers_b_composite.xlsx")
+
+#filter temp data to full data frame
+pers_b_tree_fulldata <- pers_b_tree_composite %>%
+  mutate(datetime = ymd_hms(TIMESTAMP)) %>%
+  select(datetime, everything()) %>%
+  select(-c(TIMESTAMP, RECORD))
+
+#adding in an aspect column - WITH ONLY 14 SENSORS!
+pers_b_aspects <- pers_b_tree_fulldata %>%
+  pivot_longer(cols = starts_with("Temp"),
+               names_to = "sensor_id",
+               values_to = "temp") %>%
+  #add in aspect column
+  mutate(aspect = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(1)",
+      "Temp_C_Avg(5)",
+      "Temp_C_Avg(9)",
+      "Temp_C_Avg(13)", "Temp_C_Avg(15)"
+    ),
+    "north",
+    "other"
+  )) %>%
+  mutate(aspect = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(2)",
+      "Temp_C_Avg(6)",
+      "Temp_C_Avg(10)",
+      "Temp_C_Avg(14)", "Temp_C_Avg(16)"),
+    "south",
+    aspect
+  )) %>%
+  mutate(aspect = ifelse(
+    sensor_id %in% c("Temp_C_Avg(3)", "Temp_C_Avg(7)", "Temp_C_Avg(11)"),
+    "charred",
+    aspect
+  )) %>%
+  mutate(aspect = ifelse(
+    sensor_id %in% c("Temp_C_Avg(4)", "Temp_C_Avg(8)", "Temp_C_Avg(12)"),
+    "uncharred",
+    aspect
+  )) %>%
+  #adding in sensor name column
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(1)",
+      "Temp_C_Avg(2)",
+      "Temp_C_Avg(3)",
+      "Temp_C_Avg(4)"
+    ),
+    "gb_w",
+    "other"
+  )) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(5)",
+      "Temp_C_Avg(6)",
+      "Temp_C_Avg(7)",
+      "Temp_C_Avg(8)"
+    ),
+    "gb_e",
+    tree_name
+  )) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(9)",
+      "Temp_C_Avg(10)",
+      "Temp_C_Avg(11)",
+      "Temp_C_Avg(12)"
+    ),
+    "gb_s",
+    tree_name
+  )) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c("Temp_C_Avg(13)", "Temp_C_Avg(14)"),
+    "db_n",
+    tree_name
+  )) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c("Temp_C_Avg(15)", "Temp_C_Avg(16)"),
+    "db_s",
+    tree_name
+  ))
+```
+
+### PSZ Unburned
+
+\*\* only works for data from 2023-2024, as the sensors were moved for 2024-25 winter
+
+```{r}
+#read in temperature data
+pers_ub_tree_composite=read_excel("nsf/105E_pers_unburned/105E_pers_ub_composite.xlsx")
+
+#filter temp data to full data frame
+pers_ub_tree_fulldata <- pers_ub_tree_composite %>%
+  mutate(datetime = as.POSIXct(TIMESTAMP, format=("%Y-%m-%d %H:%M:%S")), datetime = force_tz(datetime, tz = 'MST')) %>%
+  select(datetime, everything()) %>%
+  select(-c(TIMESTAMP, RECORD))
+
+#adding in an aspect column - WITH ONLY 14 SENSORS!
+pers_ub_aspects <- pers_ub_tree_fulldata %>%
+  pivot_longer(cols = starts_with("Temp"),
+               names_to = "sensor_id",
+               values_to = "temp") %>%
+  #add in aspect column
+  mutate(aspect = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(1)",
+      "Temp_C_Avg(3)"),
+    "north",
+    "other"
+  )) %>%
+  mutate(aspect = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(2)",
+      "Temp_C_Avg(4)"),
+    "south",
+    aspect
+  )) %>%
+  #adding in sensor name column
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(1)",
+      "Temp_C_Avg(2)"
+    ),
+    "ub_n",
+    "other"
+  )) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(3)", 
+      "Temp_C_Avg(4)"
+    ),
+    "ub_s",
+    tree_name
+  ))
+```
+
+### TSZ Burned
+
+```{r}
+#read in temperature data
+trans_b_tree_composite=read_excel("nsf/105E_trans_burned/105E_trans_b_composite.xlsx")
+
+#filter temp data to full data frame
+trans_b_tree_fulldata <- trans_b_tree_composite %>%
+  mutate(datetime = ymd_hms(TIMESTAMP)) %>%
+  select(datetime, everything()) %>%
+  select(-c(TIMESTAMP, Record)) %>%
+  na.omit()
+
+#adding in an aspect column 
+trans_b_aspects <- trans_b_tree_fulldata %>%
+  pivot_longer(cols = starts_with("Temp"),
+               names_to = "sensor_id",
+               values_to = "temp") %>%
+  #add in aspect column
+  mutate(aspect = ifelse(
+    sensor_id %in% c("Temp_C_Avg(1)", "Temp_C_Avg(5)", "Temp_C_Avg(9)", "Temp_C_Avg(11)"),
+    "north",
+    "other"
+  )) %>%
+mutate(aspect = ifelse(
+    sensor_id %in% c("Temp_C_Avg(2)", "Temp_C_Avg(6)", "Temp_C_Avg(10)", "Temp_C_Avg(12)"),
+    "south",
+    aspect)) %>%
+  mutate(aspect = ifelse(
+    sensor_id %in% c("Temp_C_Avg(3)", "Temp_C_Avg(7)"),
+    "charred",
+    aspect)) %>%
+    mutate(aspect = ifelse(
+    sensor_id %in% c("Temp_C_Avg(4)", "Temp_C_Avg(8)"),
+    "uncharred",
+    aspect)) %>%
+  #adding in sensor name column
+  mutate(tree_name = ifelse(
+    sensor_id %in% c("Temp_C_Avg(1)", "Temp_C_Avg(2)", "Temp_C_Avg(3)", "Temp_C_Avg(4)"),
+    "gb_n",
+    "other"
+  )) %>%
+mutate(tree_name = ifelse(
+    sensor_id %in% c("Temp_C_Avg(5)", "Temp_C_Avg(6)", "Temp_C_Avg(7)", "Temp_C_Avg(8)"),
+    "gb_s",
+    tree_name)) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c("Temp_C_Avg(9)", "Temp_C_Avg(10)"),
+    "db_n",
+    tree_name)) %>%
+    mutate(tree_name = ifelse(
+    sensor_id %in% c("Temp_C_Avg(11)", "Temp_C_Avg(12)"),
+    "db_s",
+    tree_name))
+```
+
+### TSZ Unburned
+
+\*\* only works for data from 2023-2024, as the sensors were moved for 2024-25 winter
+
+```{r}
+trans_ub_tree_composite=read_excel("nsf/105E_trans_unburned/105E_trans_ub_composite.xlsx")
+
+#filter temp data to full data frame
+trans_ub_tree_fulldata <- trans_ub_tree_composite %>%
+  mutate(datetime = as.POSIXct(TIMESTAMP, format = ("%Y-%m-%d %H:%M:%S")),
+         datetime = force_tz(datetime, tz = 'MST'))%>%
+  select(datetime, everything()) %>%
+  select(-c(TIMESTAMP,RECORD))
+
+#adding in an aspect column - WITH ONLY 14 SENSORS!
+trans_ub_aspects <- trans_ub_tree_fulldata %>%
+  pivot_longer(cols = starts_with("Temp"),
+               names_to = "sensor_id",
+               values_to = "temp") %>%
+  #add in aspect column
+  mutate(aspect = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(1)",
+      "Temp_C_Avg(3)"),
+    "north",
+    "other"
+  )) %>%
+  mutate(aspect = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(2)",
+      "Temp_C_Avg(4)"),
+    "south",
+    aspect
+  )) %>%
+  #adding in sensor name column
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(1)",
+      "Temp_C_Avg(2)"
+    ),
+    "ub_w",
+    "other"
+  )) %>%
+  mutate(tree_name = ifelse(
+    sensor_id %in% c(
+      "Temp_C_Avg(3)", 
+      "Temp_C_Avg(4)"
+    ),
+    "ub_e",
+    tree_name
+  )) 
+```
+
+## 1 and 0.5-m sensor Data
+
+PSZ Burned
+
+```{r}
+# bs stands for "below snow" - this is the 1 and 0.5 m data
+bs_pers_b_alldata <- read_csv("nsf/105E_pers_burned/105E_pers_b_bs_composite.csv")
+```
+
+```{r}
+bs_pers_b_aspects <- bs_pers_b_alldata %>%
+  mutate(TIMESTAMP = paste0(TIMESTAMP, ":00")) %>%  # Add missing seconds
+  mutate(datetime = mdy_hms(TIMESTAMP, tz = "MST")) %>%
+  select(-TIMESTAMP) %>%
+  select(datetime, everything()) %>%
+  pivot_longer(cols = matches("^GB|^DB"),  # Use matches() for multiple prefixes
+  names_to = "tree_id",
+  values_to = "temp_C") %>%
+  #add in aspect column
+  mutate(aspect = ifelse(
+    tree_id %in% c(
+      "GB_E_N_1_Avg",
+      "GB_E_N_05_Avg",
+      "DB_N_N_1_Avg",
+      "DB_N_N_05_Avg"),
+    "north",
+    "south"
+  )) %>%
+  # Add tree_name column based on the start of tree_id
+  mutate(tree_name = case_when(
+    str_starts(tree_id, "GB_E") ~ "gb_e",  # If tree_id starts with "GB_E"
+    str_starts(tree_id, "DB_N") ~ "db_n",  # If tree_id starts with "DB_N"
+    TRUE ~ NA_character_  # If neither condition is met, set to NA
+  )) %>%
+  #add burn status column
+   # Add tree_name column based on the start of tree_id
+  mutate(burn_status = case_when(
+    str_starts(tree_id, "GB_E") ~ "GB",  # If tree_id starts with "GB_E"
+    str_starts(tree_id, "DB") ~ "DB",  # If tree_id starts with "DB_N"
+    TRUE ~ NA_character_  # If neither condition is met, set to NA
+  )) %>%
+  mutate(sensor_height_m = case_when(
+    str_ends(tree_id, "1_Avg") ~ 1,  # If tree_id ends with "1_Avg"
+    str_ends(tree_id, "05_Avg") ~ 0.5,  # If tree_id ends with "05_Avg"
+    TRUE ~ NA_real_  # If neither condition is met, set to NA
+  )) %>%
+  mutate(zone = "PSZ", day = as.Date(datetime, tz = "MST")) %>%
+  select(datetime, day, zone, burn_status, tree_name, aspect, sensor_height_m, temp_C)
+```
+
+### PSZ Unburned
+
+```{r}
+bs_pers_ub_alldata <- read_csv("nsf/105E_pers_unburned/105E_pers_ub_bs_composite.csv")
+```
+
+```{r}
+bs_pers_ub_aspects <- bs_pers_ub_alldata %>%
+  mutate(TIMESTAMP = paste0(TIMESTAMP, ":00")) %>%  # Add missing seconds
+  mutate(datetime = mdy_hms(TIMESTAMP, tz = "MST")) %>%
+  select(-TIMESTAMP) %>%
+  select(datetime, everything()) %>%
+  pivot_longer(cols = matches("^UB"),  # Use matches() for multiple prefixes
+  names_to = "tree_id",
+  values_to = "temp_C") %>%
+  #add in aspect column
+  mutate(aspect = ifelse(
+    tree_id %in% c(
+      "UB_N_N_2_Avg",
+      "UB_N_N_05_Avg"), 
+    "north",
+    "south"
+  )) %>%
+  # Add tree_name column based on the start of tree_id
+  mutate(tree_name = "ub_n", burn_status = "live", zone = "PSZ") %>%
+  mutate(sensor_height_m = case_when(
+    str_ends(tree_id, "2_Avg") ~ 2,  # If tree_id ends with "1_Avg"
+    str_ends(tree_id, "05_Avg") ~ 0.5,  # If tree_id ends with "05_Avg"
+    TRUE ~ NA_real_  # If neither condition is met, set to NA
+  )) %>%
+  mutate(day = as.Date(datetime, tz = "MST")) %>%
+  select(datetime, day, zone, burn_status, tree_name, aspect, sensor_height_m, temp_C)
+```
+
+TSZ Burned
+
+```{r}
+bs_trans_b_alldata <- read_csv("nsf/105E_trans_burned/105E_trans_b_bs_composite.csv")
+```
+
+```{r}
+bs_trans_b_aspects <- bs_trans_b_alldata %>%
+  mutate(TIMESTAMP = paste0(TIMESTAMP, ":00")) %>%  # Add missing seconds
+  mutate(datetime = mdy_hms(TIMESTAMP, tz = "MST")) %>%
+  select(-TIMESTAMP) %>%
+  select(datetime, everything()) %>%
+  pivot_longer(cols = matches("^GB|^DB"),  # Use matches() for multiple prefixes
+  names_to = "tree_id",
+  values_to = "temp_C") %>%
+  #add in aspect column
+  mutate(aspect = ifelse(
+    tree_id %in% c(
+      "gb_s_n_1_Avg",
+      "gb_s_n_05_Avg",
+      "db_s_n_1_Avg",
+      "db_s_n_05_Avg"),
+    "north",
+    "south"
+  )) %>%
+  # Add tree_name column based on the start of tree_id
+  mutate(tree_name = case_when(
+    str_starts(tree_id, "gb_s") ~ "gb_s",  # If tree_id starts with "GB_E"
+    str_starts(tree_id, "db_s") ~ "db_s",  # If tree_id starts with "DB_N"
+    TRUE ~ NA_character_  # If neither condition is met, set to NA
+  )) %>%
+  #add burn status column
+   # Add tree_name column based on the start of tree_id
+  mutate(burn_status = case_when(
+    str_starts(tree_id, "gb") ~ "GB",  # If tree_id starts with "GB_E"
+    str_starts(tree_id, "db") ~ "DB",  # If tree_id starts with "DB_N"
+    TRUE ~ NA_character_  # If neither condition is met, set to NA
+  )) %>%
+  mutate(sensor_height_m = case_when(
+    str_ends(tree_id, "1_Avg") ~ 1,  # If tree_id ends with "1_Avg"
+    str_ends(tree_id, "05_Avg") ~ 0.5,  # If tree_id ends with "05_Avg"
+    TRUE ~ NA_real_  # If neither condition is met, set to NA
+  )) %>%
+  mutate(zone = "TSZ", day = as.Date(datetime, tz = "MST")) %>%
+  select(datetime, day, zone, burn_status, tree_name, aspect, sensor_height_m, temp_C)
+```
+
+Trans Unburned
+
+```{r}
+bs_trans_ub_alldata <- read_csv("nsf/105E_trans_unburned/105E_trans_ub_bs_composite.csv")
+```
+
+```{r}
+bs_trans_ub_aspects <- bs_trans_ub_alldata %>%
+  mutate(TIMESTAMP = paste0(TIMESTAMP, ":00")) %>%  # Add missing seconds
+  mutate(datetime = mdy_hms(TIMESTAMP, tz = "MST")) %>%
+  select(-TIMESTAMP) %>%
+  select(datetime, everything()) %>%
+  pivot_longer(cols = matches("^UB"),  # Use matches() for multiple prefixes
+  names_to = "tree_id",
+  values_to = "temp_C") %>%
+  #add in aspect column
+  mutate(aspect = ifelse(
+    tree_id %in% c(
+      "UB_N_N_2_Avg",
+      "UB_N_N_05_Avg"), 
+    "north",
+    "south"
+  )) %>%
+  # Add tree_name column based on the start of tree_id
+  mutate(tree_name = "ub_n", burn_status = "live", zone = "TSZ") %>%
+  mutate(sensor_height_m = case_when(
+    str_ends(tree_id, "2_Avg") ~ 2,  # If tree_id ends with "1_Avg"
+    str_ends(tree_id, "05_Avg") ~ 0.5,  # If tree_id ends with "05_Avg"
+    TRUE ~ NA_real_  # If neither condition is met, set to NA
+  )) %>%
+  mutate(day = as.Date(datetime, tz = "MST")) %>%
+  select(datetime, day, zone, burn_status, tree_name, aspect, sensor_height_m, temp_C)
+```
